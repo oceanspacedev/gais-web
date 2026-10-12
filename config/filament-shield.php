@@ -82,6 +82,11 @@ return [
             'assign',
             'manageAccess',
             'manageBusinessEntityAccess',
+            'approveAccounting',
+            'approveManager',
+            'process',
+            'audit',
+            'changeApplicant',
         ],
     ],
 

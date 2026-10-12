@@ -13,6 +13,7 @@ use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use InvalidArgumentException;
@@ -46,6 +47,9 @@ class User extends Authenticatable implements FilamentUser
         'business_entity_id',
         'access_all_business_entities',
         'job_title_id',
+        'division_id',
+        'approver_user_id',
+        'legacy_sumo_user_id',
     ];
 
     /**
@@ -196,6 +200,34 @@ class User extends Authenticatable implements FilamentUser
     public function jobTitle(): BelongsTo
     {
         return $this->belongsTo(JobTitle::class);
+    }
+
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class);
+    }
+
+    /**
+     * Atasan yang menyetujui pengajuan user ini (sumo: approval_id).
+     */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approver_user_id');
+    }
+
+    public function subordinates(): HasMany
+    {
+        return $this->hasMany(User::class, 'approver_user_id');
+    }
+
+    public function itemRequests(): HasMany
+    {
+        return $this->hasMany(ItemRequest::class);
+    }
+
+    public function problemReports(): HasMany
+    {
+        return $this->hasMany(ProblemReport::class);
     }
 
     public function nameWithJobTitle(): string

@@ -92,6 +92,11 @@ return [
         'delete_all' => 'Hapus Data Semua User',
         'manage_access' => 'Kelola Akses & Login',
         'manage_business_entity_access' => 'Kelola Akses Badan Usaha',
+        'approve_accounting' => 'Approval Accounting (Status PO)',
+        'approve_manager' => 'Setujui Jumlah (Manager)',
+        'process' => 'Proses (Executor)',
+        'audit' => 'Catatan Audit',
+        'change_applicant' => 'Ubah Pemohon',
 
         // Custom permissions
         'view_horizon' => 'Lihat Horizon',

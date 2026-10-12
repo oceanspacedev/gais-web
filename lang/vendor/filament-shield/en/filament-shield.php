@@ -92,6 +92,11 @@ return [
         'delete_all' => "Delete Every User's Data",
         'manage_access' => 'Manage Access & Login',
         'manage_business_entity_access' => 'Manage Business Entity Access',
+        'approve_accounting' => 'Accounting approval (PO status)',
+        'approve_manager' => 'Approve quantities (manager)',
+        'process' => 'Process (executor)',
+        'audit' => 'Audit notes',
+        'change_applicant' => 'Change applicant',
 
         // Custom permissions
         'view_horizon' => 'View Horizon',
