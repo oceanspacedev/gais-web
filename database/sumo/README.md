@@ -54,3 +54,23 @@ Dump sumo sempat di-import ke `db_shelf`. Pemulihan yang dilakukan, urutannya pe
    `php artisan test --filter=NavigationGroupsTest`.
 
 Yang hilang karena restore: perubahan pada 7 tabel itu antara tanggal backup dan kejadian.
+
+## Setelah impor: langkah manual di server
+
+1. **File unggahan sumo.** Salin folder berikut dari `storage/app/public` server sumo ke disk
+   `public` shelf (lokal: `storage/app/public`, atau bucket S3 bila `FILESYSTEM_DISK=s3`),
+   dengan nama folder yang sama: `Request_File`, `Problem_Report_File`, `Rent_File`, `product`.
+   Nama file di database hanya nama filenya; shelf menambahkan folder saat menampilkan
+   (`App\Support\LegacyUpload`).
+2. **Scheduler.** Pastikan cron `php artisan schedule:run` tiap menit aktif. Jadwal baru:
+   `problem-reports:auto-confirm` (tiap 10 menit) dan `reminder:whatsapp` (tiap jam, mengirim
+   sekali sehari setelah jam kirim di menu Notifikasi WA).
+3. **WhatsApp.** `WAG_URL` dan `WAG_TOKEN` sudah dipakai modul aset; nomor tujuan global diatur
+   di menu Pengaturan > Notifikasi WA. Uji dengan tombol "Kirim Uji Coba".
+4. **Akun sumo.** 87 akun aktif dibuat sebagai user shelf dengan password lamanya. Role: ADMIN ->
+   `pengajuan_admin`, ACCOUNTING -> `accounting`, EXECUTOR -> `executor`, USER -> `requester`.
+   Izin tambahan per divisi (HCM, AUDIT, MIS-IT) dan cakupan pengajuan per divisi ada di
+   `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu.
+5. **Pemetaan badan usaha.** Periksa `config/sumo-import.php` bagian `business_entities`
+   (mis. CV.CS dan PT. RISM punya kandidat lebih dari satu) sebelum impor di server; jalankan
+   `php artisan sumo:import --dry-run` dulu dan baca peringatannya.

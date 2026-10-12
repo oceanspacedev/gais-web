@@ -22,7 +22,7 @@ class NavigationGroupsTest extends TestCase
         $navigation = $this->navigationFor($this->superAdmin());
 
         $this->assertSame(
-            ['', 'Aset', 'Master Aset', 'OB / Kebersihan', 'Kendaraan', 'Pekerjaan Vendor', 'Organisasi', 'Pengaturan'],
+            ['', 'Aset', 'Master Aset', 'OB / Kebersihan', 'Kendaraan', 'Pekerjaan Vendor', 'Pengajuan Barang', 'Lapor Gangguan', 'Asuransi & Sewa', 'Organisasi', 'Pengaturan'],
             collect($navigation)->map(fn (NavigationGroup $group): string => (string) $group->getLabel())->values()->all(),
         );
 

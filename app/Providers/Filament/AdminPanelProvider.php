@@ -67,6 +67,9 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('OB / Kebersihan'),
                 NavigationGroup::make('Kendaraan'),
                 NavigationGroup::make('Pekerjaan Vendor'),
+                NavigationGroup::make('Pengajuan Barang'),
+                NavigationGroup::make('Lapor Gangguan'),
+                NavigationGroup::make('Asuransi & Sewa'),
                 NavigationGroup::make('Organisasi'),
                 NavigationGroup::make('Pengaturan')->collapsed(),
             ])

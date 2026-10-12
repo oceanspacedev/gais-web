@@ -3,11 +3,20 @@
 namespace App\Filament\Resources;
 
 use App\Filament\Resources\DivisionResource\Pages;
+use App\Models\Area;
 use App\Models\Division;
+use App\Models\ItemRequestType;
 use App\Models\User;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -33,6 +42,12 @@ class DivisionResource extends Resource
                     ->unique(ignoreRecord: true)
                     ->required()
                     ->maxLength(255),
+
+                Forms\Components\Select::make('area_id')
+                    ->label('Area')
+                    ->helperText('Kelompok divisi (HO, RETAIL, TOP, ...), dipakai cakupan pengajuan barang.')
+                    ->options(fn (): array => Area::query()->orderBy('name')->pluck('name', 'id')->all())
+                    ->searchable(),
 
                 Forms\Components\Repeater::make('approvers')
                     ->label('Alur Persetujuan (Approval Flow)')
@@ -75,6 +90,29 @@ class DivisionResource extends Resource
 
                         return $user?->nameWithJobTitle() ?? 'Approver';
                     }),
+
+                Section::make('Cakupan Pengajuan Barang')
+                    ->description('Pengajuan mana yang boleh dilihat dan diproses executor/manager di divisi ini. Kosongkan tipe atau area untuk "semua". Tanpa baris, anggota divisi hanya melihat pengajuannya sendiri.')
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Repeater::make('itemRequestScopes')
+                            ->hiddenLabel()
+                            ->relationship('itemRequestScopes')
+                            ->schema([
+                                Forms\Components\Select::make('item_request_type_id')
+                                    ->label('Tipe pengajuan')
+                                    ->placeholder('Semua tipe')
+                                    ->options(fn (): array => ItemRequestType::query()->orderBy('id')->pluck('name', 'id')->all()),
+                                Forms\Components\Select::make('area_id')
+                                    ->label('Area pemohon')
+                                    ->placeholder('Semua area')
+                                    ->options(fn (): array => Area::query()->orderBy('name')->pluck('name', 'id')->all())
+                                    ->searchable(),
+                            ])
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah cakupan'),
+                    ]),
             ]);
     }
 
@@ -86,6 +124,15 @@ class DivisionResource extends Resource
                     ->label('Nama Divisi')
                     ->searchable()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('area.name')
+                    ->label('Area')
+                    ->sortable()
+                    ->placeholder('-'),
+                Tables\Columns\TextColumn::make('users_count')
+                    ->label('Anggota')
+                    ->counts('users')
+                    ->badge()
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('approvers')
                     ->label('Alur Persetujuan')
                     ->getStateUsing(function (Division $record) {
@@ -95,6 +142,11 @@ class DivisionResource extends Resource
                             ->map(fn ($approver) => $approver->user?->nameWithJobTitle() ?? 'Unknown')
                             ->implode(' ➔ ');
                     }),
+                Tables\Columns\TextColumn::make('item_request_scopes_count')
+                    ->label('Cakupan Pengajuan')
+                    ->counts('itemRequestScopes')
+                    ->badge()
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Tanggal Dibuat')
                     ->dateTime()
@@ -102,28 +154,25 @@ class DivisionResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\SelectFilter::make('area_id')
+                    ->label('Area')
+                    ->relationship('area', 'name')
+                    ->preload(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make()
+                EditAction::make()
                     ->slideOver()
-                    ->modalWidth('md'),
-                \Filament\Actions\DeleteAction::make(),
+                    ->modalWidth('lg'),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
-                    \Filament\Actions\ForceDeleteBulkAction::make(),
-                    \Filament\Actions\RestoreBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
-    }
-
-    public static function getRelations(): array
-    {
-        return [
-            //
-        ];
     }
 
     public static function getPages(): array
@@ -139,15 +188,5 @@ class DivisionResource extends Resource
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ]);
-    }
-
-    public static function getModelLabel(): string
-    {
-        return __('Division');
-    }
-
-    public static function getPluralModelLabel(): string
-    {
-        return __('Divisions');
     }
 }

@@ -8,7 +8,12 @@ use App\Filament\Resources\AssetResource;
 use App\Filament\Resources\AssetServiceResource;
 use App\Filament\Resources\AssetTransferResource;
 use App\Filament\Resources\DivisionResource;
+use App\Filament\Resources\InsuranceResource;
+use App\Filament\Resources\ItemRequestResource;
 use App\Filament\Resources\ObChecksheetResource;
+use App\Filament\Resources\ProblemReportResource;
+use App\Filament\Resources\ProductResource;
+use App\Filament\Resources\RentResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
 use App\Support\ObservabilityAccess;
@@ -141,6 +146,33 @@ return [
                 'deleteAll',
                 // Menugaskan pembersihan ke OB dan mengganti petugasnya.
                 'assign',
+            ],
+            // Alur pengajuan barang: tahap Accounting, Manager, Executor, catatan audit, ganti pemohon.
+            ItemRequestResource::class => [
+                'export',
+                'viewAll',
+                'approveAccounting',
+                'approveManager',
+                'process',
+                'audit',
+                'changeApplicant',
+            ],
+            ProblemReportResource::class => [
+                'export',
+                'viewAll',
+                'process',
+            ],
+            InsuranceResource::class => [
+                'export',
+                'import',
+            ],
+            RentResource::class => [
+                'export',
+                'import',
+            ],
+            ProductResource::class => [
+                'export',
+                'import',
             ],
             DivisionResource::class => [
                 'restore',

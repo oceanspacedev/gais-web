@@ -73,6 +73,32 @@ class Rent extends Model
         return $this->latestUpdate()?->status ?? $this->status;
     }
 
+    /**
+     * Ringkasan tagihan kontrak awal (sumo: rents/show): jumlah tahun dibulatkan ke
+     * atas per 366 hari, total = tahun x sewa per tahun, dibayar = dana CVCS + online.
+     * Status LUNAS bila sisa 0, LEBIH bila pembayaran melebihi, KURANG bila masih ada sisa.
+     *
+     * @return array{years: int, total: int, paid: int, remaining: int, status: string}
+     */
+    public function billingSummary(): array
+    {
+        $days = $this->join_date !== null && $this->expired_date !== null
+            ? max(1, (int) $this->join_date->diffInDays($this->expired_date))
+            : 0;
+        $years = $days > 0 ? (int) ceil($days / 366) : 0;
+        $total = $years * (int) ($this->rent_per_year ?? 0);
+        $paid = (int) ($this->cvcs_fund ?? 0) + (int) ($this->online_fund ?? 0);
+        $remaining = $total - $paid;
+
+        return [
+            'years' => $years,
+            'total' => $total,
+            'paid' => $paid,
+            'remaining' => $remaining,
+            'status' => $remaining < 0 ? 'LEBIH' : ($remaining === 0 ? 'LUNAS' : 'KURANG'),
+        ];
+    }
+
     public function isAccessibleBy(User $user): bool
     {
         return $this->business_entity_id === null || $user->canAccessBusinessEntity($this->business_entity_id);

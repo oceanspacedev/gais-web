@@ -7,6 +7,7 @@ use App\Http\Controllers\PdfController;
 use App\Http\Controllers\PublicAssetQrController;
 use App\Http\Controllers\PublicAssetRequestController;
 use App\Http\Controllers\StoredFileController;
+use App\Http\Controllers\SumoQrLabelController;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Illuminate\Support\Facades\Route;
@@ -58,3 +59,11 @@ Route::get('qr/{qr}', [PublicAssetQrController::class, 'show'])->name('qr.show')
 Route::post('qr/{qr}/location', [PublicAssetQrController::class, 'storeLocation'])
     ->middleware('throttle:60,1')
     ->name('qr.location');
+
+// QR pengajuan barang dan QR barang (modul pindahan sumo-web).
+Route::get('item-requests/{itemRequest}/qr-labels', [SumoQrLabelController::class, 'itemRequest'])
+    ->middleware(['auth'])
+    ->name('item-requests.qr-labels');
+Route::get('products/{product}/qr-label', [SumoQrLabelController::class, 'product'])
+    ->middleware(['auth'])
+    ->name('products.qr-label');

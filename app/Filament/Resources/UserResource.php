@@ -68,6 +68,20 @@ class UserResource extends Resource
                             ->label('Employee ID')
                             ->maxLength(64)
                             ->unique(User::class, 'employee_id', ignoreRecord: true),
+                        // Tanpa preload: opsi baru diambil saat dicari, jadi halaman user tetap
+                        // terbuka walau tabel divisi belum ada (lihat PhoneOtpLoginTest).
+                        Select::make('division_id')
+                            ->label('Divisi')
+                            ->relationship('division', 'name')
+                            ->searchable()
+                            ->preload(false),
+                        Select::make('approver_user_id')
+                            ->label('Atasan (approver pengajuan barang)')
+                            ->relationship('approver', 'name', fn (Builder $query, ?User $record): Builder => $query
+                                ->when($record, fn (Builder $q) => $q->whereKeyNot($record->id))
+                                ->orderBy('name'))
+                            ->searchable()
+                            ->preload(false),
                         TextInput::make('whatsapp_number')
                             ->label('Nomor WhatsApp')
                             ->tel()
@@ -174,6 +188,10 @@ class UserResource extends Resource
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable()->toggleable(),
+                TextColumn::make('division.name')
+                    ->label('Divisi')
+                    ->placeholder('-')
+                    ->toggleable(),
                 TextColumn::make('employee_id')
                     ->label('Employee ID')
                     ->searchable()

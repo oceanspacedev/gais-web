@@ -54,6 +54,8 @@ class PhoneOtpLoginTest extends TestCase
             $table->string('employee_id')->nullable()->unique();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->unsignedBigInteger('job_title_id')->nullable();
+            $table->unsignedBigInteger('division_id')->nullable();
+            $table->unsignedBigInteger('approver_user_id')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

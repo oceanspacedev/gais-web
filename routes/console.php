@@ -20,3 +20,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('horizon:snapshot')->everyFiveMinutes();
+
+// Modul pindahan sumo-web: konfirmasi otomatis laporan gangguan (dulu tiap menit).
+Schedule::command('problem-reports:auto-confirm')->everyTenMinutes();
+Schedule::command('reminder:whatsapp')->hourly();
