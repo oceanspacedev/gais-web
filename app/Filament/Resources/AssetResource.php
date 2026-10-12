@@ -60,6 +60,10 @@ class AssetResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-archive-box';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 1;
+
     public static function getCategoryOptions(): array
     {
         return Cache::remember('asset_category_options', 300, function () {

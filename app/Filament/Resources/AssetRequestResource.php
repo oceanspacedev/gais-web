@@ -52,6 +52,10 @@ class AssetRequestResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clipboard-document-list';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 2;
+
     public static function getModelLabel(): string
     {
         return __('Asset Request');

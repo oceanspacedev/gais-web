@@ -39,6 +39,10 @@ class VehicleChecksheetResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-truck';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Kendaraan';
+
+    protected static ?int $navigationSort = 1;
+
     public static function form(Schema $form): Schema
     {
         return $form

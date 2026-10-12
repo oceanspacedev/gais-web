@@ -13,9 +13,26 @@
     $hasObservabilityLinks = \App\Support\ObservabilityAccess::allowed(filament()->auth()->user());
     $shouldRenderSidebarFooter = filament()->auth()->check()
         && ($hasDatabaseNotificationsInSidebar || $hasUserMenuInSidebar || $hasObservabilityLinks);
+    // Mekaya tidak membaca NavigationGroup::collapsed(); grup itu dilipat sekali saat
+    // pertama kali dibuka, setelah itu pilihan buka/tutup pengguna yang dipakai.
+    $defaultCollapsedGroups = collect(filament()->getNavigationGroups())
+        ->filter(fn ($group): bool => $group instanceof \Filament\Navigation\NavigationGroup && $group->isCollapsed())
+        ->map(fn (\Filament\Navigation\NavigationGroup $group): string => (string) $group->getLabel())
+        ->values()
+        ->all();
 @endphp
 
-<div class="h-full">
+<div
+    class="h-full"
+    x-data
+    x-init="
+        const seeded = JSON.parse(localStorage.getItem('sidebar-default-collapsed-groups') ?? '[]');
+        @js($defaultCollapsedGroups)
+            .filter((label) => ! seeded.includes(label))
+            .forEach((label) => $store.sidebar.collapseGroup(label));
+        localStorage.setItem('sidebar-default-collapsed-groups', JSON.stringify([...new Set([...seeded, ...@js($defaultCollapsedGroups)])]));
+    "
+>
     <script>
         if (
             localStorage.getItem('collapsedGroups') === null ||

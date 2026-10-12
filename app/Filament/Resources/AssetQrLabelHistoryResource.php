@@ -24,11 +24,11 @@ class AssetQrLabelHistoryResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 6;
+
     protected static ?string $navigationLabel = 'History Label QR';
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Asset';
-
-    protected static ?int $navigationSort = 5;
 
     public static function getModelLabel(): string
     {

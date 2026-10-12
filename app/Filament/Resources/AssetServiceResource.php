@@ -45,7 +45,7 @@ class AssetServiceResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-wrench-screwdriver';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Asset';
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
 
     protected static ?int $navigationSort = 4;
 

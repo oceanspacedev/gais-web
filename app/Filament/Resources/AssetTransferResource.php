@@ -66,6 +66,10 @@ class AssetTransferResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 3;
+
     public static function form(Schema $form): Schema
     {
         $viewer = Auth::user();

@@ -27,11 +27,11 @@ class AssetReconciliationResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-arrows-right-left';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 5;
+
     protected static ?string $navigationLabel = 'Import & Laporan Audit';
-
-    protected static string|\UnitEnum|null $navigationGroup = 'Asset';
-
-    protected static ?int $navigationSort = 2;
 
     public static function canViewAny(): bool
     {

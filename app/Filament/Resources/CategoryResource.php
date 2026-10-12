@@ -19,7 +19,9 @@ class CategoryResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|\UnitEnum|null $navigationGroup = 'Master Aset';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $form): Schema
     {

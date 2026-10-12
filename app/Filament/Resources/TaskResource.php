@@ -36,6 +36,10 @@ class TaskResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clipboard-document-check';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Pekerjaan Vendor';
+
+    protected static ?int $navigationSort = 1;
+
     public static function form(Schema $form): Schema
     {
         return $form
