@@ -6,12 +6,14 @@ use App\Filament\Exports\ObChecksheetExporter;
 use App\Filament\Resources\ObChecksheetResource;
 use App\Forms\Components\CameraCapture;
 use App\Models\ObChecksheet;
-use App\Models\ObTaskTemplate;
+use App\Models\ObRoom;
+use App\Models\ObShift;
 use App\Models\User;
 use App\Services\ObTaskAssignmentService;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
@@ -23,6 +25,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Schemas\Components\Text;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
 use Illuminate\Database\Eloquent\Builder;
@@ -37,7 +40,7 @@ class ListObChecksheets extends ListRecords
         return [
             $this->startAllAction(),
             $this->finishAllAction(),
-            $this->assignFromTemplateAction(),
+            $this->assignFromShiftAction(),
             $this->assignManualAction(),
             ExportAction::make()
                 ->exporter(ObChecksheetExporter::class)
@@ -221,24 +224,37 @@ class ListObChecksheets extends ListRecords
             });
     }
 
-    protected function assignFromTemplateAction(): Action
+    /**
+     * Pilih shift, semua ruangannya langsung tercentang; atasan cukup mencoret yang tidak perlu.
+     */
+    protected function assignFromShiftAction(): Action
     {
-        return Action::make('assignFromTemplate')
-            ->label('Tugaskan dari Template')
-            ->icon('heroicon-o-clipboard-document-list')
+        return Action::make('assignFromShift')
+            ->label('Tugaskan per Shift')
+            ->icon('heroicon-o-clock')
             ->color('info')
             ->visible(fn (): bool => $this->canAssign())
             ->modalWidth('lg')
             ->modalSubmitActionLabel('Tugaskan')
             ->form([
-                Select::make('template_id')
-                    ->label('Template')
-                    ->options(fn (): array => ObTaskTemplate::query()
-                        ->where('is_active', true)
-                        ->orderBy('name')
-                        ->pluck('name', 'id')
-                        ->all())
+                Select::make('ob_shift_id')
+                    ->label('Shift')
+                    ->placeholder('Ketik nama shift, mis. Shift Pagi')
+                    ->options(fn (): array => ObShift::options())
                     ->searchable()
+                    ->required()
+                    ->live()
+                    ->afterStateUpdated(fn (mixed $state, Set $set) => $set(
+                        'room_ids',
+                        array_map('strval', array_keys($this->shiftRoomOptions($state))),
+                    )),
+                CheckboxList::make('room_ids')
+                    ->label('Ruangan')
+                    ->helperText('Hilangkan centang ruangan yang tidak perlu dikerjakan.')
+                    ->options(fn (Get $get): array => $this->shiftRoomOptions($get('ob_shift_id')))
+                    ->visible(fn (Get $get): bool => filled($get('ob_shift_id')))
+                    ->bulkToggleable()
+                    ->columns(2)
                     ->required(),
                 Select::make('user_id')
                     ->label('Petugas OB')
@@ -254,8 +270,9 @@ class ListObChecksheets extends ListRecords
             ->action(function (array $data, ObTaskAssignmentService $assignments): void {
                 abort_unless($this->canAssign(), 403);
 
-                $result = $assignments->assignTemplate(
-                    ObTaskTemplate::query()->where('is_active', true)->findOrFail($data['template_id']),
+                $result = $assignments->assignShift(
+                    ObShift::query()->active()->findOrFail($data['ob_shift_id']),
+                    array_values($data['room_ids'] ?? []),
                     $this->officeBoy($data['user_id'] ?? null),
                     Carbon::parse($data['date']),
                     auth()->user(),
@@ -285,15 +302,18 @@ class ListObChecksheets extends ListRecords
                     ->label('Tanggal')
                     ->default(now())
                     ->required(),
-                TextInput::make('shift_label')
-                    ->label('Keterangan Shift (Opsional)')
-                    ->datalist(['Shift Pagi', 'Shift Middle'])
-                    ->maxLength(255),
+                Select::make('ob_shift_id')
+                    ->label('Shift (Opsional)')
+                    ->options(fn (): array => ObShift::options())
+                    ->searchable()
+                    ->live(),
                 Repeater::make('rooms')
-                    ->label('Ruangan / Pekerjaan')
+                    ->label('Ruangan')
+                    ->helperText('Pilih dari saran Master Ruangan atau ketik nama ruangan lain.')
                     ->simple(
                         TextInput::make('room')
                             ->placeholder('Contoh: Ruang Meeting Finance')
+                            ->datalist(fn (Get $get): array => ObRoom::suggestions($this->shiftLocationId($get('../../ob_shift_id'))))
                             ->required()
                             ->maxLength(255),
                     )
@@ -309,11 +329,24 @@ class ListObChecksheets extends ListRecords
                     $this->officeBoy($data['user_id'] ?? null),
                     Carbon::parse($data['date']),
                     auth()->user(),
-                    filled($data['shift_label'] ?? null) ? $data['shift_label'] : null,
+                    filled($data['ob_shift_id'] ?? null) ? ObShift::query()->active()->findOrFail($data['ob_shift_id']) : null,
                 );
 
                 $this->notifyAssigned($result);
             });
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function shiftRoomOptions(mixed $shiftId): array
+    {
+        return filled($shiftId) ? (ObShift::query()->active()->find($shiftId)?->roomOptions() ?? []) : [];
+    }
+
+    private function shiftLocationId(mixed $shiftId): ?int
+    {
+        return filled($shiftId) ? ObShift::query()->whereKey($shiftId)->value('asset_location_id') : null;
     }
 
     private function canAssign(): bool

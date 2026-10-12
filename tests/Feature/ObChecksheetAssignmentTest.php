@@ -6,9 +6,12 @@ use App\Filament\Exports\ObChecksheetExporter;
 use App\Filament\Resources\ObChecksheetResource;
 use App\Filament\Resources\ObChecksheetResource\Pages\ListObChecksheets;
 use App\Filament\Resources\ObChecksheetResource\Pages\ViewObChecksheet;
-use App\Filament\Resources\ObTaskTemplateResource\Pages\ManageObTaskTemplates;
+use App\Filament\Resources\ObRoomResource\Pages\ManageObRooms;
+use App\Filament\Resources\ObShiftResource\Pages\ManageObShifts;
 use App\Models\ObChecksheet;
-use App\Models\ObTaskTemplate;
+use App\Models\AssetLocation;
+use App\Models\ObRoom;
+use App\Models\ObShift;
 use App\Models\User;
 use App\Services\ObTaskAssignmentService;
 use Filament\Actions\Exports\Models\Export;
@@ -43,12 +46,18 @@ class ObChecksheetAssignmentTest extends TestCase
         'update_all_ob::checksheet',
         'assign_ob::checksheet',
         'export_ob::checksheet',
-        'view_any_ob::task::template',
-        'view_ob::task::template',
-        'create_ob::task::template',
-        'update_ob::task::template',
-        'delete_ob::task::template',
-        'delete_any_ob::task::template',
+        'view_any_ob::room',
+        'view_ob::room',
+        'create_ob::room',
+        'update_ob::room',
+        'delete_ob::room',
+        'delete_any_ob::room',
+        'view_any_ob::shift',
+        'view_ob::shift',
+        'create_ob::shift',
+        'update_ob::shift',
+        'delete_ob::shift',
+        'delete_any_ob::shift',
     ];
 
     public function test_assigned_task_starts_pending_without_start_time_or_photo(): void
@@ -101,16 +110,16 @@ class ObChecksheetAssignmentTest extends TestCase
         $this->assertNotNull($task->started_at);
     }
 
-    public function test_service_assigns_one_pending_task_per_template_room_and_skips_repeats(): void
+    public function test_service_assigns_one_pending_task_per_shift_room_and_skips_repeats(): void
     {
         [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
-        $template = $this->template('Shift Pagi Petra', ['Ruang Chief', 'Ruang Audit', 'Aula']);
+        $shift = $this->shift('Shift Pagi Petra', ['Ruang Chief', 'Ruang Audit', 'Aula']);
         $date = now()->addDay();
 
         $service = app(ObTaskAssignmentService::class);
 
-        $first = $service->assignTemplate($template, $officeBoy, $date, $supervisor);
-        $second = $service->assignTemplate($template, $officeBoy, $date, $supervisor);
+        $first = $service->assignShift($shift, null, $officeBoy, $date, $supervisor);
+        $second = $service->assignShift($shift, null, $officeBoy, $date, $supervisor);
 
         $this->assertSame(['created' => 3, 'skipped' => 0], $first);
         $this->assertSame(['created' => 0, 'skipped' => 3], $second);
@@ -121,16 +130,66 @@ class ObChecksheetAssignmentTest extends TestCase
             && $task->source === ObChecksheet::SOURCE_ASSIGNED
             && $task->assigned_by === $supervisor->id
             && $task->shift_label === 'Shift Pagi Petra'
+            && $task->ob_shift_id === $shift->id
+            && $task->ob_room_id !== null
             && $task->scheduled_date->isSameDay($date)));
     }
 
-    public function test_one_office_boy_can_receive_several_templates_on_the_same_day(): void
+    public function test_service_only_assigns_the_rooms_that_were_ticked(): void
+    {
+        [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
+        $shift = $this->shift('Shift Pagi Petra', ['Ruang Chief', 'Ruang Audit', 'Aula']);
+        $audit = $shift->rooms->firstWhere('name', 'Ruang Audit');
+
+        $result = app(ObTaskAssignmentService::class)->assignShift($shift, [$audit->id], $officeBoy, now(), $supervisor);
+
+        $this->assertSame(['created' => 1, 'skipped' => 0], $result);
+        $this->assertSame(['Ruang Audit'], ObChecksheet::query()->where('user_id', $officeBoy->id)->pluck('room')->all());
+    }
+
+    public function test_same_room_name_at_two_locations_are_separate_pool_tasks(): void
+    {
+        $supervisor = $this->supervisor();
+        $service = app(ObTaskAssignmentService::class);
+        $petra = $this->shift('Shift Pagi', ['Toilet Uji'], $this->location('HO PETRA UJI'));
+        $tuparev = $this->shift('Shift Pagi', ['Toilet Uji'], $this->location('HO TUPAREV UJI'));
+
+        $this->assertSame(['created' => 1, 'skipped' => 0], $service->assignShift($petra, null, null, now(), $supervisor));
+        $this->assertSame(['created' => 1, 'skipped' => 0], $service->assignShift($tuparev, null, null, now(), $supervisor));
+    }
+
+    public function test_typed_room_names_are_linked_to_the_master_room(): void
+    {
+        $officeBoy = $this->officeBoy();
+        $location = $this->location('HO PETRA UJI');
+        $master = ObRoom::create(['name' => 'Ruang Uji Master', 'asset_location_id' => $location->id]);
+
+        $linked = ObChecksheet::create(['user_id' => $officeBoy->id, 'room' => '  ruang   uji MASTER ']);
+        $free = ObChecksheet::create(['user_id' => $officeBoy->id, 'room' => 'Ruang Di Luar Master Uji']);
+
+        $this->assertSame($master->id, $linked->ob_room_id);
+        $this->assertSame('ruang uji MASTER', $linked->room);
+        $this->assertNull($free->ob_room_id);
+        $this->assertSame('Ruang Di Luar Master Uji', $free->room);
+    }
+
+    public function test_choosing_a_shift_fills_its_name_on_the_checksheet(): void
+    {
+        $shift = $this->shift('Shift Middle Uji', ['Ruang Uji A']);
+
+        $task = ObChecksheet::create(['user_id' => $this->officeBoy()->id, 'room' => 'Ruang Uji A', 'ob_shift_id' => $shift->id]);
+
+        $this->assertSame('Shift Middle Uji', $task->shift_label);
+        $this->assertSame($shift->rooms->first()->id, $task->ob_room_id);
+    }
+
+    public function test_one_office_boy_can_receive_several_shifts_on_the_same_day(): void
     {
         [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
         $service = app(ObTaskAssignmentService::class);
 
-        $service->assignTemplate($this->template('Pagi', ['Ruang A']), $officeBoy, now(), $supervisor);
-        $service->assignTemplate($this->template('Middle', ['Ruang B']), $officeBoy, now(), $supervisor);
+        $service->assignShift($this->shift('Pagi', ['Ruang A']), null, $officeBoy, now(), $supervisor);
+        $service->assignShift($this->shift('Middle', ['Ruang B']), null, $officeBoy, now(), $supervisor);
 
         $this->assertSame(2, ObChecksheet::query()->where('user_id', $officeBoy->id)->count());
     }
@@ -142,16 +201,22 @@ class ObChecksheetAssignmentTest extends TestCase
         $this->assertFalse($this->userWithPermissions(['view_all_ob::checksheet'])->can('assign', ObChecksheet::class));
     }
 
-    public function test_supervisor_assigns_from_template_through_the_list_page(): void
+    public function test_supervisor_assigns_from_shift_through_the_list_page(): void
     {
         [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
-        $template = $this->template('Shift Middle Petra', ['Ruang IT', 'Mushola']);
+        $shift = $this->shift('Shift Middle Petra', ['Ruang IT', 'Mushola']);
 
         $this->actAs($supervisor);
 
         Livewire::test(ListObChecksheets::class)
-            ->callAction('assignFromTemplate', [
-                'template_id' => $template->id,
+            ->mountAction('assignFromShift')
+            ->setActionData(['ob_shift_id' => $shift->id])
+            ->assertActionDataSet(['room_ids' => array_map('strval', $shift->rooms->pluck('id')->all())]);
+
+        Livewire::test(ListObChecksheets::class)
+            ->callAction('assignFromShift', [
+                'ob_shift_id' => $shift->id,
+                'room_ids' => $shift->rooms->pluck('id')->all(),
                 'user_id' => $officeBoy->id,
                 'date' => today()->toDateString(),
             ])
@@ -185,6 +250,7 @@ class ObChecksheetAssignmentTest extends TestCase
     public function test_supervisor_adds_a_one_off_task_manually(): void
     {
         [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
+        $shift = $this->shift('Shift Pagi Uji', []);
 
         $this->actAs($supervisor);
 
@@ -192,13 +258,14 @@ class ObChecksheetAssignmentTest extends TestCase
             Livewire::test(ListObChecksheets::class),
             'assignManual',
             'rooms',
-            ['user_id' => $officeBoy->id, 'date' => today()->toDateString(), 'shift_label' => 'Shift Pagi'],
+            ['user_id' => $officeBoy->id, 'date' => today()->toDateString(), 'ob_shift_id' => $shift->id],
             [['room' => 'Ruang Tamu Direksi'], ['room' => 'Teras']],
         )->assertHasNoActionErrors();
 
         $tasks = ObChecksheet::query()->where('user_id', $officeBoy->id)->orderBy('id')->get();
         $this->assertSame(['Ruang Tamu Direksi', 'Teras'], $tasks->pluck('room')->all());
-        $this->assertSame('Shift Pagi', $tasks->first()->shift_label);
+        $this->assertSame('Shift Pagi Uji', $tasks->first()->shift_label);
+        $this->assertSame($shift->id, $tasks->first()->ob_shift_id);
     }
 
     public function test_office_boy_does_not_see_assignment_actions(): void
@@ -206,7 +273,7 @@ class ObChecksheetAssignmentTest extends TestCase
         $this->actAs($this->officeBoy());
 
         Livewire::test(ListObChecksheets::class)
-            ->assertActionHidden('assignFromTemplate')
+            ->assertActionHidden('assignFromShift')
             ->assertActionHidden('assignManual');
     }
 
@@ -543,32 +610,107 @@ class ObChecksheetAssignmentTest extends TestCase
 
         $onList = FilamentView::renderHook(PanelsRenderHook::BODY_END, scopes: ListObChecksheets::class)->toHtml();
         $onView = FilamentView::renderHook(PanelsRenderHook::BODY_END, scopes: ViewObChecksheet::class)->toHtml();
-        $elsewhere = FilamentView::renderHook(PanelsRenderHook::BODY_END, scopes: ManageObTaskTemplates::class)->toHtml();
+        $elsewhere = FilamentView::renderHook(PanelsRenderHook::BODY_END, scopes: ManageObShifts::class)->toHtml();
 
         $this->assertStringContainsString('img[data-lightbox]', $onList);
         $this->assertStringContainsString('img[data-lightbox]', $onView);
         $this->assertStringNotContainsString('img[data-lightbox]', $elsewhere);
     }
 
-    public function test_supervisor_manages_templates(): void
+    public function test_supervisor_manages_shifts_with_their_rooms(): void
     {
+        $chief = ObRoom::create(['name' => 'Ruang Chief Uji']);
+        $audit = ObRoom::create(['name' => 'Ruang Audit Uji']);
+
         $this->actAs($this->supervisor());
 
         $this->callWithRepeater(
-            Livewire::test(ManageObTaskTemplates::class),
+            Livewire::test(ManageObShifts::class),
             'create',
-            'items',
-            ['name' => 'Shift Pagi Petra', 'shift_label' => 'Shift Pagi', 'is_active' => true],
-            [['room' => 'Ruang Chief'], ['room' => 'Ruang Audit']],
+            'shiftRooms',
+            ['name' => 'Shift Pagi Uji', 'is_active' => true],
+            [['ob_room_id' => $chief->id], ['ob_room_id' => $audit->id]],
         )->assertHasNoActionErrors();
 
-        $template = ObTaskTemplate::query()->where('name', 'Shift Pagi Petra')->firstOrFail();
-        $this->assertSame(['Ruang Chief', 'Ruang Audit'], $template->items->pluck('room')->all());
+        $shift = ObShift::query()->where('name', 'Shift Pagi Uji')->firstOrFail();
+        $this->assertSame(['Ruang Chief Uji', 'Ruang Audit Uji'], $shift->rooms->pluck('name')->all());
     }
 
-    public function test_office_boy_cannot_open_the_template_page(): void
+    public function test_supervisor_manages_rooms_and_names_are_unique_per_location(): void
     {
-        $this->assertFalse($this->officeBoy()->can('viewAny', ObTaskTemplate::class));
+        $location = $this->location('HO PETRA UJI');
+
+        $this->actAs($this->supervisor());
+
+        Livewire::test(ManageObRooms::class)
+            ->callAction('create', ['name' => '  Pantry   Uji ', 'asset_location_id' => $location->id, 'is_active' => true])
+            ->assertHasNoActionErrors();
+
+        $this->assertTrue(ObRoom::query()->where('name', 'Pantry Uji')->where('asset_location_id', $location->id)->exists());
+
+        Livewire::test(ManageObRooms::class)
+            ->callAction('create', ['name' => 'Pantry Uji', 'asset_location_id' => $location->id, 'is_active' => true])
+            ->assertHasActionErrors(['name' => 'unique']);
+
+        Livewire::test(ManageObRooms::class)
+            ->callAction('create', ['name' => 'Pantry Uji', 'asset_location_id' => $this->location('HO TUPAREV UJI')->id, 'is_active' => true])
+            ->assertHasNoActionErrors();
+    }
+
+    public function test_merging_rooms_moves_history_and_shift_rooms(): void
+    {
+        $officeBoy = $this->officeBoy();
+        $toilet = ObRoom::create(['name' => 'Toilet Uji Gabung']);
+        $typo = ObRoom::create(['name' => 'Toliet Uji Gabung']);
+        $task = ObChecksheet::create(['user_id' => $officeBoy->id, 'room' => 'Toliet Uji Gabung']);
+        $shift = $this->shift('Shift Gabung Uji', []);
+        $shift->shiftRooms()->create(['ob_room_id' => $typo->id]);
+
+        $this->assertSame($typo->id, $task->ob_room_id);
+
+        $this->actAs($this->supervisor());
+
+        Livewire::test(ManageObRooms::class)
+            ->callTableBulkAction('merge', [$toilet, $typo], ['target_id' => $toilet->id])
+            ->assertHasNoTableBulkActionErrors();
+
+        $task->refresh();
+        $this->assertSame($toilet->id, $task->ob_room_id);
+        $this->assertSame('Toilet Uji Gabung', $task->room);
+        $this->assertSoftDeleted($typo);
+        $this->assertSame([$toilet->id], $shift->shiftRooms()->pluck('ob_room_id')->all());
+    }
+
+    public function test_office_boy_cannot_open_the_master_pages(): void
+    {
+        $this->assertFalse($this->officeBoy()->can('viewAny', ObShift::class));
+        $this->assertFalse($this->officeBoy()->can('viewAny', ObRoom::class));
+    }
+
+    public function test_create_page_fills_rooms_from_the_chosen_shift(): void
+    {
+        $shift = $this->shift('Shift Pagi Uji', ['Ruang Uji A', 'Ruang Uji B']);
+
+        $this->actAs($this->officeBoy());
+
+        $rooms = Livewire::test(ObChecksheetResource\Pages\CreateObChecksheet::class)
+            ->fillForm(['ob_shift_id' => $shift->id])
+            ->get('data.rooms');
+
+        $this->assertSame(['Ruang Uji A', 'Ruang Uji B'], array_values(array_column($rooms, 'room')));
+    }
+
+    public function test_choosing_a_shift_keeps_rooms_the_office_boy_already_filled(): void
+    {
+        $shift = $this->shift('Shift Pagi Uji', ['Ruang Uji A', 'Ruang Uji B']);
+
+        $rooms = ObChecksheetResource::withShiftRooms(
+            ['x' => ['room' => 'ruang uji b', 'before_photo' => 'b.jpg'], 'y' => ['room' => null, 'before_photo' => null]],
+            $shift,
+        );
+
+        $this->assertSame(['ruang uji b', 'Ruang Uji A'], array_values(array_column($rooms, 'room')));
+        $this->assertSame('b.jpg', $rooms['x']['before_photo']);
     }
 
     public function test_only_assigners_can_change_the_petugas_on_edit(): void
@@ -588,23 +730,24 @@ class ObChecksheetAssignmentTest extends TestCase
             ->assertFormFieldIsEnabled('user_id');
     }
 
-    public function test_template_without_a_petugas_goes_to_the_shared_pool(): void
+    public function test_shift_without_a_petugas_goes_to_the_shared_pool(): void
     {
         $supervisor = $this->supervisor();
-        $template = $this->template('Shift Pagi Petra', ['Ruang Chief', 'Ruang Audit']);
+        $shift = $this->shift('Shift Pagi Petra', ['Ruang Chief', 'Ruang Audit']);
 
         $this->actAs($supervisor);
 
         Livewire::test(ListObChecksheets::class)
-            ->callAction('assignFromTemplate', [
-                'template_id' => $template->id,
+            ->callAction('assignFromShift', [
+                'ob_shift_id' => $shift->id,
+                'room_ids' => $shift->rooms->pluck('id')->all(),
                 'user_id' => null,
                 'date' => today()->toDateString(),
             ])
             ->assertHasNoActionErrors()
             ->assertNotified('2 tugas dibuat');
 
-        $tasks = ObChecksheet::query()->where('shift_label', 'Shift Pagi Petra')->orderBy('id')->get();
+        $tasks = ObChecksheet::query()->where('ob_shift_id', $shift->id)->orderBy('id')->get();
 
         $this->assertCount(2, $tasks);
         $this->assertTrue($tasks->every(fn (ObChecksheet $task): bool => $task->user_id === null
@@ -632,15 +775,15 @@ class ObChecksheetAssignmentTest extends TestCase
     public function test_pool_assignment_skips_rooms_even_after_someone_claimed_them(): void
     {
         [$supervisor, $officeBoy] = [$this->supervisor(), $this->officeBoy()];
-        $template = $this->template('Shift Pagi', ['Ruang Audit', 'Aula']);
+        $shift = $this->shift('Shift Pagi', ['Ruang Audit', 'Aula']);
         $service = app(ObTaskAssignmentService::class);
 
-        $this->assertSame(['created' => 2, 'skipped' => 0], $service->assignTemplate($template, null, now(), $supervisor));
+        $this->assertSame(['created' => 2, 'skipped' => 0], $service->assignShift($shift, null, null, now(), $supervisor));
 
-        ObChecksheet::query()->where('room', 'Ruang Audit')->firstOrFail()->claim($officeBoy);
+        ObChecksheet::query()->where('ob_shift_id', $shift->id)->where('room', 'Ruang Audit')->firstOrFail()->claim($officeBoy);
 
-        $this->assertSame(['created' => 0, 'skipped' => 2], $service->assignTemplate($template, null, now(), $supervisor));
-        $this->assertSame(2, ObChecksheet::query()->where('shift_label', 'Shift Pagi')->count());
+        $this->assertSame(['created' => 0, 'skipped' => 2], $service->assignShift($shift, null, null, now(), $supervisor));
+        $this->assertSame(2, ObChecksheet::query()->where('ob_shift_id', $shift->id)->count());
     }
 
     public function test_every_office_boy_sees_unclaimed_pool_tasks_but_not_tasks_owned_by_others(): void
@@ -930,17 +1073,28 @@ class ObChecksheetAssignmentTest extends TestCase
     }
 
     /**
+     * Shift dengan ruangan master baru (lokasi khusus tes supaya tidak bentrok dengan data yang ada).
+     *
      * @param  list<string>  $rooms
      */
-    private function template(string $name, array $rooms): ObTaskTemplate
+    private function shift(string $name, array $rooms, ?AssetLocation $location = null): ObShift
     {
-        $template = ObTaskTemplate::create(['name' => $name, 'shift_label' => $name, 'is_active' => true]);
+        $location ??= $this->location('LOKASI UJI '.uniqid());
+        $shift = ObShift::create(['name' => $name, 'asset_location_id' => $location->id, 'is_active' => true]);
 
         foreach ($rooms as $index => $room) {
-            $template->items()->create(['room' => $room, 'sort_order' => $index]);
+            $shift->shiftRooms()->create([
+                'ob_room_id' => ObRoom::create(['name' => $room, 'asset_location_id' => $location->id])->id,
+                'sort_order' => $index,
+            ]);
         }
 
-        return $template;
+        return $shift->load('rooms');
+    }
+
+    private function location(string $name): AssetLocation
+    {
+        return AssetLocation::create(['name' => $name]);
     }
 
     private function pendingTask(User $officeBoy, string $room, mixed $date = null): ObChecksheet

@@ -30,7 +30,9 @@ class ObChecksheet extends Model
         'source',
         'scheduled_date',
         'shift_label',
+        'ob_shift_id',
         'room',
+        'ob_room_id',
         'status',
         'duration_minutes',
         'cleaned_at',
@@ -57,6 +59,16 @@ class ObChecksheet extends Model
     public function assigner(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function obRoom(): BelongsTo
+    {
+        return $this->belongsTo(ObRoom::class)->withTrashed();
+    }
+
+    public function obShift(): BelongsTo
+    {
+        return $this->belongsTo(ObShift::class)->withTrashed();
     }
 
     /**
@@ -259,6 +271,8 @@ class ObChecksheet extends Model
         });
 
         static::saving(function (ObChecksheet $checksheet) {
+            $checksheet->syncMasterData();
+
             if ($checksheet->finished_at && $checksheet->started_at) {
                 $checksheet->duration_minutes = max(0, $checksheet->started_at->diffInMinutes($checksheet->finished_at));
             }
@@ -270,6 +284,36 @@ class ObChecksheet extends Model
                 }
             }
         });
+    }
+
+    /**
+     * Nama ruangan/shift disimpan sebagai salinan teks di samping id masternya.
+     * Memilih master mengisi teksnya; mengetik nama ruangan dicocokkan ke master
+     * (nama di luar master tetap boleh, id-nya kosong).
+     */
+    protected function syncMasterData(): void
+    {
+        $shift = filled($this->ob_shift_id) ? ObShift::withTrashed()->find($this->ob_shift_id) : null;
+
+        if ($this->isDirty('ob_shift_id') && (! $this->isDirty('shift_label') || blank($this->shift_label))) {
+            $this->shift_label = $shift?->name;
+        }
+
+        if ($this->isDirty('room')) {
+            $this->room = filled($this->room) ? ObRoom::normalizeName($this->room) : $this->room;
+        }
+
+        if ($this->isDirty('ob_room_id') && filled($this->ob_room_id)) {
+            if (! $this->isDirty('room') || blank($this->room)) {
+                $this->room = ObRoom::withTrashed()->find($this->ob_room_id)?->name ?? $this->room;
+            }
+
+            return;
+        }
+
+        if ($this->isDirty('room')) {
+            $this->ob_room_id = ObRoom::findByName($this->room, $shift?->asset_location_id)?->id;
+        }
     }
 
     public static function generateReferenceNumber(): string

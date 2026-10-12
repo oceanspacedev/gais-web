@@ -6,6 +6,8 @@ use App\Filament\Exports\ObChecksheetExporter;
 use App\Filament\Resources\ObChecksheetResource\Pages;
 use App\Forms\Components\CameraCapture;
 use App\Models\ObChecksheet;
+use App\Models\ObRoom;
+use App\Models\ObShift;
 use App\Models\User;
 use App\Support\StoredFile;
 use Filament\Actions\Action;
@@ -31,6 +33,8 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Support\Enums\TextSize;
@@ -43,12 +47,17 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 
 class ObChecksheetResource extends Resource
 {
     protected static ?string $model = ObChecksheet::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clipboard-document-check';
+
+    protected static string|\UnitEnum|null $navigationGroup = 'OB / Kebersihan';
+
+    protected static ?int $navigationSort = 1;
 
     public static function getModelLabel(): string
     {
@@ -104,9 +113,10 @@ class ObChecksheetResource extends Resource
                                 DatePicker::make('scheduled_date')
                                     ->label('Tanggal'),
 
-                                TextInput::make('shift_label')
-                                    ->label('Keterangan Shift')
-                                    ->maxLength(255),
+                                Select::make('ob_shift_id')
+                                    ->label('Shift')
+                                    ->options(fn (?ObChecksheet $record): array => ObShift::options($record?->ob_shift_id))
+                                    ->searchable(),
 
                                 DateTimePicker::make('started_at')
                                     ->label('Waktu Mulai')
@@ -128,13 +138,25 @@ class ObChecksheetResource extends Resource
                     ->description('Tambahkan semua ruangan dan foto sebelum sekaligus. Foto sesudah diambil nanti, satu ruangan satu kali.')
                     ->visibleOn('create')
                     ->schema([
+                        Select::make('ob_shift_id')
+                            ->label('Shift (Opsional)')
+                            ->placeholder('Pilih shift untuk memunculkan daftar ruangannya')
+                            ->helperText('Hapus ruangan yang tidak dikerjakan. Ruangan lain tetap bisa diketik.')
+                            ->options(fn (): array => ObShift::options())
+                            ->searchable()
+                            ->live()
+                            ->afterStateUpdated(fn (mixed $state, Get $get, Set $set) => $set(
+                                'rooms',
+                                self::withShiftRooms($get('rooms') ?? [], filled($state) ? ObShift::find($state) : null),
+                            ))
+                            ->columnSpanFull(),
                         Repeater::make('rooms')
                             ->label('Daftar ruangan')
                             ->schema([
                                 TextInput::make('room')
                                     ->label('Nama Ruangan')
                                     ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
-                                    ->datalist(fn (): array => self::roomSuggestions())
+                                    ->datalist(fn (Get $get): array => self::roomSuggestions($get('../../ob_shift_id')))
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
@@ -167,7 +189,8 @@ class ObChecksheetResource extends Resource
                         TextInput::make('room')
                             ->label('Nama Ruangan')
                             ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
-                            ->datalist(fn (): array => self::roomSuggestions())
+                            ->helperText('Nama yang cocok dengan Master Ruangan otomatis terhubung.')
+                            ->datalist(fn (Get $get): array => self::roomSuggestions($get('ob_shift_id')))
                             ->required()
                             ->maxLength(255)
                             ->columnSpanFull(),
@@ -362,24 +385,19 @@ class ObChecksheetResource extends Resource
                     ->toggle()
                     ->query(fn (Builder $query): Builder => $query->unclaimed()),
 
-                SelectFilter::make('room')
+                SelectFilter::make('ob_room_id')
                     ->label('Ruangan')
-                    ->options(function () {
-                        $user = auth()->user();
-                        if (! $user) {
-                            return [];
-                        }
+                    ->relationship('obRoom', 'name', fn (Builder $query): Builder => $query->with('location')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(fn (ObRoom $record): string => $record->label())
+                    ->searchable()
+                    ->preload(),
 
-                        $query = ObChecksheet::query()
-                            ->whereNotNull('room')
-                            ->where('room', '!=', '');
-
-                        if (! $user->can('viewAll', ObChecksheet::class)) {
-                            $query->where('user_id', $user->id);
-                        }
-
-                        return $query->distinct()->pluck('room', 'room')->toArray();
-                    }),
+                SelectFilter::make('ob_shift_id')
+                    ->label('Shift')
+                    ->relationship('obShift', 'name', fn (Builder $query): Builder => $query->with('location')->orderBy('name'))
+                    ->getOptionLabelFromRecordUsing(fn (ObShift $record): string => $record->label())
+                    ->searchable()
+                    ->preload(),
 
                 SelectFilter::make('user_id')
                     ->label('Petugas OB')
@@ -659,27 +677,38 @@ class ObChecksheetResource extends Resource
     }
 
     /**
+     * Saran nama dari Master Ruangan, dipersempit ke lokasi shift bila shift dipilih.
+     *
      * @return array<int, string>
      */
-    private static function roomSuggestions(): array
+    private static function roomSuggestions(mixed $shiftId): array
     {
-        $user = auth()->user();
-        if (! $user) {
-            return [];
-        }
+        $locationId = filled($shiftId) ? ObShift::query()->whereKey($shiftId)->value('asset_location_id') : null;
 
-        $query = ObChecksheet::query()
-            ->whereNotNull('room')
-            ->where('room', '!=', '');
+        return ObRoom::suggestions($locationId);
+    }
 
-        if (! $user->can('viewAll', ObChecksheet::class)) {
-            return $query->where('user_id', $user->id)
-                ->distinct()
-                ->pluck('room')
-                ->all();
-        }
+    /**
+     * Ruangan yang sudah diisi OB (nama atau foto) tetap dipertahankan; baris kosong
+     * diganti ruangan shift yang belum ada di daftar.
+     *
+     * @param  array<int|string, array<string, mixed>>  $items
+     * @return array<string, array<string, mixed>>
+     */
+    public static function withShiftRooms(array $items, ?ObShift $shift): array
+    {
+        $kept = collect($items)->filter(fn (mixed $item): bool => is_array($item)
+            && (filled($item['room'] ?? null) || filled($item['before_photo'] ?? null)));
 
-        return $query->distinct()->pluck('room')->all();
+        $present = $kept->map(fn (array $item): string => mb_strtolower(ObRoom::normalizeName($item['room'] ?? null)))->all();
+
+        $added = collect($shift?->roomOptions() ?? [])
+            ->reject(fn (string $room): bool => in_array(mb_strtolower($room), $present, true))
+            ->mapWithKeys(fn (string $room): array => [(string) Str::uuid() => ['room' => $room, 'before_photo' => null, 'notes' => null]]);
+
+        $rooms = $kept->union($added)->all();
+
+        return $rooms !== [] ? $rooms : [(string) Str::uuid() => ['room' => null, 'before_photo' => null, 'notes' => null]];
     }
 
     private static function photoPreview(string $name, string $label, string $directory): FileUpload
