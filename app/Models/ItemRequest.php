@@ -93,7 +93,12 @@ class ItemRequest extends Model
 
     public function approvals(): HasMany
     {
-        return $this->hasMany(ItemRequestApproval::class);
+        // Urut sesuai alur (Accounting, Manager, Executor, Pemohon), bukan urutan alfabet kode tahap.
+        $order = collect(ItemRequestApprovalType::cases())
+            ->map(fn (ItemRequestApprovalType $type, int $i): string => "WHEN '{$type->value}' THEN {$i}")
+            ->implode(' ');
+
+        return $this->hasMany(ItemRequestApproval::class)->orderByRaw("CASE approval_type {$order} END");
     }
 
     public function logs(): HasMany
