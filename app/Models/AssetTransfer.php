@@ -160,7 +160,7 @@ class AssetTransfer extends Model
      * $actor adalah akun yang sedang membuat BA; bila diberikan, pihak GA pada
      * BA harus akun itu sendiri (lihat ensureGeneralAffairPartyIsActor).
      */
-    public function applyLifecycleToAssets(?AssetRequest $sourceAssetRequest = null, ?User $actor = null): void
+    public function applyLifecycleToAssets(?User $actor = null): void
     {
         $documentType = $this->documentType();
 
@@ -172,7 +172,7 @@ class AssetTransfer extends Model
         $this->ensurePartiesMatchDocumentType($documentType);
         $this->ensureGeneralAffairPartyIsActor($documentType, $actor);
         $this->ensureActorCanReach($actor);
-        $this->ensureAssetsCanMove($documentType, $sourceAssetRequest);
+        $this->ensureAssetsCanMove($documentType);
 
         foreach ($this->details as $detail) {
             $asset = $detail->asset;
@@ -285,7 +285,7 @@ class AssetTransfer extends Model
         }
     }
 
-    protected function ensureAssetsCanMove(AssetTransferDocumentType $documentType, ?AssetRequest $sourceAssetRequest = null): void
+    protected function ensureAssetsCanMove(AssetTransferDocumentType $documentType): void
     {
         if ($this->details->isEmpty()) {
             throw new AssetTransferException('BA transfer wajib memiliki minimal satu aset.');
@@ -317,13 +317,6 @@ class AssetTransfer extends Model
                     'Aset "%s" tidak bisa ditransfer karena statusnya %s.',
                     $asset->name,
                     $asset->condition_status_label,
-                ));
-            }
-
-            if ($asset->hasOpenAssetRequestLock($sourceAssetRequest?->id)) {
-                throw new AssetTransferException(sprintf(
-                    'Aset "%s" sedang dalam pengajuan aktif dan belum bisa ditransfer.',
-                    $asset->name,
                 ));
             }
 

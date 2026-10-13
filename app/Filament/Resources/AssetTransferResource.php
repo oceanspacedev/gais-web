@@ -321,12 +321,12 @@ class AssetTransferResource extends Resource
                         $indicators = [];
 
                         if ($data['from'] ?? null) {
-                            $indicators[] = Indicator::make('Dari: ' . Carbon::parse($data['from'])->format('d M Y'))
+                            $indicators[] = Indicator::make('Dari: '.Carbon::parse($data['from'])->format('d M Y'))
                                 ->removeField('from');
                         }
 
                         if ($data['until'] ?? null) {
-                            $indicators[] = Indicator::make('Sampai: ' . Carbon::parse($data['until'])->format('d M Y'))
+                            $indicators[] = Indicator::make('Sampai: '.Carbon::parse($data['until'])->format('d M Y'))
                                 ->removeField('until');
                         }
 
@@ -596,7 +596,6 @@ class AssetTransferResource extends Resource
     {
         $viewer = Auth::user();
         $query = Asset::query()
-            ->notLockedForOpenRequest()
             ->when($viewer instanceof User, fn (Builder $query): Builder => $query->accessibleBy($viewer));
 
         if ($type->dispatchesFromStock()) {

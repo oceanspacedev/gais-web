@@ -3,15 +3,16 @@
 namespace App\Models;
 
 use App\Enums\AssetCondition;
-use App\Enums\AssetRequestType;
 use App\Enums\NbhStatus;
-use App\Enums\RequestStatus;
+use App\Services\AssetQrService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Facades\Schema;
 
 class Asset extends Model
@@ -35,7 +36,7 @@ class Asset extends Model
                 return;
             }
 
-            app(\App\Services\AssetQrService::class)->ensureForAsset($asset);
+            app(AssetQrService::class)->ensureForAsset($asset);
         });
     }
 
@@ -73,7 +74,6 @@ class Asset extends Model
         'is_available',
         'recipient_id',
         'recipient_business_entity_id',
-        'asset_request_id',
     ];
 
     protected $casts = [
@@ -92,12 +92,12 @@ class Asset extends Model
         return $this->hasMany(AssetAttribute::class);
     }
 
-    public function qr(): \Illuminate\Database\Eloquent\Relations\HasOne
+    public function qr(): HasOne
     {
         return $this->hasOne(AssetQr::class);
     }
 
-    public function qrScans(): \Illuminate\Database\Eloquent\Relations\HasManyThrough
+    public function qrScans(): HasManyThrough
     {
         return $this->hasManyThrough(AssetQrScan::class, AssetQr::class);
     }
@@ -268,33 +268,6 @@ class Asset extends Model
         return $this->belongsTo(User::class, 'nbh_responsible_user_id');
     }
 
-    // Relasi ke pengajuan aset yang menjadi sumber aset ini (nullable).
-    public function assetRequest(): BelongsTo
-    {
-        return $this->belongsTo(AssetRequest::class, 'asset_request_id');
-    }
-
-    /**
-     * Pengajuan yang menargetkan aset ini sebagai subjek (penarikan/perbaikan).
-     * Berbeda dari assetRequest() (link "aset dibuat dari pengajuan X"):
-     * relasi ini me-link aset ke pengajuan yang menarik/memperbaiki aset ini.
-     */
-    public function assetRequests(): HasMany
-    {
-        return $this->hasMany(AssetRequest::class, 'asset_id');
-    }
-
-    public function assetRequestItems(): HasMany
-    {
-        return $this->hasMany(AssetRequestItem::class, 'asset_id');
-    }
-
-    /**
-     * Scope: aset yang TIDAK sedang dalam pengajuan penarikan/perbaikan terbuka
-     * (status Pending atau Approved yang belum di-fulfill). Dipakai untuk
-     * mengunci aset dari opsi transfer selama pengajuan belum selesai ditindak
-     * lanjuti, agar tidak dobel-tindak (dipindah sambil ditarik/diperbaiki).
-     */
     /**
      * Aset yang boleh dilihat $user: badan usaha pemilik, badan usaha penerima
      * (BA terakhir / penanda stok), atau badan usaha pemegangnya termasuk akses
@@ -320,84 +293,6 @@ class Asset extends Model
         return $user->canAccessBusinessEntity($this->business_entity_id)
             || $user->canAccessBusinessEntity($this->recipient_business_entity_id)
             || ($this->recipient_id !== null && $user->canAccessBusinessEntity($this->recipient?->business_entity_id));
-    }
-
-    public function scopeNotLockedForOpenRequest(Builder $query): Builder
-    {
-        if (! self::assetRequestLockColumnsAvailable()) {
-            return $query;
-        }
-
-        $query->whereDoesntHave('assetRequests', function (Builder $q): void {
-            $q->whereIn('type', [AssetRequestType::Penarikan->value, AssetRequestType::Perbaikan->value])
-                ->whereIn('status', [RequestStatus::Pending->value, RequestStatus::Approved->value])
-                ->whereNull('fulfilled_at');
-        });
-
-        if (self::assetRequestItemsTableAvailable()) {
-            $query->whereDoesntHave('assetRequestItems.assetRequest', function (Builder $q): void {
-                $q->whereIn('type', [AssetRequestType::Penarikan->value, AssetRequestType::Perbaikan->value])
-                    ->whereIn('status', [RequestStatus::Pending->value, RequestStatus::Approved->value])
-                    ->whereNull('fulfilled_at');
-            });
-        }
-
-        return $query;
-    }
-
-    /**
-     * Aset yang boleh diajukan penarikan/perbaikan: tidak terkunci request terbuka
-     * dan kondisi masih transferable (bukan Damaged/Lost/Sold).
-     */
-    public function scopeEligibleForPenarikanOrPerbaikan(Builder $query): Builder
-    {
-        return $query
-            ->notLockedForOpenRequest()
-            ->whereIn('condition_status', AssetCondition::transferableValues());
-    }
-
-    public function hasOpenAssetRequestLock(?int $exceptAssetRequestId = null): bool
-    {
-        if (! self::assetRequestLockColumnsAvailable()) {
-            return false;
-        }
-
-        $legacyLockExists = $this->assetRequests()
-            ->whereIn('type', [AssetRequestType::Penarikan->value, AssetRequestType::Perbaikan->value])
-            ->whereIn('status', [RequestStatus::Pending->value, RequestStatus::Approved->value])
-            ->whereNull('fulfilled_at')
-            ->when($exceptAssetRequestId, fn (Builder $q) => $q->whereKeyNot($exceptAssetRequestId))
-            ->exists();
-
-        if ($legacyLockExists || ! self::assetRequestItemsTableAvailable()) {
-            return $legacyLockExists;
-        }
-
-        return $this->assetRequestItems()
-            ->whereHas('assetRequest', function (Builder $q) use ($exceptAssetRequestId): void {
-                $q->whereIn('type', [AssetRequestType::Penarikan->value, AssetRequestType::Perbaikan->value])
-                    ->whereIn('status', [RequestStatus::Pending->value, RequestStatus::Approved->value])
-                    ->whereNull('fulfilled_at')
-                    ->when($exceptAssetRequestId, fn (Builder $query) => $query->whereKeyNot($exceptAssetRequestId));
-            })
-            ->exists();
-    }
-
-    /**
-     * Cek skema dipanggil per query aset (mis. tiap baris form BA); hasilnya
-     * tidak berubah selama request sehingga cukup sekali ke information_schema.
-     */
-    protected static function assetRequestLockColumnsAvailable(): bool
-    {
-        return once(fn (): bool => Schema::hasTable('asset_requests')
-            && Schema::hasColumn('asset_requests', 'type')
-            && Schema::hasColumn('asset_requests', 'status')
-            && Schema::hasColumn('asset_requests', 'fulfilled_at'));
-    }
-
-    protected static function assetRequestItemsTableAvailable(): bool
-    {
-        return once(fn (): bool => Schema::hasTable('asset_request_items'));
     }
 
     private function formatDiff($value, $unit)

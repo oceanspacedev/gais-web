@@ -2,10 +2,8 @@
 
 namespace Tests\Feature;
 
-use App\Models\AssetRequest;
 use App\Models\AssetTransfer;
 use App\Models\BusinessEntity;
-use App\Models\Division;
 use App\Models\Task;
 use App\Models\User;
 use App\Models\Vendor;
@@ -93,25 +91,6 @@ class PdfAuthorizationTest extends TestCase
 
         $this->actingAs($actor)
             ->get(route('task-completion.preview', $task))
-            ->assertForbidden();
-    }
-
-    public function test_pengadaan_pdf_requires_asset_request_view_permission(): void
-    {
-        $actor = User::create(['name' => 'Limited User']);
-        $requester = User::create(['name' => 'Requester']);
-        $division = Division::create(['name' => 'IT']);
-        $assetRequest = AssetRequest::create([
-            'type' => 'pengadaan',
-            'user_id' => $requester->id,
-            'division_id' => $division->id,
-            'item_name' => 'Laptop',
-            'qty' => 1,
-            'status' => 'approved',
-        ]);
-
-        $this->actingAs($actor)
-            ->get(route('pengadaan.download', $assetRequest))
             ->assertForbidden();
     }
 
@@ -233,7 +212,6 @@ class PdfAuthorizationTest extends TestCase
 
         Schema::create('assets', function (Blueprint $table): void {
             $table->id();
-            $table->unsignedBigInteger('asset_request_id')->nullable();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('name');
             $table->unsignedBigInteger('category_id')->nullable();
@@ -244,52 +222,6 @@ class PdfAuthorizationTest extends TestCase
             $table->string('imei1')->nullable();
             $table->string('imei2')->nullable();
             $table->integer('qty')->default(1);
-            $table->timestamps();
-        });
-
-        Schema::create('asset_requests', function (Blueprint $table): void {
-            $table->id();
-            $table->string('reference_number')->nullable();
-            $table->string('public_token')->nullable();
-            $table->string('type')->default('pengadaan');
-            $table->unsignedBigInteger('user_id');
-            $table->unsignedBigInteger('division_id')->nullable();
-            $table->unsignedBigInteger('asset_location_id')->nullable();
-            $table->unsignedBigInteger('asset_id')->nullable();
-            $table->string('item_name')->nullable();
-            $table->integer('qty')->nullable();
-            $table->text('description')->nullable();
-            $table->text('attachment')->nullable();
-            $table->string('status')->default('pending');
-            $table->integer('current_level')->default(1);
-            $table->text('notes')->nullable();
-            $table->timestamp('fulfilled_at')->nullable();
-            $table->unsignedBigInteger('fulfilled_by_user_id')->nullable();
-            $table->unsignedBigInteger('asset_transfer_id')->nullable();
-            $table->timestamps();
-            $table->softDeletes();
-        });
-
-        Schema::create('asset_request_items', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('asset_request_id');
-            $table->unsignedBigInteger('asset_id')->nullable();
-            $table->string('item_name')->nullable();
-            $table->integer('qty')->default(1);
-            $table->text('notes')->nullable();
-            $table->unsignedBigInteger('fulfilled_asset_id')->nullable();
-            $table->timestamp('fulfilled_at')->nullable();
-            $table->timestamps();
-        });
-
-        Schema::create('asset_request_approvals', function (Blueprint $table): void {
-            $table->id();
-            $table->unsignedBigInteger('asset_request_id');
-            $table->unsignedBigInteger('user_id');
-            $table->integer('level');
-            $table->string('status');
-            $table->text('notes')->nullable();
-            $table->timestamp('decided_at')->nullable();
             $table->timestamps();
         });
     }

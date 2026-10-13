@@ -2,8 +2,8 @@
 
 declare(strict_types=1);
 
+use App\Filament\Pages\Guide;
 use App\Filament\Resources\AssetReconciliationResource;
-use App\Filament\Resources\AssetRequestResource;
 use App\Filament\Resources\AssetResource;
 use App\Filament\Resources\AssetServiceResource;
 use App\Filament\Resources\AssetTransferResource;
@@ -115,13 +115,6 @@ return [
                 'updateRecipient',
                 'merge',
             ],
-            AssetRequestResource::class => [
-                'export',
-                'restore',
-                'restoreAny',
-                'forceDelete',
-                'forceDeleteAny',
-            ],
             AssetTransferResource::class => [
                 'export',
                 // BA Serah Terima/Pengembalian atas nama staf GA mana pun.
@@ -211,6 +204,7 @@ return [
         'prefix' => 'view',
         'exclude' => [
             Dashboard::class,
+            Guide::class,
         ],
     ],
 

@@ -5,14 +5,13 @@
 <h1 align="center">Shelf</h1>
 
 <p align="center">
-  Sistem manajemen aset berbasis web untuk inventaris, pengajuan publik,
-  approval berbasis token, transfer dan berita acara, rekonsiliasi audit,
+  Sistem manajemen aset berbasis web untuk inventaris,
+  transfer dan berita acara, rekonsiliasi audit,
   checksheet kendaraan, serta pengingat dokumen.
 </p>
 
-Shelf menyediakan dua jalur penggunaan utama:
+Shelf dipakai lewat satu jalur utama:
 
-- **Form pengajuan publik** di `/` (diarahkan ke `/asset-requests`) untuk pengadaan, penarikan, dan perbaikan, plus halaman status dan approval berbasis token.
 - **Panel staf Filament** di `/admin` untuk operasional aset, master data, transfer/BA, rekonsiliasi, checksheet kendaraan, tugas, dan pengguna.
 
 Ada juga endpoint integrasi WhatsApp `POST /api/integrations/whatsapp/assets/query` (saat ini tanpa autentikasi; lihat peringatan di bawah).
@@ -20,7 +19,7 @@ Ada juga endpoint integrasi WhatsApp `POST /api/integrations/whatsapp/assets/que
 Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitungan waktu menggunakan zona waktu `Asia/Jakarta`.
 
 > [!IMPORTANT]
-> Tautan approval publik (`/asset-requests/approval/{token}`) **tidak** memverifikasi identitas orang yang membuka tautan. Siapa pun yang memiliki token dapat menyetujui atau menolak. `POST /api/integrations/whatsapp/assets/query` juga tanpa middleware auth; tes saat ini memperlakukannya sebagai publik. Jangan membuka endpoint itu ke internet tanpa kontrol jaringan. Reset password panel Filament dimatikan (`passwordReset(null, null)`).
+> `POST /api/integrations/whatsapp/assets/query` juga tanpa middleware auth; tes saat ini memperlakukannya sebagai publik. Jangan membuka endpoint itu ke internet tanpa kontrol jaringan. Reset password panel Filament dimatikan (`passwordReset(null, null)`).
 
 ## Daftar isi
 
@@ -40,24 +39,23 @@ Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitun
 
 ## Tujuan dan scope
 
-Shelf menyatukan pencatatan aset dengan pengajuan dari pemohon. Alur utamanya dimulai dari form publik, approval per divisi (atau auto-approve bila divisi belum punya approver), tindak lanjut operator di panel, lalu dokumen BA, rekonsiliasi, checksheet kendaraan, dan pengingat masa berlaku dokumen.
+Shelf mencatat aset, transfer dan dokumen BA, rekonsiliasi, checksheet kendaraan, dan pengingat masa berlaku dokumen. Pengajuan barang ditangani modul Pengajuan Barang (dari sumo-web); modul Pengajuan Aset lama (pengadaan/penarikan/perbaikan, form publik, approval token) sudah dihapus.
 
 ### Termasuk dalam scope
 
-- Form pengajuan publik di `/asset-requests` (`GET /` mengarah ke sana) untuk jenis `pengadaan`, `penarikan`, dan `perbaikan`.
-- Halaman progress publik `/asset-requests/status/{token}` dan approval `/asset-requests/approval/{token}`.
-- Panel Filament di `/admin`: aset, pengajuan, transfer, rekonsiliasi (CSA dan audit kendaraan), checksheet kendaraan, atribut kustom, tugas, vendor, dan master data.
+- `GET /` mengarah ke panel `/admin`.
+- Panel Filament di `/admin`: aset, transfer, rekonsiliasi (CSA dan audit kendaraan), checksheet kendaraan, atribut kustom, tugas, vendor, dan master data.
 - Role Shield `super_admin` plus role operasional `general_affair` (penerima penarikan, jenis dokumen BA, perbaikan).
 - Login panel dengan username atau email di `/admin/login`. Registrasi mandiri, reset password, dan halaman profil default Filament dimatikan.
-- Unduhan PDF berita acara / pengadaan / penyelesaian tugas (hanya user terautentikasi).
+- Unduhan PDF berita acara / penyelesaian tugas (hanya user terautentikasi).
 - Pengingat dokumen terjadwal (`notifications:send-scheduled` setiap hari pukul 13:20) plus `model:prune` harian.
-- Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi pengajuan dan pengingat.
+- Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi dan pengingat.
 - Query aset dari integrasi WhatsApp: `shelf.search_asset`, `shelf.asset_history`, `shelf.expiring_documents`.
 - Health check Laravel di `/up`.
 
 ### Di luar scope implementasi saat ini
 
-- Aplikasi mobile terpisah; pemohon memakai form Blade publik, staf memakai panel Filament.
+- Aplikasi mobile terpisah; staf memakai panel Filament.
 - Produk REST API domain. `routes/api.php` hanya mengekspos `GET /api/user` (Sanctum) dan `POST /api/integrations/whatsapp/assets/query` (tanpa auth).
 - Role operasional `general_affair` dan `admin` **tidak** dibuat oleh seeder; hanya akun Shield `super_admin` yang di-seed.
 - Pipeline CI/CD, image container, atau orkestrasi Compose di repositori ini.
@@ -66,20 +64,17 @@ Shelf menyatukan pencatatan aset dengan pengajuan dari pemohon. Alur utamanya di
 
 Ketersediaan modul pada setiap surface saat ini:
 
-| Modul | Form `/asset-requests` | Panel `/admin` | Integrasi WhatsApp | Keterangan |
-|---|:---:|:---:|:---:|---|
-| Pengajuan pengadaan / penarikan / perbaikan | Ya | Ya | Tidak | `POST /asset-requests` dibatasi `throttle:public` (5/menit per IP, dilepas saat testing) |
-| Status pengajuan (token) | Ya | Ya | Tidak | `/asset-requests/status/{token}` |
-| Approval pengajuan (token) | Ya | Ya | Tidak | Token bukan bukti identitas approver |
-| Inventaris aset | Tidak | Ya | Query | Kondisi: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai |
-| Transfer aset dan BA | Tidak | Ya | Tidak | BA / BAPAB / BAPEB dari peran `general_affair`; unduh PDF butuh auth |
-| Rekonsiliasi / audit | Tidak | Ya | Tidak | CSA (stok) dan VEHICLE_AUDIT (plat); apply koreksi terpisah dari import |
-| Checksheet kendaraan | Tidak | Ya | Tidak | Resource Filament plus import/export |
-| Atribut kustom dan pengingat dokumen | Tidak | Ya | Query kedaluwarsa | Scheduler `notifications:send-scheduled` |
-| Tugas (task) | Tidak | Ya | Tidak | PDF penyelesaian tugas butuh auth |
-| Master data | Tidak | Ya | Tidak | Kategori, badan usaha, jabatan, merek, lokasi, divisi+approver, vendor, pengguna |
-| Pengguna dan role | Tidak | Ya | Tidak | Permission Filament Shield; masuk panel hanya jika user punya role. Import Talenta/Excel mengisi `employee_id` dan nomor WhatsApp |
-| Query aset WhatsApp | Tidak | Tidak | Ya | `POST /api/integrations/whatsapp/assets/query` tanpa auth |
+| Modul | Panel `/admin` | Integrasi WhatsApp | Keterangan |
+|---|:---:|:---:|---|
+| Inventaris aset | Ya | Query | Kondisi: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai |
+| Transfer aset dan BA | Ya | Tidak | BA / BAPAB / BAPEB dari peran `general_affair`; unduh PDF butuh auth |
+| Rekonsiliasi / audit | Ya | Tidak | CSA (stok) dan VEHICLE_AUDIT (plat); apply koreksi terpisah dari import |
+| Checksheet kendaraan | Ya | Tidak | Resource Filament plus import/export |
+| Atribut kustom dan pengingat dokumen | Ya | Query kedaluwarsa | Scheduler `notifications:send-scheduled` |
+| Tugas (task) | Ya | Tidak | PDF penyelesaian tugas butuh auth |
+| Master data | Ya | Tidak | Kategori, badan usaha, jabatan, merek, lokasi, divisi+approver, vendor, pengguna |
+| Pengguna dan role | Ya | Tidak | Permission Filament Shield; masuk panel hanya jika user punya role. Import Talenta/Excel mengisi `employee_id` dan nomor WhatsApp |
+| Query aset WhatsApp | Tidak | Ya | `POST /api/integrations/whatsapp/assets/query` tanpa auth |
 
 > [!NOTE]
 > Detail operasional atribut kustom (STNK, KIR, dan sejenisnya) ada di [`docs/cara-kerja-custom-attribute-pengingat-dokumen.md`](docs/cara-kerja-custom-attribute-pengingat-dokumen.md). Jejak keputusan rekonsiliasi ada di `docs/chain-of-truth/`.
@@ -106,8 +101,6 @@ Pilihan badan usaha di form Aset, BA, dan pembuatan user cepat memakai `Business
 | `super_admin` | Role Shield; seeder menugaskannya ke akun Super Admin. Bypass Gate Pulse (`viewPulse`) hanya untuk role ini. |
 | `general_affair` | Role operasional: penerima wajib pada fulfillment penarikan, penentu jenis dokumen BA, dan aksi perbaikan aset. **Tidak** di-seed. |
 | `admin` | Target permission `export_asset` bersama `general_affair` (`EnsureAssetExportPermissions`). **Tidak** di-seed. |
-| Pemohon form publik | Tidak memakai panel. Pengajuan baru dapat membuat/memakai baris `users` (nama, WhatsApp, email) tanpa menugaskan role, sehingga akun itu tidak otomatis masuk `/admin`. |
-| Approver publik | Memutuskan lewat token; bukan login panel. |
 
 ### Akun uji development
 
@@ -125,46 +118,11 @@ Role `general_affair` harus dibuat dan ditugaskan manual sebelum alur penarikan/
 
 ```mermaid
 flowchart LR
-    A[Pemohon buka /] --> B["/asset-requests"]
-    B --> C[Kirim pengajuan]
-    C --> D{Divisi punya approver?}
-    D -- Tidak --> E[Status Approved]
-    D -- Ya --> F[Pending plus tautan token]
-    F --> G[Approver putuskan lewat token]
-    G --> E
-    E --> H[Operator fulfill di /admin]
-    H --> I[Aset / BA / perbaikan]
+    A[Staf buka /admin] --> B[Aset / Transfer BA / Rekonsiliasi]
     J["Scheduler 13:20"] --> K[notifications:send-scheduled]
 ```
 
-### 1. Form publik
-
-`GET /` mengarah ke `GET /asset-requests`. Pemohon memilih jenis:
-
-| Jenis | Tujuan | Hasil operator |
-|---|---|---|
-| Pengadaan | Meminta aset baru (bisa multi-item) | Aset dibuat per item; pengajuan selesai setelah semua item terpenuhi |
-| Penarikan | Mengembalikan aset pemegang ke General Affairs | BA Pengembalian; aset ke user ber-role `general_affair` |
-| Perbaikan | Mengajukan aset rusak | Aset ditandai Rusak / NBH Pending |
-
-Pengadaan boleh mengisi pemohon baru (nama, WhatsApp, email, jabatan). Penarikan dan perbaikan wajib memilih pemohon terdaftar dan aset yang eligible. Lampiran minimal satu file (jpeg/jpg/png/pdf/doc/docx/xls/xlsx, maks. 10 MB per file). `POST` publik memakai `throttle:public`.
-
-Setelah tersimpan, sistem membuat `reference_number` dan `public_token`, merakit rantai approval dari `division_approvers` (urut `level`), dan mengirim notifikasi WhatsApp/email bila kontak tersedia.
-
-### 2. Approval berbasis token
-
-- Progress: `/asset-requests/status/{token}` pada `public_token` pengajuan.
-- Keputusan: `/asset-requests/approval/{token}` pada token baris `asset_request_approvals`.
-- `POST .../approve` dan `POST .../reject` juga di-throttle. Penolakan wajib mengisi catatan.
-- Jika divisi tidak punya approver, status langsung `approved` tetapi tetap menunggu tindak lanjut operator (`fulfilled_at`).
-
-Token adalah rahasia tautan, bukan login. Perlakukan URL approval seperti kredensial.
-
-### 3. Tindak lanjut di panel
-
-Operator di `/admin` (resource Asset Requests) men-fulfill sesuai jenis. Pengajuan baru dianggap selesai setelah fulfillment, bukan sekadar approval. Aset dengan pengajuan penarikan/perbaikan aktif tidak boleh diproses ganda.
-
-### 4. Transfer dan berita acara
+### 1. Transfer dan berita acara
 
 Resource Asset Transfers mencatat mutasi pemegang. Jenis dokumen dipilih eksplisit saat BA dibuat (kolom `document_type`); pemberi dan penerima selalu orang, dan stok adalah aset Tersedia tanpa pemegang:
 
@@ -176,19 +134,19 @@ Pihak GA pada BA staf GA selalu akunnya sendiri: staf GA tidak bisa membuat BA a
 
 Membuat dan mengedit BA berjalan dalam satu transaksi database: bila aturan siklus hidup menolak, BA ikut dibatalkan dan form bisa dikirim ulang. Menyimpan BA tanpa mengubah jenis, pihak, badan usaha, atau daftar aset (mis. mengunggah scan BA yang sudah ditandatangani) tidak memindahkan aset lagi.
 
-Akun GA bersama yang mewakili departemen (default username `adminga`, diatur lewat `GA_SHARED_ACCOUNT_USERNAMES` di `config/asset-transfer.php`) dikosongkan nama dan jabatannya di PDF BA, pengadaan, dan penyelesaian tugas supaya diisi tangan oleh staf GA yang menandatangani.
+Akun GA bersama yang mewakili departemen (default username `adminga`, diatur lewat `GA_SHARED_ACCOUNT_USERNAMES` di `config/asset-transfer.php`) dikosongkan nama dan jabatannya di PDF BA dan penyelesaian tugas supaya diisi tangan oleh staf GA yang menandatangani.
 
-Unduhan: `GET /asset-transfer/{id}/download`, `GET /pengadaan/{id}/download`, `GET /task-completion/{id}/download` — semua `auth` plus policy `view`.
+Unduhan: `GET /asset-transfer/{id}/download`, `GET /task-completion/{id}/download` — semua `auth` plus policy `view`.
 
-### 5. Rekonsiliasi audit
+### 2. Rekonsiliasi audit
 
 Resource **Import & Laporan Audit** membandingkan workbook CSA (sheet `ASET`, qty) atau audit kendaraan (sheet `Monitoring Asset`, plat) terhadap data Shelf. File di-stage dulu; data aplikasi baru berubah setelah **Terapkan Koreksi**. Resource ini memakai permission `import` pada `Asset`.
 
-### 6. Pengingat dokumen
+### 3. Pengingat dokumen
 
 Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiable`. Command `notifications:send-scheduled` (jadwal harian 13:20) mengirim WhatsApp/email ke penerima yang dikonfigurasi. Integrasi WhatsApp juga dapat menanyakan dokumen yang akan kedaluwarsa lewat rute `shelf.expiring_documents`.
 
-### 7. Login staf
+### 4. Login staf
 
 - Username atau email plus kata sandi di `/admin/login`.
 - Reset password dan profil default Filament dimatikan.
@@ -198,19 +156,15 @@ Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiabl
 
 ```mermaid
 flowchart TB
-    Publik[Browser publik] --> Form[Blade /asset-requests]
     Staf[Browser staf] --> Filament[Filament Livewire /admin]
-    Form --> PublicCtrl[PublicAssetRequestController]
     Filament --> Policies[Policies dan Shield]
     Scheduler[Laravel Scheduler] --> Notif[notifications:send-scheduled]
     WAClient[Klien WhatsApp] --> Query["POST /api/integrations/whatsapp/assets/query"]
-    PublicCtrl --> Models[Eloquent Models]
     Filament --> Models
     Query --> Models
     Notif --> WA[WhatsAppGateway WagHub]
     Models --> DB[(MySQL)]
     Filament --> Files[(Filesystem disk)]
-    Form --> Files
     Worker["php artisan horizon"] --> Redis[(Redis)]
     Worker --> Files
 ```
@@ -222,7 +176,7 @@ flowchart TB
 | `app/Filament/Resources` | CRUD aset, pengajuan, transfer, rekonsiliasi, checksheet, tugas, master, pengguna |
 | `app/Filament/Pages/Auth` | Login username/email Mekaya |
 | `app/Filament/Auth/Pages` | Login OTP WhatsApp untuk akun terdaftar |
-| `app/Http/Controllers` | Form publik, PDF, query WhatsApp, `GET /api/user` |
+| `app/Http/Controllers` | PDF, query WhatsApp, `GET /api/user` |
 | `app/Models` | Model dan lifecycle pengajuan/transfer |
 | `app/Policies` | Authorization panel dan unduhan PDF |
 | `app/Services` | Notifikasi, rekonsiliasi CSA/kendaraan, gateway WhatsApp |
@@ -230,7 +184,7 @@ flowchart TB
 | `app/Support` | Normalizer rekonsiliasi, grant `export_asset` |
 | `database/migrations` | Evolusi schema |
 | `database/seeders` | Super Admin Shield plus master kategori/badan usaha/jabatan/merek |
-| `routes/web.php` | Redirect `/`, form publik, token, PDF |
+| `routes/web.php` | Redirect `/`, PDF |
 | `routes/api.php` | Sanctum `/api/user` dan query WhatsApp |
 | `bootstrap/app.php` | Health `/up`, jadwal 13:20, trust proxies |
 | `deploy/web-shelf-queue.service` | Unit systemd `php artisan horizon` |
@@ -244,7 +198,6 @@ flowchart TB
 |---|---|
 | Backend | PHP `^8.2`, Laravel 12 |
 | Admin UI | Filament 4, Livewire, Mekaya Theme |
-| Form publik | Blade + Vite (`resources/css/public.css`) |
 | Frontend build | Vite 8, Tailwind CSS 4, Axios |
 | Database | MySQL (default `.env.example`) |
 | Filesystem | Disk Laravel `local` / `public`; disk `s3` via `AWS_*` (MinIO/S3-compatible) |
@@ -269,7 +222,7 @@ flowchart TB
 - MySQL 8+ (atau MariaDB yang kompatibel) untuk development sesuai `.env.example`.
 - Extension PHP yang biasa dipakai Laravel/Filament, termasuk `curl`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `xml`, dan `zip`.
 
-Gateway WhatsApp dan object storage S3/MinIO bersifat opsional untuk menjalankan form publik dan panel dasar. Notifikasi WhatsApp membutuhkan `WAG_URL` dan `WAG_TOKEN`. Composer memasang `kungfufafa/mekaya-theme` dari repositori Git yang tercantum di `composer.json`.
+Gateway WhatsApp dan object storage S3/MinIO bersifat opsional untuk menjalankan panel dasar. Notifikasi WhatsApp membutuhkan `WAG_URL` dan `WAG_TOKEN`. Composer memasang `kungfufafa/mekaya-theme` dari repositori Git yang tercantum di `composer.json`.
 
 ### Clone dan dependency
 
@@ -376,7 +329,7 @@ MAIL_FROM_ADDRESS=dev@example.test
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-Form publik dan panel dasar tetap berjalan tanpa WhatsApp. Tanpa kredensial gateway, notifikasi dan pengingat dokumen tidak terkirim lewat saluran itu.
+Panel dasar tetap berjalan tanpa WhatsApp. Tanpa kredensial gateway, notifikasi dan pengingat dokumen tidak terkirim lewat saluran itu.
 
 ## Menjalankan aplikasi
 
@@ -392,7 +345,6 @@ npm run dev
 
 Buka:
 
-- Form publik: `http://127.0.0.1:8000/` atau `http://127.0.0.1:8000/asset-requests`
 - Panel staf: `http://127.0.0.1:8000/admin`
 - Health check: `http://127.0.0.1:8000/up`
 
@@ -448,8 +400,6 @@ Gunakan scope kecil dan satu tujuan per branch.
 | Kebutuhan | Lokasi umum |
 |---|---|
 | Tambah/ubah tabel | `database/migrations` dan `app/Models` |
-| Form publik / token approval | `app/Http/Controllers/PublicAssetRequestController.php`, `resources/views/public` |
-| Lifecycle pengajuan | `app/Models/AssetRequest.php` |
 | Hak akses panel | `app/Policies`, permission Shield, `app/Support/EnsureAssetExportPermissions.php` |
 | Fitur panel web | `app/Filament/Resources`, `Pages`, atau `Widgets` |
 | Rekonsiliasi | `app/Services/*Reconciliation*`, `app/Services/*AuditWorkbook*` |
@@ -460,9 +410,8 @@ Gunakan scope kecil dan satu tujuan per branch.
 ### Aturan implementasi
 
 - Jangan mengubah schema melalui migration yang sudah pernah berjalan di shared environment; tambahkan migration baru.
-- Jangan menganggap token publik sebagai bukti identitas; throttle dan perlakuan tautan sebagai rahasia.
 - Perubahan konfigurasi wajib diikuti update `.env.example` dan README tanpa memasukkan secret.
-- Tambahkan test regresi untuk setiap perbaikan bug pada form publik, approval, policy, rekonsiliasi, atau gateway WhatsApp.
+- Tambahkan test regresi untuk setiap perbaikan bug pada policy, rekonsiliasi, atau gateway WhatsApp.
 
 ### Definition of Done
 
@@ -496,7 +445,6 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 
 1. **Token approval bukan autentikasi.** Siapa pun yang memiliki tautan dapat memutuskan pengajuan.
 2. **Query WhatsApp aset bersifat publik.** `POST /api/integrations/whatsapp/assets/query` tidak memakai Sanctum; tes `WhatsappAssetIntegrationTest` menegaskan itu.
-3. **Form publik memuat daftar pemohon terdaftar.** `PublicAssetRequestController@index` mengambil user (nama, jabatan, badan usaha, flag kontak) untuk dropdown.
 4. **Role `general_affair` dan `admin` tidak di-seed.** Alur penarikan/BA dan grant `export_asset` membutuhkan role itu di database.
 5. **Reset password dan profil panel dimatikan.** Onboarding staf tetap seeder / administrator.
 6. **Tidak ada REST API domain.** Jangan mengasumsikan klien mobile/API v1 terpisah.
@@ -538,7 +486,7 @@ php artisan storage:link
 
 ### Login panel ditolak
 
-Pastikan user memiliki minimal satu role. Akun yang dibuat dari form publik tanpa role tidak dapat masuk `/admin`. Reset password tidak tersedia di panel.
+Pastikan user memiliki minimal satu role. Akun tanpa role tidak dapat masuk `/admin`. Reset password tidak tersedia di panel.
 
 ### Login WhatsApp
 
@@ -550,7 +498,7 @@ Untuk mengaktifkan:
 2. Isi `WAG_URL` dan `WAG_TOKEN`. Tombol WhatsApp muncul jika keduanya terisi.
 3. Sebagai admin, buka **Master Data → Users → Edit**, lalu isi **Nomor WhatsApp**. Satu nomor dipakai untuk pengingat aset dan login OTP. Nomor dinormalisasi dan harus unik; kosongkan untuk menonaktifkan akses melalui WhatsApp.
 
-Formulir publik tetap hanya mengisi kontak notifikasi, bukan kredensial login. Admin yang menyimpan nomor di panel, atau **Import Talenta** / impor Excel yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP baru membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
+Admin yang menyimpan nomor di panel, atau **Import Talenta** / impor Excel yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP baru membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
 
 OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun baru dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus Shelf.
 

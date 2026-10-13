@@ -5,7 +5,6 @@ namespace App\Providers;
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\PhoneLogin;
 use App\Models\Area;
-use App\Models\AssetRequest;
 use App\Models\AssetService;
 use App\Models\AssetTransfer;
 use App\Models\Insurance;
@@ -31,7 +30,6 @@ use App\Models\Task;
 use App\Models\UnitType;
 use App\Policies\ActivityPolicy;
 use App\Policies\AreaPolicy;
-use App\Policies\AssetRequestPolicy;
 use App\Policies\AssetServicePolicy;
 use App\Policies\AssetTransferPolicy;
 use App\Policies\ExceptionPolicy;
@@ -145,7 +143,6 @@ class AppServiceProvider extends ServiceProvider
 
     protected function registerAuthorization(): void
     {
-        Gate::policy(AssetRequest::class, AssetRequestPolicy::class);
         Gate::policy(AssetService::class, AssetServicePolicy::class);
         Gate::policy(AssetTransfer::class, AssetTransferPolicy::class);
         Gate::policy(ObChecksheet::class, ObChecksheetPolicy::class);

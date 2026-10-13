@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Resources\AssetRequestResource;
 use App\Filament\Resources\AssetResource;
 use App\Filament\Resources\AssetResource\Widgets\CustomAssetWidget;
 use App\Filament\Resources\AssetTransferResource;
@@ -37,12 +36,10 @@ class FilamentShieldIntegrationTest extends TestCase
     public function test_shield_preserves_permission_keys_used_by_existing_roles_and_policies(): void
     {
         $rolePermissions = FilamentShield::getResourcePolicyActionsWithPermissions(RoleResource::class);
-        $assetRequestPermissions = FilamentShield::getResourcePolicyActionsWithPermissions(AssetRequestResource::class);
         $widget = FilamentShield::getWidgets()[CustomAssetWidget::class];
         $settingsPage = FilamentShield::getPages()[SettingsHub::class];
 
         $this->assertSame('view_any_role', $rolePermissions['viewAny']);
-        $this->assertSame('view_any_asset::request', $assetRequestPermissions['viewAny']);
         $this->assertSame('widget_CustomAssetWidget', array_key_first($widget['permissions']));
         $this->assertSame('View:SettingsHub', array_key_first($settingsPage['permissions']));
     }
@@ -67,9 +64,6 @@ class FilamentShieldIntegrationTest extends TestCase
             'export' => 'export_asset',
             'import' => 'import_asset',
         ]);
-        $this->assertResourcePermissions(AssetRequestResource::class, [
-            'export' => 'export_asset::request',
-        ]);
         $this->assertResourcePermissions(AssetTransferResource::class, [
             'export' => 'export_asset::transfer',
         ]);
@@ -85,15 +79,13 @@ class FilamentShieldIntegrationTest extends TestCase
     public function test_shield_only_generates_actions_exposed_by_each_resource(): void
     {
         $assetPermissions = FilamentShield::getResourcePolicyActionsWithPermissions(AssetResource::class);
-        $assetRequestPermissions = FilamentShield::getResourcePolicyActionsWithPermissions(AssetRequestResource::class);
         $divisionPermissions = FilamentShield::getResourcePolicyActionsWithPermissions(DivisionResource::class);
 
         foreach (['restore', 'restoreAny', 'forceDelete', 'forceDeleteAny'] as $action) {
-            $this->assertArrayHasKey($action, $assetRequestPermissions);
             $this->assertArrayHasKey($action, $divisionPermissions);
         }
 
-        foreach ([$assetPermissions, $assetRequestPermissions, $divisionPermissions] as $permissions) {
+        foreach ([$assetPermissions, $divisionPermissions] as $permissions) {
             $this->assertArrayNotHasKey('replicate', $permissions);
             $this->assertArrayNotHasKey('reorder', $permissions);
         }
@@ -103,7 +95,6 @@ class FilamentShieldIntegrationTest extends TestCase
     {
         foreach ([
             AssetResource::class,
-            AssetRequestResource::class,
             UserResource::class,
             VehicleChecksheetResource::class,
         ] as $resource) {

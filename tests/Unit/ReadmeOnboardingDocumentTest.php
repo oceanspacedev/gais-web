@@ -64,7 +64,6 @@ class ReadmeOnboardingDocumentTest extends TestCase
         foreach ([
             'https://github.com/oceanspacedev/shelf-web.git',
             '/admin',
-            'asset-requests',
             'Asia/Jakarta',
             'notifications:send-scheduled',
             'admin@dev.com',

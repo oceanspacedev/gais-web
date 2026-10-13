@@ -3,18 +3,13 @@
 namespace Tests\Feature;
 
 use App\Enums\AssetCondition;
-use App\Enums\AssetRequestType;
 use App\Enums\AssetTransferDocumentType;
-use App\Filament\Resources\AssetRequestResource;
 use App\Filament\Resources\AssetResource;
 use App\Filament\Resources\AssetTransferResource;
 use App\Models\Asset;
-use App\Models\AssetRequest;
-use App\Models\AssetRequestApproval;
 use App\Models\AssetTransfer;
 use App\Models\AssetTransferDetail;
 use App\Models\BusinessEntity;
-use App\Models\Division;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -104,38 +99,6 @@ class BusinessEntityScopingTest extends TestCase
         $this->get(route('asset-transfer.download', $betaTransfer))->assertForbidden();
     }
 
-    public function test_requests_from_the_entity_on_its_assets_own_or_awaiting_approval_are_visible(): void
-    {
-        $viewer = $this->restrictedUser($this->alpha);
-        $alphaRequester = $this->employee($this->alpha);
-        $betaRequester = $this->employee($this->beta);
-        $alphaAsset = $this->asset($this->alpha, $this->beta, $betaRequester);
-
-        $fromAlpha = $this->request($alphaRequester);
-        $fromBeta = $this->request($betaRequester);
-        $onAlphaAsset = $this->request($betaRequester, $alphaAsset);
-        $own = $this->request($viewer);
-        $awaitingApproval = $this->request($betaRequester);
-        AssetRequestApproval::create([
-            'asset_request_id' => $awaitingApproval->id,
-            'user_id' => $viewer->id,
-            'level' => 1,
-            'status' => 'pending',
-        ]);
-
-        $this->actingAs($viewer);
-
-        $this->assertEqualsCanonicalizing(
-            [$fromAlpha->id, $onAlphaAsset->id, $own->id, $awaitingApproval->id],
-            AssetRequestResource::getEloquentQuery()
-                ->whereKey([$fromAlpha->id, $fromBeta->id, $onAlphaAsset->id, $own->id, $awaitingApproval->id])
-                ->pluck('id')
-                ->all(),
-        );
-        $this->assertTrue($viewer->can('view', $onAlphaAsset));
-        $this->assertFalse($viewer->can('view', $fromBeta));
-    }
-
     public function test_business_entity_options_follow_the_viewer(): void
     {
         $viewer = $this->restrictedUser($this->alpha);
@@ -213,18 +176,6 @@ class BusinessEntityScopingTest extends TestCase
             'from_user_id' => $from->id,
             'to_user_id' => $to->id,
             'transfer_date' => now()->toDateString(),
-        ]);
-    }
-
-    private function request(User $requester, ?Asset $asset = null): AssetRequest
-    {
-        return AssetRequest::create([
-            'user_id' => $requester->id,
-            'division_id' => Division::create(['name' => '__bes_division_'.uniqid().'__'])->id,
-            'type' => $asset ? AssetRequestType::Penarikan : AssetRequestType::Pengadaan,
-            'asset_id' => $asset?->id,
-            'item_name' => $asset ? null : '__bes_item__',
-            'qty' => 1,
         ]);
     }
 }

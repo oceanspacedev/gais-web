@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AssetRequest;
 use App\Models\AssetTransfer;
 use App\Models\Task;
 use App\Support\StoredFile;
@@ -68,44 +67,6 @@ class PdfController extends Controller
         $pdf = Pdf::loadView('pdf.task-completion', compact('task', 'headerImage', 'attachments'));
 
         return $pdf->stream($this->safeDownloadFilename('berita_acara_pengerjaan_'.$fileName.'.pdf'));
-    }
-
-    /**
-     * Berita Acara Pengadaan: dokumen tindak lanjut operator dari pengajuan
-     * pengadaan yang sudah disetujui & di-fulfill (aset sudah dibuat).
-     */
-    public function downloadPengadaan($id)
-    {
-        $assetRequest = AssetRequest::findOrFail($id);
-        $this->authorize('view', $assetRequest);
-
-        // BA Pengadaan hanya bermakna bila pengajuan sudah fulfilled dan ada aset
-        // yang dibuat darinya. Tanpa guard ini, URL bisa diakses langsung untuk
-        // pengadaan belum selesai -> BA dengan tabel aset kosong.
-        abort_unless($assetRequest->is_fulfilled && $assetRequest->createdAssets->isNotEmpty(), 404);
-
-        $assetRequest->load([
-            'user.jobTitle',
-            'division',
-            'fulfilledBy.jobTitle',
-            'createdAssets.category',
-            'createdAssets.brand',
-            'createdAssets.assetLocation',
-            'createdAssets.businessEntity',
-            'createdAssets.attributes',
-        ]);
-
-        $headerImage = $assetRequest->createdAssets->first()?->businessEntity?->letterhead
-            ? StoredFile::imageDataUri('public', $assetRequest->createdAssets->first()->businessEntity->letterhead)
-            : public_path('images/cvcs_kop.png');
-
-        $referenceNumber = $assetRequest->reference_number ?? 'PENGADAAN';
-        $userName = strtolower(str_replace(' ', '_', $assetRequest->user->name));
-        $fileName = $this->safeDownloadFilename("BAP_{$referenceNumber}_{$userName}.pdf");
-
-        $pdf = Pdf::loadView('pdf.pengadaan', compact('assetRequest', 'headerImage'));
-
-        return $pdf->download($fileName);
     }
 
     /**
