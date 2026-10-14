@@ -1,7 +1,8 @@
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { BASE } from './lib.mjs';
+import { execFileSync } from 'node:child_process';
+import { BASE, PHP, ROOT } from './lib.mjs';
 
 export default [
   {
@@ -304,6 +305,51 @@ export default [
     },
   },
   {
+    id: 'ba-pengalihan', // butuh laptop yang dipegang Budi dari bagian ba-serah-terima
+    async run(page, r) {
+      await openMenu(page, r, 'Aset Transfer', 'asset-transfers');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Buat/ }).first());
+      await waitPage(page, /create$/);
+      await r.select('Jenis Berita Acara', 'BERITA ACARA PENGALIHAN BARANG');
+      await r.select('Badan Usaha', 'CV BERSAMA CS');
+      await r.select('Dari Pemegang', 'Budi Santoso');
+      await r.select('Ke Penerima', 'Putri Pemohon');
+      await r.date('Transfer date', today());
+      // Yang digulir panel konten, bukan window: gulir ke judul halaman.
+      await page.locator('.fi-header').first().evaluate((e) => e.scrollIntoView({ block: 'start' }));
+      await r.pause(800);
+      await r.shot('aset-pemegang-terisi', page.locator('.fi-fo-repeater').first());
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, (u) => !u.pathname.endsWith('/create'));
+      await r.pause(1500);
+      await r.shot('ba-tersimpan');
+      await r.pause(800);
+    },
+  },
+  {
+    id: 'ba-pengembalian', // butuh laptop yang dipegang Putri dari bagian ba-pengalihan
+    async run(page, r) {
+      await openMenu(page, r, 'Aset Transfer', 'asset-transfers');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Buat/ }).first());
+      await waitPage(page, /create$/);
+      await r.select('Jenis Berita Acara', 'BERITA ACARA PENGEMBALIAN BARANG');
+      await r.select('Badan Usaha', 'CV BERSAMA CS');
+      await r.select('Dari Pemegang', 'Putri Pemohon');
+      await r.select('Staf GA yang Menerima', 'Gita General Affair');
+      await r.date('Transfer date', today());
+      await r.pause(800);
+      await r.shot('form-pengembalian');
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, (u) => !u.pathname.endsWith('/create'));
+      await r.pause(1500);
+      await r.shot('ba-tersimpan');
+      // Aset kembali ke stok: Tersedia, tanpa pemegang.
+      await openMenu(page, r, 'Aset', 'assets');
+      await r.shot('laptop-kembali-tersedia', page.locator('.fi-ta-row', { hasText: 'Laptop Lenovo' }).first());
+      await r.pause(800);
+    },
+  },
+  {
     id: 'servis',
     async run(page, r) {
       await openMenu(page, r, 'Servis Aset', 'asset-services');
@@ -435,10 +481,157 @@ export default [
       await r.pause(800);
     },
   },
+
+  // ---- Asuransi & Sewa, pengingat WhatsApp ----
+  {
+    id: 'asuransi',
+    async run(page, r) {
+      await openMenu(page, r, 'Asuransi', 'insurances');
+      await r.shot('daftar-asuransi');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: 'Buat Asuransi' }).first());
+      await waitPage(page, /create$/);
+      await r.fill('Nomor Polis', 'POL-2025-00871');
+      await r.fill('Nama Tertanggung', 'CV BERSAMA CS - GUDANG PUSAT');
+      await r.select('Badan Usaha', 'CV BERSAMA CS');
+      await r.fill('Nilai Stok', '750000000');
+      await r.fill('Premi Stok', '3250000');
+      await r.shot('polis-dan-nilai');
+      const period = page.locator('.fi-section', { hasText: 'Periode dan Status' }).first();
+      await period.scrollIntoViewIfNeeded();
+      await r.date('Tanggal Mulai', shiftDays(-340));
+      await r.date('Tanggal Berakhir', shiftDays(25));
+      await r.fill('Nomor WA Pengingat', '081234567890');
+      await r.shot('periode-dan-pengingat', period);
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, (u) => !u.pathname.endsWith('/create'));
+      await r.pause(1500);
+      await r.shot('asuransi-tersimpan');
+      await r.pause(800);
+    },
+  },
+  {
+    id: 'sewa',
+    async run(page, r) {
+      await openMenu(page, r, 'Perjanjian Sewa', 'rents');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: 'Buat Perjanjian Sewa' }).first());
+      await waitPage(page, /create$/);
+      await r.fill('Kode Sewa', 'SW-BKS-2026');
+      await r.select('Badan Usaha', 'CV BERSAMA CS');
+      await r.fill('Objek Sewa', 'Ruko 2 lantai cabang Bekasi');
+      await r.fill('Pihak Pertama', 'Bapak Hendra (pemilik)');
+      await r.fill('Pihak Kedua', 'CV BERSAMA CS');
+      await r.date('Tanggal Mulai', shiftDays(-320));
+      await r.date('Tanggal Berakhir', shiftDays(45));
+      await r.fill('Pengingat (bulan sebelum)', '2');
+      await r.shot('data-kontrak');
+      await r.fill('Sewa per Tahun', '120000000');
+      await r.select('Dokumen Perjanjian', 'ADA (SCAN)');
+      await r.shot('pembayaran-dan-dokumen', page.locator('.fi-section', { hasText: 'Dokumen' }).last());
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, (u) => !u.pathname.endsWith('/create'));
+      await r.pause(1500);
+      await r.shot('sewa-tersimpan');
+      // Kontrak yang hampir habis muncul di dasbor.
+      await page.goto(`${BASE}/admin`);
+      await page.waitForLoadState('networkidle');
+      await r.pause(1500);
+      // Widget dasbor dimuat malas (lazy) saat terlihat: gulir pelan sampai tabel jatuh tempo muncul.
+      const expiring = page.getByText('Asuransi Terdekat Jatuh Tempo').first();
+      for (let i = 0; i < 15 && !(await expiring.isVisible()); i++) {
+        await page.mouse.wheel(0, 500);
+        await r.pause(700);
+      }
+      await expiring.evaluate((e) => e.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+      await r.pause(1500);
+      await r.shot('dasbor-kontrak-berakhir');
+      await r.pause(800);
+    },
+  },
+  {
+    id: 'wa-pengaturan',
+    async run(page, r) {
+      await page.goto(`${BASE}/admin`);
+      await r.pause(800);
+      const link = page.locator('aside a[href$="/wa-notification-settings"]').first();
+      // Grup Pengaturan tertutup secara default: buka dulu.
+      if (!(await link.isVisible())) await r.click(page.locator('button.mky-sidebar-group-label', { hasText: 'Pengaturan' }).first());
+      await r.click(link);
+      await waitPage(page, /wa-notification-settings$/);
+      await r.pause(1000);
+      await r.shot('pengaturan-umum');
+      await page.mouse.wheel(0, 400);
+      await r.pause(1000);
+      await r.shot('jenis-pengingat');
+      await r.pause(800);
+    },
+  },
+  // ---- Import & Laporan Audit (kendaraan): export format -> isi -> import -> laporan -> terapkan ----
+  {
+    id: 'audit-kendaraan',
+    async run(page, r) {
+      const workbook = vehicleAuditWorkbook();
+      await openMenu(page, r, 'Import & Laporan Audit', 'asset-reconciliations');
+      await r.shot('daftar-audit');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Import Audit/ }).first());
+      await waitPage(page, /create$/);
+      await r.pause(800);
+      await r.shot('tombol-export-format', page.locator('.fi-header').getByRole('button', { name: /Export Format Audit Kendaraan/ }).first());
+      await r.select('Jenis Audit', 'Kendaraan (Monitoring Asset / LHP)');
+      await r.select('Badan Usaha Default', 'CV BERSAMA CS');
+      await r.upload('File Excel Audit', workbook);
+      await r.toggle('Buat aset/lokasi baru dari audit (opt-in)');
+      await r.shot('form-import');
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, /asset-reconciliations\/[0-9]+$/);
+      await r.pause(2000);
+      await r.shot('laporan-hasil-banding');
+      // Tabel per kendaraan (relation manager) dimuat saat terlihat: gulir sampai barisnya muncul.
+      const items = page.locator('.fi-ta').last();
+      for (let i = 0; i < 12 && !(await page.locator('.fi-ta-row').first().isVisible()); i++) {
+        await page.mouse.wheel(0, 500);
+        await r.pause(700);
+      }
+      await items.evaluate((e) => e.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+      await r.pause(1500);
+      await r.shot('laporan-per-kendaraan', items);
+      await page.locator('.fi-header').first().evaluate((e) => e.scrollIntoView({ block: 'start' }));
+      await r.pause(600);
+      await r.action('3. Terapkan Koreksi');
+      await r.shot('konfirmasi-terapkan', r.modal());
+      await r.submitModal();
+      await r.pause(1000);
+      await r.shot('koreksi-diterapkan');
+      await openMenu(page, r, 'Aset', 'assets');
+      await r.shot('aset-baru-dari-audit', page.locator('.fi-ta-row', { hasText: 'GRAN MAX' }).first());
+      await r.pause(800);
+    },
+  },
 ];
 
+// File audit kendaraan contoh: hasil "Export Format Audit Kendaraan" ditambah satu mobil yang ditemukan auditor
+// tapi belum tercatat di Shelf (seperti yang diisi orang di Excel sebelum diimpor).
+function vehicleAuditWorkbook() {
+  const file = join(mkdtempSync(join(tmpdir(), 'audit-')), 'audit-kendaraan-contoh.xlsx').replace(/\\/g, '/');
+  const code = String.raw`$s = app(App\Services\VehicleAssetAuditWorkbookExporter::class)->build();`
+    + String.raw` $sh = $s->getSheetByName('Monitoring Asset'); $r = $sh->getHighestRow() + 1;`
+    + String.raw` $sh->fromArray([$r - 2, 'B 1717 KJT', 'CV BERSAMA CS', null, null, null, 'KANTOR PUSAT', 'DAIHATSU', 'GRAN MAX', 'MOBIL', 'PUTIH', '2022', 'MHKV1BA2JNK012345', 'Budi Santoso', 'ADA'], null, 'A'.$r);`
+    + ` (new PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx($s))->save('${file}');`;
+  execFileSync(PHP, ['artisan', 'tinker', '--execute', code], {
+    cwd: ROOT,
+    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_shelf_capture' },
+    stdio: 'pipe',
+  });
+  return file;
+}
+
 function today() {
+  return shiftDays(0);
+}
+
+// Tanggal ISO relatif terhadap hari ini (mis. -30 = 30 hari lalu).
+function shiftDays(n) {
   const d = new Date();
+  d.setDate(d.getDate() + n);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 

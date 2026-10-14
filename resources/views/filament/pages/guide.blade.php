@@ -193,11 +193,13 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-4').scrollIntoView({ behavior: 'smooth' })">4. Pengingat dokumen (contoh: STNK)</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-5').scrollIntoView({ behavior: 'smooth' })">5. Pengajuan Barang dari awal sampai diterima</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-6').scrollIntoView({ behavior: 'smooth' })">6. Lapor Gangguan</a></li>
-                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-7').scrollIntoView({ behavior: 'smooth' })">7. Serah terima aset (Berita Acara)</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-7').scrollIntoView({ behavior: 'smooth' })">7. Berita Acara aset: serah terima, pengalihan, pengembalian</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-8').scrollIntoView({ behavior: 'smooth' })">8. Servis aset</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-9').scrollIntoView({ behavior: 'smooth' })">9. OB: menugaskan dan mengerjakan</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-10').scrollIntoView({ behavior: 'smooth' })">10. Checksheet kendaraan</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-11').scrollIntoView({ behavior: 'smooth' })">11. Menambah pengguna dan memberi role</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-12').scrollIntoView({ behavior: 'smooth' })">12. Import &amp; Laporan Audit (contoh: kendaraan)</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-13').scrollIntoView({ behavior: 'smooth' })">13. Asuransi, Sewa, dan pengingat WhatsApp</a></li>
                     </ol>
                 </div>
 
@@ -376,8 +378,9 @@
                 </div>
 
                 <div class="pg-block" id="bab-7">
-                    <h2>7. Serah terima aset (Berita Acara)</h2>
-                    <p>Staf General Affair mengeluarkan aset dari stok untuk karyawan. Contoh: laptop diserahkan ke Budi.</p>
+                    <h2>7. Berita Acara aset: serah terima, pengalihan, pengembalian</h2>
+                    <p>Setiap perpindahan aset antar orang dicatat sebagai Berita Acara (BA). Contoh di bawah mengikuti satu laptop: dikeluarkan dari stok ke Budi, dialihkan ke Putri, lalu dikembalikan ke GA.</p>
+                    <h3>7.1 Serah terima: aset keluar dari stok</h3>
                     <x-guide.demo name="ba-serah-terima" caption="Animasi: membuat BA Serah Terima dari staf GA ke penerima, memilih laptop, lalu menyimpan." :shots="[
                         'ba-serah-terima-01-daftar-ba.png' => 'Daftar BA',
                         'ba-serah-terima-02-informasi-ba.png' => 'Informasi BA',
@@ -390,6 +393,27 @@
                         <li><strong>Nomor Surat</strong> terisi otomatis setelah Badan Usaha dipilih. Pihak GA harus user dengan role <code>general_affair</code>.</li>
                         <li>Daftar aset baru muncul setelah jenis dan pihak pertama dipilih. Untuk serah terima, hanya aset <em>Tersedia</em> tanpa pemegang yang bisa dipilih.</li>
                         <li>Setelah disimpan, aset menjadi <em>Digunakan</em> oleh penerima. Tombol <strong>Download PDF</strong> mencetak BA untuk ditandatangani; unggah hasil scan lewat <strong>Ubah</strong>.</li>
+                    </ul>
+
+                    <h3>7.2 Pengalihan: pindah ke pemegang lain</h3>
+                    <x-guide.demo name="ba-pengalihan" caption="Animasi: BA Pengalihan dari Budi ke Putri; laptop yang dipegang Budi otomatis masuk daftar." :shots="[
+                        'ba-pengalihan-01-aset-pemegang-terisi.png' => 'Aset pemegang terisi',
+                        'ba-pengalihan-02-ba-tersimpan.png' => 'BA tersimpan',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Pilih <strong>Dari Pemegang</strong>: semua aset yang sedang ia pegang langsung terisi di <strong>Details</strong>. Hapus baris aset yang tidak ikut dialihkan.</li>
+                        <li>Aset tetap <em>Digunakan</em>, pemegangnya berganti.</li>
+                    </ul>
+
+                    <h3>7.3 Pengembalian: aset kembali ke stok</h3>
+                    <x-guide.demo name="ba-pengembalian" caption="Animasi: BA Pengembalian dari Putri ke staf GA, lalu laptop kembali Tersedia di daftar aset." :shots="[
+                        'ba-pengembalian-01-form-pengembalian.png' => 'Form pengembalian',
+                        'ba-pengembalian-02-ba-tersimpan.png' => 'BA tersimpan',
+                        'ba-pengembalian-03-laptop-kembali-tersedia.png' => 'Aset kembali Tersedia',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Pihak penerima adalah <strong>Staf GA yang Menerima</strong> (role <code>general_affair</code>).</li>
+                        <li>Setelah disimpan, aset menjadi <em>Tersedia</em> tanpa pemegang dan bisa diserahkan lagi lewat BA Serah Terima.</li>
                     </ul>
                 </div>
 
@@ -463,6 +487,69 @@
                         <li>Menu <strong>Organisasi</strong>, <strong>Pengguna</strong>, tombol <strong>Buat Pengguna</strong>.</li>
                         <li>Tanpa role, pengguna tidak bisa masuk. Role menentukan menu yang tampil (lihat tab <strong>Role dan akses</strong>).</li>
                         <li>Untuk pengajuan barang, isi juga <strong>Divisi</strong> dan <strong>Atasan (approver pengajuan barang)</strong>. Untuk login WhatsApp, isi <strong>Nomor WhatsApp</strong>.</li>
+                    </ul>
+                </div>
+
+                <div class="pg-block" id="bab-12">
+                    <h2>12. Import &amp; Laporan Audit (contoh: kendaraan)</h2>
+                    <p>Hasil audit lapangan dicocokkan dengan data Shelf lewat file Excel. Shelf baru berubah setelah koreksi diterapkan, jadi laporan bisa ditinjau dulu dengan aman. Contoh: auditor menemukan satu mobil yang belum tercatat.</p>
+                    <x-guide.demo name="audit-kendaraan" caption="Animasi: impor file audit kendaraan, meninjau laporan hasil banding, lalu menerapkan koreksi sehingga mobil baru tercatat." :shots="[
+                        'audit-kendaraan-01-daftar-audit.png' => 'Daftar batch audit',
+                        'audit-kendaraan-02-tombol-export-format.png' => 'Export format',
+                        'audit-kendaraan-03-form-import.png' => 'Form import',
+                        'audit-kendaraan-04-laporan-hasil-banding.png' => 'Laporan hasil banding',
+                        'audit-kendaraan-05-laporan-per-kendaraan.png' => 'Laporan per kendaraan',
+                        'audit-kendaraan-06-konfirmasi-terapkan.png' => 'Konfirmasi terapkan',
+                        'audit-kendaraan-07-koreksi-diterapkan.png' => 'Koreksi diterapkan',
+                        'audit-kendaraan-08-aset-baru-dari-audit.png' => 'Aset baru dari audit',
+                    ]" />
+                    <ul class="pg-list">
+                        <li><strong>0. Export Format</strong>: di halaman <strong>1. Import Audit</strong>, unduh format <em>Audit Kendaraan</em> (atau <em>CSA</em> untuk stok ritel). File sudah berisi aset yang tercatat di Shelf.</li>
+                        <li><strong>Isi di Excel</strong>: lengkapi hasil cek lapangan (keberadaan, BPKB, tanggal STNK/KIR/pajak), tambahkan baris unit yang belum tercatat, dan tulis <em>TERJUAL</em> di kolom ACCOUNTING untuk unit yang sudah dijual. Jangan ubah kolom NOMOR POLISI kecuali koreksi plat.</li>
+                        <li><strong>1. Import Audit</strong>: pilih <em>Jenis Audit</em>, <em>Badan Usaha Default</em>, unggah file. Nyalakan <em>Buat aset/lokasi baru dari audit</em> bila unit baru boleh dibuat otomatis.</li>
+                        <li><strong>2. Laporan Hasil Banding</strong>: tiap baris berstatus <em>Inline</em> (sudah sama), <em>Gap</em> (akan dikoreksi), atau <em>Terblokir</em> (perlu dicek manual, misalnya plat tidak valid atau muncul dua kali).</li>
+                        <li><strong>3. Terapkan Koreksi</strong>: hanya bisa bila tidak ada baris Terblokir. Aset tidak pernah dihapus; duplikat dinonaktifkan. Pakai <strong>Compare Ulang</strong> untuk memastikan semua sudah Inline.</li>
+                    </ul>
+                    <div class="pg-note"><p>Unit kendaraan dicocokkan lewat atribut <em>Plat Nomor</em>. Aset kategori MOBIL/MOTOR tanpa plat tidak ikut dalam file ekspor.</p></div>
+                </div>
+
+                <div class="pg-block" id="bab-13">
+                    <h2>13. Asuransi, Sewa, dan pengingat WhatsApp</h2>
+                    <h3>13.1 Mencatat polis asuransi</h3>
+                    <x-guide.demo name="asuransi" caption="Animasi: membuat polis asuransi stok dengan periode, status, dan nomor WA pengingat." :shots="[
+                        'asuransi-01-daftar-asuransi.png' => 'Daftar asuransi',
+                        'asuransi-02-polis-dan-nilai.png' => 'Polis dan nilai',
+                        'asuransi-03-periode-dan-pengingat.png' => 'Periode dan pengingat',
+                        'asuransi-04-asuransi-tersimpan.png' => 'Asuransi tersimpan',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi</strong>, tombol <strong>Buat Asuransi</strong>. Wajib: Nomor Polis, Nama Tertanggung, Tanggal Mulai, Tanggal Berakhir.</li>
+                        <li><strong>Nomor WA Pengingat</strong>: pisahkan dengan koma. Bila kosong, pengingat dikirim ke nomor global di Notifikasi WA.</li>
+                        <li>Saat polis diperpanjang, buka detailnya lalu <strong>Tambah Pembaharuan</strong>. Data lama bisa diimpor sekaligus lewat <strong>Impor Excel</strong>.</li>
+                    </ul>
+
+                    <h3>13.2 Mencatat perjanjian sewa</h3>
+                    <x-guide.demo name="sewa" caption="Animasi: membuat perjanjian sewa ruko, lalu kontrak yang hampir habis muncul di dasbor." :shots="[
+                        'sewa-01-data-kontrak.png' => 'Data kontrak',
+                        'sewa-02-pembayaran-dan-dokumen.png' => 'Pembayaran dan dokumen',
+                        'sewa-03-sewa-tersimpan.png' => 'Sewa tersimpan',
+                        'sewa-04-dasbor-kontrak-berakhir.png' => 'Dasbor: jatuh tempo',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Perjanjian Sewa</strong>, tombol <strong>Buat Perjanjian Sewa</strong>. Wajib: Kode Sewa, Objek Sewa, Pihak Pertama, Pihak Kedua, dan kedua tanggal.</li>
+                        <li>Bagian <strong>Dokumen</strong> mencatat ada tidaknya bukti potong dan dokumen perjanjian, plus file scan-nya.</li>
+                        <li>Dasbor menampilkan tabel <strong>Asuransi/Sewa Terdekat Jatuh Tempo</strong>. Perpanjangan dicatat lewat <strong>Tambah Perpanjangan</strong> di detail sewa.</li>
+                    </ul>
+
+                    <h3>13.3 Mengatur pengingat WhatsApp</h3>
+                    <x-guide.demo name="wa-pengaturan" caption="Animasi: membuka Pengaturan, Notifikasi WA, berisi nomor global, jam kirim, dan jadwal pengingat." :shots="[
+                        'wa-pengaturan-01-pengaturan-umum.png' => 'Pengaturan umum',
+                        'wa-pengaturan-02-jenis-pengingat.png' => 'Jenis pengingat',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Pengaturan</strong>, <strong>Notifikasi WA</strong>. <strong>Jam kirim</strong>: pengingat dikirim sekali sehari setelah jam ini.</li>
+                        <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi, dan cutoff pengajuan barang.</li>
+                        <li><strong>Kirim Uji Coba</strong> mengetes koneksi WhatsApp. <strong>Ganti Nomor</strong> mengganti satu nomor di semua kontrak sekaligus.</li>
                     </ul>
                 </div>
             </section>

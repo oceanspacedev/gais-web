@@ -24,7 +24,7 @@ class GuidePageTest extends TestCase
             ->assertSee('Pengajuan Barang')
             ->assertSee('pg-flow', false)
             ->assertSee('@keyframes pg-dot-6-5', false)
-            ->assertSee('id="bab-11"', false)
+            ->assertSee('id="bab-13"', false)
             ->assertSee('Konfirmasi Penerimaan');
     }
 

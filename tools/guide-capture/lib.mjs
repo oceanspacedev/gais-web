@@ -8,7 +8,7 @@ export const ROOT = resolve(import.meta.dirname, '../..');
 export const OUT = join(ROOT, 'public/images/guide');
 export const PORT = 8099;
 export const BASE = `http://127.0.0.1:${PORT}`;
-const PHP = process.env.PHP_BIN || 'C:/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe';
+export const PHP = process.env.PHP_BIN || 'C:/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe';
 
 // Server Laravel khusus capture: DB terpisah, queue sync, tidak menyentuh db_shelf.
 export async function startServer(db) {
@@ -57,8 +57,9 @@ export function resetData(db) {
   if (!db.includes('capture')) throw new Error(`DB "${db}" bukan DB capture.`);
   // Hapus data buatan bagian-bagian capture, lalu seed ulang: aset stok kembali Tersedia, akun contoh lengkap lagi.
   const tables = ['item_request_logs', 'item_request_approvals', 'item_request_details', 'item_requests', 'problem_reports',
-    'asset_transfer_details', 'asset_transfers', 'asset_service_items', 'asset_services', 'ob_checksheets', 'vehicle_checksheets'];
-  const code = String.raw`App\Models\Asset::withoutGlobalScopes()->where('name', 'like', 'Toyota Avanza%')->get()->each->forceDelete();`
+    'asset_transfer_details', 'asset_transfers', 'asset_service_items', 'asset_services', 'ob_checksheets', 'vehicle_checksheets',
+    'insurance_updates', 'insurances', 'rent_updates', 'rents', 'asset_reconciliation_items', 'asset_reconciliations'];
+  const code = String.raw`App\Models\Asset::withoutGlobalScopes()->where(fn ($q) => $q->where('name', 'like', 'Toyota Avanza%')->orWhere('name', 'like', '%GRAN MAX%'))->get()->each->forceDelete();`
     + String.raw` App\Models\CustomAssetAttribute::where('name', 'Dokumen STNK Mobil')->delete();`
     + String.raw` App\Models\User::where('email', 'like', '%@contoh.test')->delete();`
     + ` foreach (['${tables.join("', '")}'] as $t) ` + String.raw`Illuminate\Support\Facades\DB::table($t)->delete();`;
@@ -144,6 +145,15 @@ export class Recorder {
       await native.fill(iso);
     } else {
       await this.click(this.field(label).locator('button:visible, input:visible').first());
+      // Pindah bulan/tahun lewat kontrol di kepala kalender bila tanggalnya bukan di bulan yang sedang tampil.
+      const month = this.field(label).locator('.fi-fo-date-time-picker-month-select:visible');
+      const year = this.field(label).locator('.fi-fo-date-time-picker-year-input:visible');
+      if (await year.inputValue() !== iso.slice(0, 4)) {
+        await year.fill(iso.slice(0, 4));
+        await this.pause(400);
+      }
+      await month.selectOption(String(Number(iso.slice(5, 7)) - 1));
+      await this.pause(400);
       const day = String(Number(iso.slice(8, 10)));
       await this.click(this.field(label).locator('.fi-fo-date-time-picker-calendar:visible').getByText(day, { exact: true }).first());
       const stillOpen = await this.field(label).locator('.fi-fo-date-time-picker-calendar:visible').count();

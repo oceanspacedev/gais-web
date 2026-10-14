@@ -23,12 +23,12 @@ Akun contoh dari `GuideCaptureSeeder` (semua kata sandi `password`). Bagian memi
 
 | Akun | Role | Dipakai di |
 |---|---|---|
-| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna |
+| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna, audit, asuransi, sewa, Notifikasi WA |
 | `pemohon` | requester | membuat pengajuan dan laporan gangguan, konfirmasi |
 | `accounting` | accounting | status PO |
 | `executor` | executor | setujui jumlah, proses pengajuan dan gangguan |
 | `ob` | office_boy | foto sebelum dan sesudah |
-| `ga`, `budi` | general_affair, requester | pihak BA serah terima |
+| `ga`, `budi` | general_affair, requester | pihak BA (serah terima, pengalihan, pengembalian) |
 
 Reset (`resetData`) menghapus pengajuan, laporan, BA, servis, checksheet, dan data buatan bagian `setup`/`isi-aset`/`user-baru`, lalu menjalankan ulang seeder sehingga aset stok kembali Tersedia.
 
@@ -58,7 +58,9 @@ Lalu tampilkan di panduan: `<x-guide.demo name="nama-bagian" caption="..." :shot
 
 ## Catatan
 
-- Bagian yang saling bergantung harus dijalankan berurutan dalam satu perintah: `setup` → `isi-aset` → `aset-daftar`, dan `pengajuan-buat` → `-accounting` → `-proses` → `-konfirmasi` (begitu juga `gangguan-*` dan `ob-*`). Kuota pengajuan (2 terbuka per tipe) dan batas satu laporan gangguan terbuka membuat pengulangan tanpa `--reset` bisa gagal.
+- Bagian yang saling bergantung harus dijalankan berurutan dalam satu perintah: `setup` → `isi-aset` → `aset-daftar`, dan `pengajuan-buat` → `-accounting` → `-proses` → `-konfirmasi` (begitu juga `gangguan-*`, `ob-*`, dan `ba-serah-terima` → `ba-pengalihan` → `ba-pengembalian`). Kuota pengajuan (2 terbuka per tipe) dan batas satu laporan gangguan terbuka membuat pengulangan tanpa `--reset` bisa gagal.
+- Bagian `audit-kendaraan` membuat file Excel contoh lewat `php artisan tinker` (ekspor format audit kendaraan + satu mobil baru), jadi tidak ada file .xlsx di repo.
+- Widget dasbor dan tabel relasi dimuat malas (lazy): gulir sampai elemennya terlihat sebelum screenshot.
 - Navigasi Filament memakai `wire:navigate`, jadi tunggu URL dengan `waitUntil: 'commit'` (helper `waitPage` di `sections.mjs`), bukan event `load`.
 - Cache permission Spatie dipakai bersama DB utama; skrip mengosongkannya sebelum dan sesudah capture.
 - Jika langkah gagal, screenshot kegagalan disimpan di `fail.png` (di-ignore git).
