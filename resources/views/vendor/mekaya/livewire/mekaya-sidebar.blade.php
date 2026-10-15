@@ -81,7 +81,16 @@
                             class="pointer-events-none absolute top-0 right-0.5 left-0 z-10 h-6 bg-linear-to-b from-gray-50 to-transparent dark:from-gray-950"
                         ></div>
 
-                        <div class="h-full overflow-y-auto">
+                        {{-- Posisi scroll menu disimpan agar tidak kembali ke atas setelah pindah halaman. --}}
+                        <div
+                            class="h-full overflow-y-auto"
+                            x-data
+                            x-init="
+                                const saved = parseInt(sessionStorage.getItem('sidebar-scroll-top') ?? '0');
+                                $nextTick(() => requestAnimationFrame(() => { $el.scrollTop = saved }));
+                            "
+                            x-on:scroll.passive.debounce.100ms="sessionStorage.setItem('sidebar-scroll-top', $el.scrollTop)"
+                        >
                             <nav class="mky-si-nav px-3 py-3">
                                 @include('mekaya::livewire.partials.mekaya-sidebar-navigation', [
                                     'navigation' => $navigation,
