@@ -9,6 +9,7 @@ use App\Support\PhoneNumber;
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 use Filament\Facades\Filament;
 use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasName;
 use Filament\Panel;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -20,7 +21,7 @@ use InvalidArgumentException;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable implements FilamentUser
+class User extends Authenticatable implements FilamentUser, HasName
 {
     use HasApiTokens, HasBusinessEntityAccess, HasFactory, HasPanelShield, HasRoles, Notifiable;
 
@@ -228,6 +229,11 @@ class User extends Authenticatable implements FilamentUser
     public function problemReports(): HasMany
     {
         return $this->hasMany(ProblemReport::class);
+    }
+
+    public function getFilamentName(): string
+    {
+        return (string) ($this->name ?: $this->fullname ?: $this->username);
     }
 
     public function nameWithJobTitle(): string
