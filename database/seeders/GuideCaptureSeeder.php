@@ -6,6 +6,8 @@ use App\Enums\AssetCondition;
 use App\Models\Area;
 use App\Models\Asset;
 use App\Models\AssetAttribute;
+use App\Models\AssetCatalogItem;
+use App\Models\AssetLocation;
 use App\Models\Brand;
 use App\Models\BusinessEntity;
 use App\Models\Category;
@@ -20,6 +22,8 @@ use App\Models\ProblemReportCategory;
 use App\Models\Product;
 use App\Models\UnitType;
 use App\Models\User;
+use App\Models\Vendor;
+use App\Support\AssetReconciliationNormalizer as Normalizer;
 use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
@@ -96,6 +100,28 @@ class GuideCaptureSeeder extends Seeder
         AssetAttribute::updateOrCreate(
             ['asset_id' => $asset('Honda Vario B 4321 KLM', 'MOTOR', 'Honda')->id, 'custom_attribute_id' => $plate->id],
             ['attribute_value' => 'B 4321 KLM'],
+        );
+
+        // Pekerjaan Vendor: vendor yang dipilih saat membuat tugas.
+        Vendor::firstOrCreate(['name' => 'CV Sumber Teknik'], ['contact_person' => 'Pak Joko', 'last_price' => 1500000]);
+
+        // Rekonsiliasi CSA: satu gudang dengan stok yang qty-nya selalu dikembalikan ke 10.
+        $warehouse = AssetLocation::updateOrCreate(['external_code' => 'GDG-PST'], ['name' => 'GUDANG PUSAT']);
+        $catalog = AssetCatalogItem::updateOrCreate(
+            ['source_system' => 'CSA', 'external_code' => 'ATK-001'],
+            ['name' => 'KERTAS THERMAL 80MM', 'normalized_name' => Normalizer::key('KERTAS THERMAL 80MM')],
+        );
+        Asset::withoutGlobalScopes()->updateOrCreate(
+            ['name' => 'KERTAS THERMAL 80MM'],
+            [
+                'business_entity_id' => $entity,
+                'asset_catalog_item_id' => $catalog->id,
+                'asset_location_id' => $warehouse->id,
+                'qty' => 10,
+                'inventory_active' => true,
+                'condition_status' => AssetCondition::Available,
+                'recipient_id' => null,
+            ],
         );
 
         // OB: ruangan dan shift untuk penugasan.

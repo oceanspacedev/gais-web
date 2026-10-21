@@ -23,7 +23,7 @@ Akun contoh dari `GuideCaptureSeeder` (semua kata sandi `password`). Bagian memi
 
 | Akun | Role | Dipakai di |
 |---|---|---|
-| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna, audit, asuransi, sewa, Notifikasi WA |
+| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna, audit kendaraan dan CSA, asuransi, sewa, Notifikasi WA, Pekerjaan Vendor |
 | `pemohon` | requester | membuat pengajuan dan laporan gangguan, konfirmasi |
 | `accounting` | accounting | status PO |
 | `executor` | executor | setujui jumlah, proses pengajuan dan gangguan |
@@ -59,7 +59,7 @@ Lalu tampilkan di panduan: `<x-guide.demo name="nama-bagian" caption="..." :shot
 ## Catatan
 
 - Bagian yang saling bergantung harus dijalankan berurutan dalam satu perintah: `setup` → `isi-aset` → `aset-daftar`, dan `pengajuan-buat` → `-accounting` → `-proses` → `-konfirmasi` (begitu juga `gangguan-*`, `ob-*`, dan `ba-serah-terima` → `ba-pengalihan` → `ba-pengembalian`). Kuota pengajuan (2 terbuka per tipe) dan batas satu laporan gangguan terbuka membuat pengulangan tanpa `--reset` bisa gagal.
-- Bagian `audit-kendaraan` membuat file Excel contoh lewat `php artisan tinker` (ekspor format audit kendaraan + satu mobil baru), jadi tidak ada file .xlsx di repo.
+- Bagian `audit-kendaraan` dan `audit-csa` membuat file Excel contoh lewat `php artisan tinker` (ekspor format audit + baris temuan auditor), jadi tidak ada file .xlsx di repo. Stok contoh CSA (KERTAS THERMAL 80MM, qty 10 di GUDANG PUSAT) dan vendor `CV Sumber Teknik` untuk bagian `vendor-tugas` dibuat oleh seeder.
 - Widget dasbor dan tabel relasi dimuat malas (lazy): gulir sampai elemennya terlihat sebelum screenshot.
 - Navigasi Filament memakai `wire:navigate`, jadi tunggu URL dengan `waitUntil: 'commit'` (helper `waitPage` di `sections.mjs`), bukan event `load`.
 - Cache permission Spatie dipakai bersama DB utama; skrip mengosongkannya sebelum dan sesudah capture.

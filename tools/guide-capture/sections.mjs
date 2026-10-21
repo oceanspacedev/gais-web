@@ -606,7 +606,113 @@ export default [
       await r.pause(800);
     },
   },
+  {
+    id: 'audit-csa',
+    async run(page, r) {
+      const workbook = csaAuditWorkbook();
+      await openMenu(page, r, 'Import & Laporan Audit', 'asset-reconciliations');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Import Audit/ }).first());
+      await waitPage(page, /create$/);
+      await r.pause(800);
+      await r.shot('tombol-export-format', page.locator('.fi-header').getByRole('button', { name: /Export Format CSA/ }).first());
+      await r.select('Jenis Audit', 'CSA (stok ritel / inventori)');
+      await r.select('Badan Usaha Default', 'CV BERSAMA CS');
+      await r.upload('File Excel Audit', workbook);
+      await r.shot('form-import');
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, /asset-reconciliations\/[0-9]+$/);
+      await r.pause(2000);
+      await r.shot('laporan-hasil-banding');
+      const items = page.locator('.fi-ta').last();
+      for (let i = 0; i < 12 && !(await page.locator('.fi-ta-row').first().isVisible()); i++) {
+        await page.mouse.wheel(0, 500);
+        await r.pause(700);
+      }
+      await items.evaluate((e) => e.scrollIntoView({ block: 'start', behavior: 'smooth' }));
+      await r.pause(1500);
+      await r.shot('laporan-per-barang', items);
+      await page.locator('.fi-header').first().evaluate((e) => e.scrollIntoView({ block: 'start' }));
+      await r.pause(600);
+      await r.action('3. Terapkan Koreksi');
+      await r.shot('konfirmasi-terapkan', r.modal());
+      await r.submitModal();
+      await r.pause(1000);
+      await r.shot('koreksi-diterapkan');
+      await r.pause(800);
+    },
+  },
+
+  // ---- Pekerjaan Vendor ----
+  {
+    id: 'vendor-tugas',
+    async run(page, r) {
+      await openMenu(page, r, 'Task', 'tasks');
+      await r.shot('daftar-tugas');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Buat|Baru|Tambah/ }).first());
+      await waitPage(page, /create$/);
+      await r.fill('Nama Pekerjaan', 'Servis AC Ruang Meeting');
+      await r.fill('Biaya', '750000');
+      await r.fill('Deskripsi', 'Cuci dan isi freon 2 unit AC split.');
+      await r.fill('Lokasi', 'Kantor Pusat Lt. 2');
+      await r.select('Entitas Bisnis', 'CV BERSAMA CS');
+      await r.shot('informasi-umum');
+      await r.select('Vendor', 'CV Sumber Teknik');
+      await r.shot('pilih-vendor', r.field('Vendor'));
+      await r.click(page.locator('button[type=submit]').getByText('Buat', { exact: true }));
+      await waitPage(page, /tasks\/[0-9]+$/);
+      await r.pause(1500);
+      await r.shot('tugas-tersimpan');
+
+      // Open -> In Progress -> Completed lewat menu aksi di baris tabel.
+      await openMenu(page, r, 'Task', 'tasks');
+      await rowAction(page, r, 'Process');
+      await r.pause(1500);
+      await r.shot('status-in-progress', page.locator('.fi-ta-row').first());
+      await rowAction(page, r, 'Complete');
+      await r.modal().waitFor();
+      await r.pause(600);
+      const photo = await r.sampleImage('ac-selesai.png', '<b>FOTO HASIL (CONTOH)</b><br>AC Ruang Meeting<br>sudah dicuci dan diisi freon');
+      await r.upload('Upload Lampiran', photo);
+      await r.shot('form-selesai', r.modal());
+      await r.submitModal();
+      await r.shot('status-completed', page.locator('.fi-ta-row').first());
+      await r.click(page.locator('.fi-ta-row').first().locator('.fi-dropdown-trigger').first());
+      await r.pause(600);
+      await r.shot('aksi-download-upload', page.locator('.fi-dropdown-panel:visible').first());
+      await page.keyboard.press('Escape');
+      await r.pause(800);
+    },
+  },
 ];
+
+// Buka menu aksi (ActionGroup) di baris teratas lalu pilih salah satu aksinya.
+async function rowAction(page, r, label) {
+  const item = page.locator('.fi-dropdown-panel:visible').getByText(label, { exact: true }).first();
+  // Setelah aksi sebelumnya, Livewire me-render ulang baris: klik pemicu bisa hilang, jadi ulangi.
+  for (let attempt = 0; attempt < 3 && !(await item.isVisible()); attempt++) {
+    await page.waitForLoadState('networkidle');
+    await r.click(page.locator('.fi-ta-row').first().locator('.fi-dropdown-trigger').first());
+    await item.waitFor({ timeout: 3000 }).catch(() => {});
+  }
+  await r.click(item);
+}
+
+// File audit CSA contoh: hasil "Export Format CSA" dengan fisik kertas thermal 8 (Shelf 10) dan satu barang
+// yang ditemukan di gudang tapi belum tercatat.
+function csaAuditWorkbook() {
+  const file = join(mkdtempSync(join(tmpdir(), 'audit-')), 'audit-csa-contoh.xlsx').replace(/\\/g, '/');
+  const code = String.raw`$s = app(App\Services\CsaAssetAuditWorkbookExporter::class)->build(); $sh = $s->getSheetByName('ASET');`
+    + String.raw` foreach ($sh->getRowIterator() as $row) { $r = $row->getRowIndex(); if ($sh->getCell('C'.$r)->getValue() === 'KERTAS THERMAL 80MM') {`
+    + String.raw` $sh->setCellValue('F'.$r, 8); $sh->setCellValue('G'.$r, -2); $sh->setCellValue('H'.$r, '2 rol rusak');`
+    + String.raw` $sh->insertNewRowBefore($r + 1); $sh->fromArray(['GDG-PST', 'ATK-002', 'TINTA PRINTER EPSON 003', null, 0, 6, 6, 'Belum tercatat'], null, 'A'.($r + 1)); break; } }`
+    + ` (new PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx($s))->save('${file}');`;
+  execFileSync(PHP, ['artisan', 'tinker', '--execute', code], {
+    cwd: ROOT,
+    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_shelf_capture' },
+    stdio: 'pipe',
+  });
+  return file;
+}
 
 // File audit kendaraan contoh: hasil "Export Format Audit Kendaraan" ditambah satu mobil yang ditemukan auditor
 // tapi belum tercatat di Shelf (seperti yang diisi orang di Excel sebelum diimpor).

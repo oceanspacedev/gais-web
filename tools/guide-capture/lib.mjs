@@ -58,8 +58,8 @@ export function resetData(db) {
   // Hapus data buatan bagian-bagian capture, lalu seed ulang: aset stok kembali Tersedia, akun contoh lengkap lagi.
   const tables = ['item_request_logs', 'item_request_approvals', 'item_request_details', 'item_requests', 'problem_reports',
     'asset_transfer_details', 'asset_transfers', 'asset_service_items', 'asset_services', 'ob_checksheets', 'vehicle_checksheets',
-    'insurance_updates', 'insurances', 'rent_updates', 'rents', 'asset_reconciliation_items', 'asset_reconciliations'];
-  const code = String.raw`App\Models\Asset::withoutGlobalScopes()->where(fn ($q) => $q->where('name', 'like', 'Toyota Avanza%')->orWhere('name', 'like', '%GRAN MAX%'))->get()->each->forceDelete();`
+    'insurance_updates', 'insurances', 'rent_updates', 'rents', 'asset_reconciliation_items', 'asset_reconciliations', 'tasks'];
+  const code = String.raw`App\Models\Asset::withoutGlobalScopes()->where(fn ($q) => $q->where('name', 'like', 'Toyota Avanza%')->orWhere('name', 'like', '%GRAN MAX%')->orWhere('name', 'TINTA PRINTER EPSON 003'))->get()->each->forceDelete();`
     + String.raw` App\Models\CustomAssetAttribute::where('name', 'Dokumen STNK Mobil')->delete();`
     + String.raw` App\Models\User::where('email', 'like', '%@contoh.test')->delete();`
     + ` foreach (['${tables.join("', '")}'] as $t) ` + String.raw`Illuminate\Support\Facades\DB::table($t)->delete();`;

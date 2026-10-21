@@ -200,6 +200,8 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-11').scrollIntoView({ behavior: 'smooth' })">11. Menambah pengguna dan memberi role</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-12').scrollIntoView({ behavior: 'smooth' })">12. Import &amp; Laporan Audit (contoh: kendaraan)</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-13').scrollIntoView({ behavior: 'smooth' })">13. Asuransi, Sewa, dan pengingat WhatsApp</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-14').scrollIntoView({ behavior: 'smooth' })">14. Pekerjaan Vendor</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-15').scrollIntoView({ behavior: 'smooth' })">15. Import &amp; Laporan Audit stok (CSA)</a></li>
                     </ol>
                 </div>
 
@@ -550,6 +552,49 @@
                         <li>Menu <strong>Pengaturan</strong>, <strong>Notifikasi WA</strong>. <strong>Jam kirim</strong>: pengingat dikirim sekali sehari setelah jam ini.</li>
                         <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi, dan cutoff pengajuan barang.</li>
                         <li><strong>Kirim Uji Coba</strong> mengetes koneksi WhatsApp. <strong>Ganti Nomor</strong> mengganti satu nomor di semua kontrak sekaligus.</li>
+                    </ul>
+                </div>
+
+                <div class="pg-block" id="bab-14">
+                    <h2>14. Pekerjaan Vendor</h2>
+                    <p>Pekerjaan yang dikerjakan pihak luar (servis AC, perbaikan gedung, dan sejenisnya) dicatat sebagai Task. Statusnya berjalan <em>open</em>, <em>in_progress</em>, lalu <em>completed</em>, dan diakhiri dengan berita acara yang ditandatangani. Contoh: servis AC ruang meeting oleh CV Sumber Teknik.</p>
+                    <x-guide.demo name="vendor-tugas" caption="Animasi: membuat task, memprosesnya, menyelesaikan dengan foto hasil, lalu tombol unduh dan unggah berita acara." :shots="[
+                        'vendor-tugas-01-daftar-tugas.png' => 'Daftar task',
+                        'vendor-tugas-02-informasi-umum.png' => 'Informasi umum',
+                        'vendor-tugas-03-pilih-vendor.png' => 'Pilih vendor',
+                        'vendor-tugas-04-tugas-tersimpan.png' => 'Task tersimpan',
+                        'vendor-tugas-05-status-in-progress.png' => 'Diproses',
+                        'vendor-tugas-06-form-selesai.png' => 'Foto hasil',
+                        'vendor-tugas-07-status-completed.png' => 'Selesai',
+                        'vendor-tugas-08-aksi-download-upload.png' => 'Download dan Upload',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Pekerjaan Vendor</strong>, <strong>Task</strong>, tombol <strong>Buat Task</strong>. Isi Nama Pekerjaan, Biaya, waktu kerja (default sekarang), Deskripsi, Lokasi, Entitas Bisnis, dan PIC (default Anda sendiri).</li>
+                        <li><strong>Vendor</strong>: pilih dari daftar. Bila belum ada, tekan tombol <strong>+</strong> di samping pilihan untuk membuat vendor baru langsung dari form.</li>
+                        <li>Nomor surat dibuat otomatis per badan usaha per tahun, contoh <code>001/BAP/CV BERSAMA CS/GA/2026</code>. Mengganti badan usaha membuat nomor baru.</li>
+                        <li>Di tabel, buka menu titik tiga pada baris task. <strong>Process</strong> mengubah status menjadi <em>in_progress</em>. Task hanya bisa diedit selama masih <em>open</em>.</li>
+                        <li><strong>Complete</strong>: unggah 1 sampai 5 foto hasil pekerjaan (gambar, maks 2 MB per foto). Status menjadi <em>completed</em> dan foto tampil di detail task.</li>
+                        <li><strong>Download</strong> mencetak PDF berita acara penyelesaian untuk ditandatangani. Setelah ditandatangani, unggah scan-nya lewat <strong>Upload</strong> (PDF atau Word, maks 5 MB). Sesudah dokumen diunggah, kedua tombol hilang dan dokumen dibuka dari kolom <em>Dokumen</em> di tabel.</li>
+                    </ul>
+                </div>
+
+                <div class="pg-block" id="bab-15">
+                    <h2>15. Import &amp; Laporan Audit stok (CSA)</h2>
+                    <p>Sama seperti bab 12, tetapi untuk stok inventori per gudang yang dihitung dalam jumlah (qty). Contoh: hasil stock opname menemukan kertas thermal tinggal 8 rol (Shelf mencatat 10) dan 6 tinta printer yang belum tercatat.</p>
+                    <x-guide.demo name="audit-csa" caption="Animasi: impor file CSA hasil stock opname, meninjau laporan per barang, lalu menerapkan koreksi qty dan barang baru." :shots="[
+                        'audit-csa-01-tombol-export-format.png' => 'Export format CSA',
+                        'audit-csa-02-form-import.png' => 'Form import',
+                        'audit-csa-03-laporan-hasil-banding.png' => 'Laporan hasil banding',
+                        'audit-csa-04-laporan-per-barang.png' => 'Laporan per barang',
+                        'audit-csa-05-konfirmasi-terapkan.png' => 'Konfirmasi terapkan',
+                        'audit-csa-06-koreksi-diterapkan.png' => 'Koreksi diterapkan',
+                    ]" />
+                    <ul class="pg-list">
+                        <li><strong>0. Export Format CSA</strong>: berisi sheet <em>ASET</em>, satu blok per gudang, dengan aset inventori aktif yang punya lokasi. Kolom <em>Qty Akhir</em> adalah saldo Shelf saat export. Jangan ubah nama sheet dan header.</li>
+                        <li><strong>Isi di Excel</strong>: tulis hasil hitung di <em>Fisik</em>. <em>Selisih</em> boleh dikosongkan (dihitung Fisik dikurangi Qty Akhir); bila diisi, harus cocok. Barang yang belum tercatat ditambahkan sebagai baris baru di blok gudangnya.</li>
+                        <li><strong>1. Import Audit</strong>: Jenis Audit <em>CSA (stok ritel / inventori)</em>, pilih Badan Usaha Default, unggah file. Judul blok bertanda <em>(CSA CSN)</em> mengarahkan baris ke badan usaha dengan alias itu. Opsi <em>Buat lokasi baru</em> menyala secara default untuk kode gudang yang belum dikenal.</li>
+                        <li><strong>2. Laporan</strong>: barang dicocokkan lewat S/N, lalu kode item + gudang, lalu nama + gudang. Qty berbeda atau barang baru menjadi <em>Gap</em>; kode gudang kosong, data duplikat, atau qty tidak konsisten menjadi <em>Terblokir</em>.</li>
+                        <li><strong>3. Terapkan Koreksi</strong>: qty aset disesuaikan, barang baru dibuat sebagai aset di gudangnya. Barang dengan fisik 0 dinonaktifkan dari inventori (tidak dihapus). Jalankan <strong>Compare Ulang</strong> untuk memastikan semua sudah Inline.</li>
                     </ul>
                 </div>
             </section>
