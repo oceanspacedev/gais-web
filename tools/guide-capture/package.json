@@ -1,0 +1,14 @@
+{
+  "name": "shelf-guide-capture",
+  "private": true,
+  "type": "module",
+  "description": "Membuat screenshot + gambar bergerak untuk panduan docs/ secara otomatis",
+  "scripts": {
+    "setup-db": "node setup-db.mjs",
+    "capture": "node capture.mjs"
+  },
+  "devDependencies": {
+    "ffmpeg-static": "^5.2.0",
+    "playwright": "^1.49.0"
+  }
+}

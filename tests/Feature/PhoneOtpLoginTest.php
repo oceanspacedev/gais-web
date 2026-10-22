@@ -54,6 +54,8 @@ class PhoneOtpLoginTest extends TestCase
             $table->string('employee_id')->nullable()->unique();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->unsignedBigInteger('job_title_id')->nullable();
+            $table->unsignedBigInteger('division_id')->nullable();
+            $table->unsignedBigInteger('approver_user_id')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });
@@ -91,6 +93,12 @@ class PhoneOtpLoginTest extends TestCase
             $table->id();
             $table->string('name');
         });
+        Schema::create('business_entity_user', function (Blueprint $table): void {
+            $table->id();
+            $table->unsignedBigInteger('business_entity_id');
+            $table->unsignedBigInteger('user_id');
+            $table->timestamps();
+        });
         Schema::create('job_titles', function (Blueprint $table): void {
             $table->id();
             $table->string('title');
@@ -120,7 +128,7 @@ class PhoneOtpLoginTest extends TestCase
     {
         $user = $this->registeredUser();
         $this->actingAs($user);
-        Gate::before(fn (): bool => true);
+        $this->grantAbilitiesExcept(['manageBusinessEntityAccess']);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
@@ -137,8 +145,9 @@ class PhoneOtpLoginTest extends TestCase
     {
         $admin = $this->registeredUser();
         $other = User::create(['name' => 'Other']);
+        $this->placeInSameBusinessEntity($admin, $other);
         $this->actingAs($admin);
-        Gate::before(fn (): bool => true);
+        $this->grantAbilitiesExcept(['manageBusinessEntityAccess']);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         Livewire::test(EditUser::class, ['record' => $other->getRouteKey()])
@@ -154,8 +163,9 @@ class PhoneOtpLoginTest extends TestCase
     {
         $admin = $this->registeredUser();
         $other = User::create(['name' => 'Other']);
+        $this->placeInSameBusinessEntity($admin, $other);
         $this->actingAs($admin);
-        Gate::before(fn (): bool => true);
+        $this->grantAbilitiesExcept(['manageBusinessEntityAccess']);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         Livewire::test(EditUser::class, ['record' => $other->getRouteKey()])
@@ -168,9 +178,8 @@ class PhoneOtpLoginTest extends TestCase
     public function test_non_admin_user_editor_cannot_read_or_change_the_login_credential(): void
     {
         $user = $this->registeredUser();
-        DB::table('roles')->where('id', 1)->update(['name' => 'operator']);
         $this->actingAs($user);
-        Gate::before(fn (): bool => true);
+        $this->grantAbilitiesExcept(['manageAccess', 'manageBusinessEntityAccess']);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         Livewire::test(EditUser::class, ['record' => $user->getRouteKey()])
@@ -344,6 +353,29 @@ class PhoneOtpLoginTest extends TestCase
             $this->assertSame(1, collect($middleware)->filter(
                 fn (string $candidate): bool => is_a($candidate, $class, true),
             )->count());
+        }
+    }
+
+    /**
+     * Semua ability diizinkan kecuali yang disebut. Seperti role admin di
+     * production: punya "Kelola Akses" tetapi tidak "Kelola Akses Badan Usaha".
+     *
+     * @param  list<string>  $denied
+     */
+    private function grantAbilitiesExcept(array $denied): void
+    {
+        Gate::before(fn ($user, string $ability): bool => ! in_array($ability, $denied, true));
+    }
+
+    /**
+     * Non-super-admin editors only reach users inside their own business entity.
+     */
+    private function placeInSameBusinessEntity(User ...$users): void
+    {
+        $entityId = DB::table('business_entities')->insertGetId(['name' => 'CV Complete']);
+
+        foreach ($users as $user) {
+            $user->forceFill(['business_entity_id' => $entityId])->save();
         }
     }
 

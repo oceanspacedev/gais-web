@@ -4,20 +4,57 @@ namespace App\Providers;
 
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\PhoneLogin;
-use App\Models\AssetRequest;
+use App\Models\Area;
 use App\Models\AssetService;
 use App\Models\AssetTransfer;
+use App\Models\Insurance;
+use App\Models\InsuranceCategory;
+use App\Models\InsuranceProvider;
+use App\Models\InsuranceScope;
+use App\Models\InsuranceUpdate;
+use App\Models\ItemRequest;
+use App\Models\ItemRequestDetail;
+use App\Models\ItemRequestLog;
+use App\Models\ItemRequestSetting;
+use App\Models\ItemRequestType;
 use App\Models\ObChecksheet;
+use App\Models\ObRoom;
+use App\Models\ObShift;
+use App\Models\ProblemReport;
+use App\Models\ProblemReportCategory;
+use App\Models\Product;
+use App\Models\ProductCategory;
+use App\Models\Rent;
+use App\Models\RentUpdate;
 use App\Models\Task;
-use App\Models\User;
+use App\Models\UnitType;
 use App\Policies\ActivityPolicy;
-use App\Policies\AssetRequestPolicy;
+use App\Policies\AreaPolicy;
 use App\Policies\AssetServicePolicy;
 use App\Policies\AssetTransferPolicy;
 use App\Policies\ExceptionPolicy;
+use App\Policies\InsuranceCategoryPolicy;
+use App\Policies\InsurancePolicy;
+use App\Policies\InsuranceProviderPolicy;
+use App\Policies\InsuranceScopePolicy;
+use App\Policies\InsuranceUpdatePolicy;
+use App\Policies\ItemRequestDetailPolicy;
+use App\Policies\ItemRequestLogPolicy;
+use App\Policies\ItemRequestPolicy;
+use App\Policies\ItemRequestSettingPolicy;
+use App\Policies\ItemRequestTypePolicy;
 use App\Policies\ObChecksheetPolicy;
+use App\Policies\ObRoomPolicy;
+use App\Policies\ObShiftPolicy;
+use App\Policies\ProblemReportCategoryPolicy;
+use App\Policies\ProblemReportPolicy;
+use App\Policies\ProductCategoryPolicy;
+use App\Policies\ProductPolicy;
+use App\Policies\RentPolicy;
+use App\Policies\RentUpdatePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TaskPolicy;
+use App\Policies\UnitTypePolicy;
 use App\Support\MekayaAssets;
 use App\Support\ObservabilityAccess;
 use App\Support\StoredFile;
@@ -106,16 +143,33 @@ class AppServiceProvider extends ServiceProvider
 
     protected function registerAuthorization(): void
     {
-        Gate::policy(AssetRequest::class, AssetRequestPolicy::class);
         Gate::policy(AssetService::class, AssetServicePolicy::class);
         Gate::policy(AssetTransfer::class, AssetTransferPolicy::class);
         Gate::policy(ObChecksheet::class, ObChecksheetPolicy::class);
+        Gate::policy(ObRoom::class, ObRoomPolicy::class);
+        Gate::policy(ObShift::class, ObShiftPolicy::class);
         Gate::policy(Activity::class, ActivityPolicy::class);
         Gate::policy(Exception::class, ExceptionPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Task::class, TaskPolicy::class);
-
-        Gate::define('viewPulse', fn (User $user): bool => $user->hasRole('super_admin'));
+        Gate::policy(RentUpdate::class, RentUpdatePolicy::class);
+        Gate::policy(ItemRequestDetail::class, ItemRequestDetailPolicy::class);
+        Gate::policy(InsuranceUpdate::class, InsuranceUpdatePolicy::class);
+        Gate::policy(Area::class, AreaPolicy::class);
+        Gate::policy(Insurance::class, InsurancePolicy::class);
+        Gate::policy(InsuranceCategory::class, InsuranceCategoryPolicy::class);
+        Gate::policy(InsuranceProvider::class, InsuranceProviderPolicy::class);
+        Gate::policy(InsuranceScope::class, InsuranceScopePolicy::class);
+        Gate::policy(ItemRequest::class, ItemRequestPolicy::class);
+        Gate::policy(ItemRequestLog::class, ItemRequestLogPolicy::class);
+        Gate::policy(ItemRequestSetting::class, ItemRequestSettingPolicy::class);
+        Gate::policy(ItemRequestType::class, ItemRequestTypePolicy::class);
+        Gate::policy(ProblemReport::class, ProblemReportPolicy::class);
+        Gate::policy(ProblemReportCategory::class, ProblemReportCategoryPolicy::class);
+        Gate::policy(Product::class, ProductPolicy::class);
+        Gate::policy(ProductCategory::class, ProductCategoryPolicy::class);
+        Gate::policy(Rent::class, RentPolicy::class);
+        Gate::policy(UnitType::class, UnitTypePolicy::class);
     }
 
     /**

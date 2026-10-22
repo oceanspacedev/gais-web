@@ -60,6 +60,10 @@ class AssetResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-archive-box';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Aset';
+
+    protected static ?int $navigationSort = 1;
+
     public static function getCategoryOptions(): array
     {
         return Cache::remember('asset_category_options', 300, function () {
@@ -84,6 +88,30 @@ class AssetResource extends Resource
         $customAttribute = CustomAssetAttribute::find($customAttributeId);
 
         return $customAttribute ? $customAttribute->type : null;
+    }
+
+    /**
+     * Calon pemegang aset: user di badan usaha yang bisa diakses viewer, plus
+     * pemegang saat ini supaya nilainya tetap tampil.
+     *
+     * @return array<int, string>
+     */
+    protected static function recipientOptions(?Asset $record): array
+    {
+        $viewer = auth()->user();
+
+        if ($viewer instanceof User && $viewer->hasUnrestrictedBusinessEntityAccess()) {
+            return Cache::remember('user_options', 300, fn () => User::orderBy('name')->pluck('name', 'id'))->all();
+        }
+
+        return User::query()
+            ->where(fn (Builder $query): Builder => $viewer instanceof User
+                ? $viewer->limitToAccessibleBusinessEntities($query, 'users.business_entity_id')
+                : $query->whereRaw('1 = 0'))
+            ->when($record?->recipient_id, fn (Builder $query, $recipientId): Builder => $query->orWhere('users.id', $recipientId))
+            ->orderBy('name')
+            ->pluck('name', 'id')
+            ->all();
     }
 
     protected static function shouldShowSaleAuditFields(callable $get): bool
@@ -699,7 +727,12 @@ class AssetResource extends Resource
                                         if ($state === AssetCondition::Sold->value) {
                                             $set('recipient_id', null);
                                             $set('recipient_business_entity_id', null);
-                                        } else {
+                                        } elseif ($state === AssetCondition::Available->value) {
+                                            // Stok tidak punya pemegang; badan usaha penerima tetap sebagai penanda stok.
+                                            $set('recipient_id', null);
+                                        }
+
+                                        if ($state !== AssetCondition::Sold->value) {
                                             $set('sold_at', null);
                                             $set('sold_to', null);
                                             $set('sold_price', null);
@@ -802,7 +835,7 @@ class AssetResource extends Resource
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                             ])
                             ->columns(3)
-                            ->visible(fn () => auth()->user()?->hasAnyRole(['super_admin', 'general_affair']) ?? false),
+                            ->visible(fn (): bool => auth()->user()?->can('manageCondition', Asset::class) ?? false),
 
                         Section::make('Penerima Aset')
                             ->schema([
@@ -815,17 +848,18 @@ class AssetResource extends Resource
                                     ]),
                                 Select::make('recipient_business_entity_id')
                                     ->translateLabel()
-                                    ->options(fn () => Cache::remember('business_entity_options', 300, fn () => BusinessEntity::orderBy('name')->pluck('name', 'id')))
+                                    ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->recipient_business_entity_id))
                                     ->searchable()
                                     ->helperText('Kosongkan jika tetap mengikuti data transfer terakhir.'),
                                 Select::make('recipient_id')
                                     ->translateLabel()
-                                    ->options(fn () => Cache::remember('user_options', 300, fn () => User::orderBy('name')->pluck('name', 'id')))
+                                    ->options(fn (?Asset $record): array => self::recipientOptions($record))
                                     ->searchable()
-                                    ->helperText('Pilih pemegang aset saat ini.'),
+                                    ->disabled(fn (callable $get): bool => $get('condition_status') === AssetCondition::Available->value)
+                                    ->helperText('Pilih pemegang aset saat ini. Aset Tersedia berada di stok dan tidak punya pemegang.'),
                             ])
                             ->columns(2)
-                            ->visible(fn () => auth()->user()?->hasRole('super_admin')),
+                            ->visible(fn (): bool => auth()->user()?->can('updateRecipient', Asset::class) ?? false),
                     ])
                     ->columnSpan(2),
 
@@ -837,7 +871,10 @@ class AssetResource extends Resource
                             ->required(),
                         Select::make('business_entity_id')
                             ->translateLabel()
-                            ->options(fn () => Cache::remember('business_entity_options', 300, fn () => BusinessEntity::orderBy('name')->pluck('name', 'id')))
+                            // Aset baru harus masuk badan usaha yang bisa diakses, kalau tidak
+                            // aset itu langsung hilang dari daftar pembuatnya sendiri.
+                            ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
+                            ->in(fn (?Asset $record): array => array_keys(BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id)))
                             ->searchable()
                             ->required(),
                         TextInput::make('item_price')
@@ -1028,7 +1065,7 @@ class AssetResource extends Resource
                     ->label('Selesaikan Perbaikan')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Asset $record): bool => (auth()->user()?->hasAnyRole(['super_admin', 'general_affair']) ?? false)
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('manageCondition', Asset::class) ?? false)
                         && $record->condition_status === AssetCondition::Damaged
                         && $record->nbh_status === NbhStatus::Pending)
                     ->form(self::repairCompletionFormSchema())
@@ -1095,6 +1132,18 @@ class AssetResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
+    }
+
+    /**
+     * Pengguna dengan akses badan usaha terbatas hanya melihat aset yang
+     * pemilik atau pemegangnya ada di badan usaha yang bisa diaksesnya.
+     */
+    public static function getEloquentQuery(): Builder
+    {
+        $query = parent::getEloquentQuery();
+        $viewer = auth()->user();
+
+        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query;
     }
 
     public static function getRelations(): array
@@ -1234,7 +1283,11 @@ class AssetResource extends Resource
                                             ->state(fn (Asset $record): string => $record->assetLocation?->name ?? '-'),
                                         TextEntry::make('recipient_display')
                                             ->label(__('Pemegang Aset'))
-                                            ->state(fn (Asset $record): string => $record->recipient?->name ?? '-'),
+                                            // Stok tidak punya pemegang; tampilkan badan usaha stoknya, bukan "-".
+                                            ->state(fn (Asset $record): string => $record->recipient?->name
+                                                ?? ($record->condition_status === AssetCondition::Available
+                                                    ? collect(['Stok', $record->recipientBusinessEntity?->name])->filter()->implode(' · ')
+                                                    : '-')),
                                     ]),
 
                         ComponentsSection::make('QR Code')

@@ -52,6 +52,7 @@ class CreateObChecksheet extends CreateRecord
 
             $created = ObChecksheet::create([
                 'user_id' => auth()->id(),
+                'ob_shift_id' => filled($data['ob_shift_id'] ?? null) ? (int) $data['ob_shift_id'] : null,
                 'room' => $room['room'] ?? null,
                 'before_photo' => is_string($photo) ? $photo : null,
                 'notes' => filled($room['notes'] ?? null) ? $room['notes'] : null,

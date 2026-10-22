@@ -2,13 +2,21 @@
 
 declare(strict_types=1);
 
+use App\Filament\Pages\Guide;
 use App\Filament\Resources\AssetReconciliationResource;
-use App\Filament\Resources\AssetRequestResource;
 use App\Filament\Resources\AssetResource;
+use App\Filament\Resources\AssetServiceResource;
 use App\Filament\Resources\AssetTransferResource;
 use App\Filament\Resources\DivisionResource;
+use App\Filament\Resources\InsuranceResource;
+use App\Filament\Resources\ItemRequestResource;
+use App\Filament\Resources\ObChecksheetResource;
+use App\Filament\Resources\ProblemReportResource;
+use App\Filament\Resources\ProductResource;
+use App\Filament\Resources\RentResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
+use App\Support\ObservabilityAccess;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
@@ -23,7 +31,7 @@ return [
             'pages' => true,
             'widgets' => true,
             'resources' => true,
-            'custom_permissions' => false,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -64,11 +72,33 @@ return [
             'restoreAny',
             'export',
             'import',
+            'impersonate',
+            'manageStock',
+            'manageCondition',
+            'repairValidation',
+            'regenerateQr',
+            'updateRecipient',
+            'merge',
+            'updateCore',
+            'deleteDetail',
+            'viewAll',
+            'updateAll',
+            'deleteAll',
+            'assign',
+            'manageAccess',
+            'manageBusinessEntityAccess',
+            'approveAccounting',
+            'approveManager',
+            'process',
+            'audit',
+            'changeApplicant',
         ],
     ],
 
+    // Custom permission labels (Horizon, Log Viewer) are translated from
+    // lang/vendor/filament-shield/{locale}/filament-shield.php.
     'localization' => [
-        'enabled' => false,
+        'enabled' => true,
         'key' => 'filament-shield::filament-shield.resource_permission_prefixes_labels',
     ],
 
@@ -78,16 +108,64 @@ return [
             AssetResource::class => [
                 'export',
                 'import',
-            ],
-            AssetRequestResource::class => [
-                'export',
-                'restore',
-                'restoreAny',
-                'forceDelete',
-                'forceDeleteAny',
+                // Tandai dijual/rusak/hilang, selesaikan perbaikan, audit penjualan.
+                'manageCondition',
+                'repairValidation',
+                'regenerateQr',
+                'updateRecipient',
+                'merge',
             ],
             AssetTransferResource::class => [
                 'export',
+                // BA Serah Terima/Pengembalian atas nama staf GA mana pun.
+                'manageStock',
+                // Ubah jenis BA, pihak, dan aset setelah BA dibuat.
+                'updateCore',
+                // Lepas riwayat transfer dari halaman aset.
+                'deleteDetail',
+            ],
+            // viewAll/updateAll/deleteAll: data milik user lain; tanpa izin ini
+            // user hanya mengelola datanya sendiri.
+            AssetServiceResource::class => [
+                'export',
+                'viewAll',
+                'updateAll',
+                'deleteAll',
+            ],
+            ObChecksheetResource::class => [
+                'export',
+                'viewAll',
+                'updateAll',
+                'deleteAll',
+                // Menugaskan pembersihan ke OB dan mengganti petugasnya.
+                'assign',
+            ],
+            // Alur pengajuan barang: tahap Accounting, Manager, Executor, catatan audit, ganti pemohon.
+            ItemRequestResource::class => [
+                'export',
+                'viewAll',
+                'approveAccounting',
+                'approveManager',
+                'process',
+                'audit',
+                'changeApplicant',
+            ],
+            ProblemReportResource::class => [
+                'export',
+                'viewAll',
+                'process',
+            ],
+            InsuranceResource::class => [
+                'export',
+                'import',
+            ],
+            RentResource::class => [
+                'export',
+                'import',
+            ],
+            ProductResource::class => [
+                'export',
+                'import',
             ],
             DivisionResource::class => [
                 'restore',
@@ -97,6 +175,10 @@ return [
             ],
             UserResource::class => [
                 'import',
+                'impersonate',
+                // Username, email, password, role, dan login WhatsApp.
+                'manageAccess',
+                'manageBusinessEntityAccess',
             ],
             VehicleChecksheetResource::class => [
                 'export',
@@ -122,6 +204,7 @@ return [
         'prefix' => 'view',
         'exclude' => [
             Dashboard::class,
+            Guide::class,
         ],
     ],
 
@@ -134,7 +217,8 @@ return [
         ],
     ],
 
-    'custom_permissions' => [],
+    // Horizon & Log Viewer access, managed from the Shield role form (Custom tab).
+    'custom_permissions' => ObservabilityAccess::shieldPermissions(),
 
     'discovery' => [
         'discover_all_resources' => false,

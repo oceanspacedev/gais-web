@@ -21,3 +21,7 @@ yarn-error.log
 .DS_Store
 app/.DS_Store
 storage/.DS_Store
+
+# Database dumps must never be committed
+/*.gz
+/*.sql

@@ -4,7 +4,10 @@ namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
 use App\Filament\Plugins\FilamentExceptionsPlugin;
+use App\Filament\Resources\AssetLocationResource;
 use App\Filament\Resources\AssetResource\Widgets\CustomAssetWidget;
+use App\Filament\Resources\ObChecksheetResource\Pages\ListObChecksheets;
+use App\Filament\Resources\ObChecksheetResource\Pages\ViewObChecksheet;
 use Apriansyahrs\MekayaTheme\Livewire\MekayaSidebar;
 use Apriansyahrs\MekayaTheme\MekayaPlugin;
 use Asmit\ResizedColumn\ResizedColumnPlugin;
@@ -14,6 +17,8 @@ use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Navigation\NavigationGroup;
+use Filament\Navigation\NavigationItem;
 use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
@@ -49,6 +54,30 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn () => view('auth.login-extra'),
             )
+            // Foto OB Checksheet bisa diklik untuk diperbesar.
+            ->renderHook(
+                PanelsRenderHook::BODY_END,
+                fn () => view('filament.ob-checksheet.image-lightbox'),
+                scopes: [ListObChecksheets::class, ViewObChecksheet::class],
+            )
+            // Menu dikelompokkan per modul; urutan grup mengikuti daftar ini.
+            ->navigationGroups([
+                NavigationGroup::make('Aset'),
+                NavigationGroup::make('Master Aset'),
+                NavigationGroup::make('OB / Kebersihan'),
+                NavigationGroup::make('Kendaraan'),
+                NavigationGroup::make('Pekerjaan Vendor'),
+                NavigationGroup::make('Pengajuan Barang'),
+                NavigationGroup::make('Lapor Gangguan'),
+                NavigationGroup::make('Asuransi & Sewa'),
+                NavigationGroup::make('Organisasi'),
+                NavigationGroup::make('Pengaturan')->collapsed(),
+            ])
+            // Lokasi dipakai aset dan OB, jadi grupnya mendapat pintasan ke menu Lokasi di Organisasi.
+            ->navigationItems([
+                $this->locationShortcut('Master Aset'),
+                $this->locationShortcut('OB / Kebersihan'),
+            ])
             ->passwordReset(null, null)
             ->profile(null)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -113,5 +142,17 @@ class AdminPanelProvider extends PanelProvider
                     ]),
             ])
             ->maxContentWidth(Width::Full);
+    }
+
+    private function locationShortcut(string $group): NavigationItem
+    {
+        return NavigationItem::make(fn (): string => AssetLocationResource::getNavigationLabel())
+            ->group($group)
+            ->sort(99)
+            ->icon('heroicon-o-map-pin')
+            ->url(fn (): string => AssetLocationResource::getUrl())
+            ->visible(fn (): bool => AssetLocationResource::canViewAny())
+            // Yang ditandai aktif cukup menu aslinya.
+            ->isActiveWhen(fn (): bool => false);
     }
 }

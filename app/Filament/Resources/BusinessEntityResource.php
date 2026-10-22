@@ -20,7 +20,9 @@ class BusinessEntityResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|\UnitEnum|null $navigationGroup = 'Organisasi';
+
+    protected static ?int $navigationSort = 2;
 
     public static function form(Schema $form): Schema
     {

@@ -63,6 +63,24 @@ return [
             ]) : [],
         ],
 
+        // Database legacy sumo-web (Web Gais) yang dibaca `php artisan sumo:import`.
+        // Lihat database/sumo/README.md. Default mengikuti DB_* selain nama database.
+        'sumo' => [
+            'driver' => 'mysql',
+            'host' => env('SUMO_DB_HOST', env('DB_HOST', '127.0.0.1')),
+            'port' => env('SUMO_DB_PORT', env('DB_PORT', '3306')),
+            'database' => env('SUMO_DB_DATABASE', 'db_sumo'),
+            'username' => env('SUMO_DB_USERNAME', env('DB_USERNAME', 'forge')),
+            'password' => env('SUMO_DB_PASSWORD', env('DB_PASSWORD', '')),
+            'unix_socket' => env('SUMO_DB_SOCKET', env('DB_SOCKET', '')),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => env('SUMO_DB_PREFIX', ''),
+            'prefix_indexes' => true,
+            'strict' => false,
+            'engine' => null,
+        ],
+
         'pgsql' => [
             'driver' => 'pgsql',
             'url' => env('DB_URL'),

@@ -20,7 +20,9 @@ class AssetLocationResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-map-pin';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|\UnitEnum|null $navigationGroup = 'Organisasi';
+
+    protected static ?int $navigationSort = 5;
 
     public static function form(Schema $form): Schema
     {

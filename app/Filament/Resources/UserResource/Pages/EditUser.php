@@ -6,7 +6,7 @@ use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Concerns\SyncsWhatsappLogin;
 use Filament\Actions;
 use Filament\Resources\Pages\EditRecord;
-use Spatie\Permission\Models\Role;
+use STS\FilamentImpersonate\Actions\Impersonate;
 
 class EditUser extends EditRecord
 {
@@ -23,21 +23,12 @@ class EditUser extends EditRecord
         return $this->syncWhatsappLoginCredential($data);
     }
 
-    protected function afterSave(): void
-    {
-        $roleIds = $this->form->getState()['roles'] ?? [];
-
-        if (! is_array($roleIds)) {
-            $roleIds = explode(',', $roleIds);
-        }
-
-        $roleNames = Role::whereIn('id', $roleIds)->pluck('name')->toArray();
-        $this->record->syncRoles($roleNames);
-    }
-
     protected function getHeaderActions(): array
     {
         return [
+            Impersonate::make()
+                ->record($this->getRecord())
+                ->redirectTo(fn (): string => filament()->getUrl()),
             Actions\DeleteAction::make(),
         ];
     }

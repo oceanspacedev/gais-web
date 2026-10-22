@@ -13,9 +13,26 @@
     $hasObservabilityLinks = \App\Support\ObservabilityAccess::allowed(filament()->auth()->user());
     $shouldRenderSidebarFooter = filament()->auth()->check()
         && ($hasDatabaseNotificationsInSidebar || $hasUserMenuInSidebar || $hasObservabilityLinks);
+    // Mekaya tidak membaca NavigationGroup::collapsed(); grup itu dilipat sekali saat
+    // pertama kali dibuka, setelah itu pilihan buka/tutup pengguna yang dipakai.
+    $defaultCollapsedGroups = collect(filament()->getNavigationGroups())
+        ->filter(fn ($group): bool => $group instanceof \Filament\Navigation\NavigationGroup && $group->isCollapsed())
+        ->map(fn (\Filament\Navigation\NavigationGroup $group): string => (string) $group->getLabel())
+        ->values()
+        ->all();
 @endphp
 
-<div class="h-full">
+<div
+    class="h-full"
+    x-data
+    x-init="
+        const seeded = JSON.parse(localStorage.getItem('sidebar-default-collapsed-groups') ?? '[]');
+        @js($defaultCollapsedGroups)
+            .filter((label) => ! seeded.includes(label))
+            .forEach((label) => $store.sidebar.collapseGroup(label));
+        localStorage.setItem('sidebar-default-collapsed-groups', JSON.stringify([...new Set([...seeded, ...@js($defaultCollapsedGroups)])]));
+    "
+>
     <script>
         if (
             localStorage.getItem('collapsedGroups') === null ||
@@ -64,7 +81,16 @@
                             class="pointer-events-none absolute top-0 right-0.5 left-0 z-10 h-6 bg-linear-to-b from-gray-50 to-transparent dark:from-gray-950"
                         ></div>
 
-                        <div class="h-full overflow-y-auto">
+                        {{-- Posisi scroll menu disimpan agar tidak kembali ke atas setelah pindah halaman. --}}
+                        <div
+                            class="h-full overflow-y-auto"
+                            x-data
+                            x-init="
+                                const saved = parseInt(sessionStorage.getItem('sidebar-scroll-top') ?? '0');
+                                $nextTick(() => requestAnimationFrame(() => { $el.scrollTop = saved }));
+                            "
+                            x-on:scroll.passive.debounce.100ms="sessionStorage.setItem('sidebar-scroll-top', $el.scrollTop)"
+                        >
                             <nav class="mky-si-nav px-3 py-3">
                                 @include('mekaya::livewire.partials.mekaya-sidebar-navigation', [
                                     'navigation' => $navigation,

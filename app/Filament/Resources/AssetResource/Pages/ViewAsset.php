@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AssetResource\Pages;
 
 use App\Enums\AssetCondition;
+use App\Enums\AssetTransferDocumentType;
 use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource;
 use App\Models\Asset;
@@ -19,6 +20,7 @@ use Filament\Forms;
 use Filament\Forms\Components\Placeholder;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 
 class ViewAsset extends ViewRecord
@@ -52,7 +54,7 @@ class ViewAsset extends ViewRecord
                     ->label('Tandai Dijual')
                     ->icon('heroicon-o-banknotes')
                     ->color('gray')
-                    ->visible(fn (Asset $record): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair'])
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('manageCondition', Asset::class) ?? false)
                         && $record->condition_status !== AssetCondition::Sold)
                     ->modalHeading('Lengkapi audit penjualan aset')
                     ->modalDescription('Isi data tujuan penjualan, nilai transaksi, dan dokumen pendukung sebelum status diubah menjadi "Dijual".')
@@ -72,7 +74,7 @@ class ViewAsset extends ViewRecord
                     ->label('Tandai Rusak')
                     ->icon('heroicon-o-wrench')
                     ->color('warning')
-                    ->visible(fn (Asset $record): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair'])
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('manageCondition', Asset::class) ?? false)
                         && ! in_array($record->condition_status, [AssetCondition::Damaged, AssetCondition::Sold], true))
                     ->form($this->getIncidentFormSchema())
                     ->action(function (array $data): void {
@@ -90,7 +92,7 @@ class ViewAsset extends ViewRecord
                     ->label('Tandai Hilang')
                     ->icon('heroicon-o-exclamation-triangle')
                     ->color('danger')
-                    ->visible(fn (Asset $record): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair'])
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('manageCondition', Asset::class) ?? false)
                         && ! in_array($record->condition_status, [AssetCondition::Lost, AssetCondition::Sold], true))
                     ->form($this->getIncidentFormSchema())
                     ->action(function (array $data): void {
@@ -108,7 +110,7 @@ class ViewAsset extends ViewRecord
                     ->label('Selesaikan Perbaikan')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Asset $record): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair'])
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('manageCondition', Asset::class) ?? false)
                         && $record->condition_status === AssetCondition::Damaged
                         && $record->nbh_status === NbhStatus::Pending)
                     ->form(AssetResource::repairCompletionFormSchema())
@@ -130,7 +132,7 @@ class ViewAsset extends ViewRecord
                     ->label('Perbaiki Validasi')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Asset $record): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair'])
+                    ->visible(fn (Asset $record): bool => (auth()->user()?->can('repairValidation', Asset::class) ?? false)
                         && ! $record->checkValidRecipient())
                     ->requiresConfirmation()
                     ->modalHeading('Perbaiki status validasi aset')
@@ -162,7 +164,7 @@ class ViewAsset extends ViewRecord
                     ->label('Gabungkan Aset Duplikat')
                     ->icon('heroicon-o-arrows-pointing-in')
                     ->color('warning')
-                    ->visible(fn (): bool => auth()->user()?->hasRole('super_admin') ?? false)
+                    ->visible(fn (): bool => auth()->user()?->can('merge', Asset::class) ?? false)
                     ->modalHeading('Gabungkan Aset Duplikat')
                     ->modalDescription('Pindahkan semua relasi dari aset sumber ke aset ini, lalu hapus aset sumber.')
                     ->modalSubmitActionLabel('Gabungkan')
@@ -172,7 +174,7 @@ class ViewAsset extends ViewRecord
                             ->label('Aset Sumber (Duplikat)')
                             ->searchable()
                             ->getSearchResultsUsing(function (string $search): array {
-                                return Asset::where('id', '!=', $this->record->id)
+                                return $this->mergeableAssets()
                                     ->where(function ($query) use ($search) {
                                         $query->where('name', 'like', "%{$search}%")
                                             ->orWhere('id', 'like', "%{$search}%");
@@ -185,7 +187,7 @@ class ViewAsset extends ViewRecord
                                     ->toArray();
                             })
                             ->getOptionLabelUsing(function ($value): ?string {
-                                $asset = Asset::find($value);
+                                $asset = $this->mergeableAssets()->find($value);
 
                                 return $asset ? "#{$asset->id} — {$asset->name}" : null;
                             })
@@ -211,7 +213,8 @@ class ViewAsset extends ViewRecord
                                     return 'Pilih aset sumber untuk melihat ringkasan.';
                                 }
 
-                                $source = Asset::withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+                                $source = $this->mergeableAssets()
+                                    ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
                                     ->find($sourceId);
 
                                 if (! $source) {
@@ -347,7 +350,7 @@ class ViewAsset extends ViewRecord
                 ->icon('heroicon-o-arrow-path')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->visible(fn (): bool => auth()->user()?->hasAnyRole(['super_admin', 'general_affair']) ?? false)
+                ->visible(fn (): bool => auth()->user()?->can('regenerateQr', Asset::class) ?? false)
                 ->action(function (): void {
                     app(AssetQrService::class)->regenerate($this->record);
                     $this->record->refresh()->load('qr');
@@ -374,27 +377,27 @@ class ViewAsset extends ViewRecord
      */
     protected function detectConflictingTransferDetails(int $targetAssetId, int $sourceAssetId): array
     {
-        $loadTransfer = fn ($q) => $q->with('fromUser', 'toUser');
-
         $targetDetails = AssetTransferDetail::where('asset_id', $targetAssetId)
-            ->with(['assetTransfer' => $loadTransfer])
+            ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
                 'id' => $d->id,
                 'origin' => 'target',
                 'from_user_id' => $d->assetTransfer?->from_user_id,
                 'to_user_id' => $d->assetTransfer?->to_user_id,
+                'type' => $d->assetTransfer?->documentType(),
                 'date' => $d->assetTransfer?->transfer_date,
             ]);
 
         $sourceDetails = AssetTransferDetail::where('asset_id', $sourceAssetId)
-            ->with(['assetTransfer' => $loadTransfer])
+            ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
                 'id' => $d->id,
                 'origin' => 'source',
                 'from_user_id' => $d->assetTransfer?->from_user_id,
                 'to_user_id' => $d->assetTransfer?->to_user_id,
+                'type' => $d->assetTransfer?->documentType(),
                 'date' => $d->assetTransfer?->transfer_date,
             ]);
 
@@ -408,7 +411,7 @@ class ViewAsset extends ViewRecord
         }
 
         // Cari rantai terpanjang yang valid menggunakan dynamic programming (LIS variant)
-        // Rantai valid = to_user[j] == from_user[i] untuk setiap pasangan berurutan
+        // Rantai valid = BA j berlanjut ke BA i (lihat continuesTransferChain)
         // Prioritas: panjang rantai (jumlah node terbanyak menang)
         $n = count($combined);
         $dp = array_fill(0, $n, 1);     // panjang rantai terpanjang ending di i
@@ -416,8 +419,7 @@ class ViewAsset extends ViewRecord
 
         for ($i = 0; $i < $n; $i++) {
             for ($j = 0; $j < $i; $j++) {
-                // Rantai valid jika to_user[j] == from_user[i]
-                if ($combined[$j]['to_user_id'] === $combined[$i]['from_user_id']) {
+                if ($this->continuesTransferChain($combined[$j], $combined[$i])) {
                     if ($dp[$i] < $dp[$j] + 1) {
                         $dp[$i] = $dp[$j] + 1;
                         $prev[$i] = $j;
@@ -456,12 +458,45 @@ class ViewAsset extends ViewRecord
         ];
     }
 
+    /**
+     * BA berikutnya melanjutkan BA sebelumnya bila penerimanya menjadi pemberi
+     * berikutnya, atau bila aset kembali ke stok lalu dikeluarkan lagi dari
+     * stok: stok tidak punya pemegang, jadi staf GA yang menerima pengembalian
+     * boleh berbeda dengan staf GA yang menyerahkannya kembali.
+     *
+     * @param  array{from_user_id: mixed, to_user_id: mixed, type: ?AssetTransferDocumentType}  $previous
+     * @param  array{from_user_id: mixed, to_user_id: mixed, type: ?AssetTransferDocumentType}  $next
+     */
+    protected function continuesTransferChain(array $previous, array $next): bool
+    {
+        if ($previous['to_user_id'] === $next['from_user_id']) {
+            return true;
+        }
+
+        return ($previous['type']?->returnsToStock() ?? false)
+            && ($next['type']?->dispatchesFromStock() ?? false);
+    }
+
+    /**
+     * Aset sumber yang boleh digabungkan: selain aset ini, dan hanya di badan
+     * usaha yang bisa diakses user (aset sumber akan dihapus).
+     */
+    protected function mergeableAssets(): Builder
+    {
+        $user = auth()->user();
+
+        return Asset::query()
+            ->whereKeyNot($this->record->getKey())
+            ->when($user instanceof User, fn (Builder $query): Builder => $query->accessibleBy($user), fn (Builder $query): Builder => $query->whereRaw('1 = 0'));
+    }
+
     protected function performMerge(int $sourceAssetId, array $transferDetailIdsToMove = []): void
     {
         /** @var Asset $target */
         $target = $this->record;
 
-        $source = Asset::withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+        $source = $this->mergeableAssets()
+            ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
             ->findOrFail($sourceAssetId);
 
         if ($source->id === $target->id) {

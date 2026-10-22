@@ -92,8 +92,6 @@
           </table>
 
           <p style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
-            <small style="color: #333;"><a href="{{ route('public.asset-requests.index') }}">Ajukan aset
-                lain</a></small><br>
             <small style="color: #333;">Dikirim oleh <a href="https://completeselular.co.id/">IT Support</a></small>
           </p>
         </div>

@@ -26,7 +26,9 @@ class VendorResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-storefront';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|\UnitEnum|null $navigationGroup = 'Master Aset';
+
+    protected static ?int $navigationSort = 3;
 
     public static function form(Schema $form): Schema
     {

@@ -11,13 +11,16 @@ use App\Support\PhoneNumber;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\Toggle;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -25,6 +28,8 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
+use STS\FilamentImpersonate\Actions\Impersonate;
 
 class UserResource extends Resource
 {
@@ -32,11 +37,13 @@ class UserResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
 
-    protected static string|\UnitEnum|null $navigationGroup = 'Master Data';
+    protected static string|\UnitEnum|null $navigationGroup = 'Organisasi';
+
+    protected static ?int $navigationSort = 1;
 
     public static function form(Schema $form): Schema
     {
-        $isSuperAdmin = Auth::user()->hasRole('super_admin') || Auth::user()->hasRole('admin');
+        $canManageAccess = Auth::user()->can('manageAccess', User::class);
 
         return $form
             ->schema([
@@ -46,9 +53,13 @@ class UserResource extends Resource
                             ->required()
                             ->maxLength(255),
                         Select::make('business_entity_id')
-                            ->options(BusinessEntity::all()->pluck('name', 'id'))
-                            ->label('Business Entity')
-                            ->searchable(),
+                            ->options(fn (): array => static::businessEntityOptions())
+                            ->label(__('Business Entity'))
+                            ->searchable()
+                            // Scoped admins must place every new user inside an entity they can
+                            // reach, otherwise the record would vanish from their own list.
+                            ->required(fn (string $operation): bool => $operation === 'create' && ! static::viewerHasUnrestrictedAccess())
+                            ->in(fn (): array => array_keys(static::businessEntityOptions())),
                         Select::make('job_title_id')
                             ->options(JobTitle::all()->pluck('title', 'id'))
                             ->label('Job Title')
@@ -57,18 +68,32 @@ class UserResource extends Resource
                             ->label('Employee ID')
                             ->maxLength(64)
                             ->unique(User::class, 'employee_id', ignoreRecord: true),
+                        // Tanpa preload: opsi baru diambil saat dicari, jadi halaman user tetap
+                        // terbuka walau tabel divisi belum ada (lihat PhoneOtpLoginTest).
+                        Select::make('division_id')
+                            ->label('Divisi')
+                            ->relationship('division', 'name')
+                            ->searchable()
+                            ->preload(false),
+                        Select::make('approver_user_id')
+                            ->label('Atasan (approver pengajuan barang)')
+                            ->relationship('approver', 'name', fn (Builder $query, ?User $record): Builder => $query
+                                ->when($record, fn (Builder $q) => $q->whereKeyNot($record->id))
+                                ->orderBy('name'))
+                            ->searchable()
+                            ->preload(false),
                         TextInput::make('whatsapp_number')
                             ->label('Nomor WhatsApp')
                             ->tel()
                             ->placeholder('081234567890')
                             ->helperText('Dipakai untuk pengingat aset via WhatsApp dan login OTP. Kosongkan untuk menonaktifkan login WhatsApp.')
-                            ->afterStateHydrated(function (TextInput $component, ?User $record) use ($isSuperAdmin): void {
-                                if ($isSuperAdmin && $record && blank($record->whatsapp_number) && filled($record->whatsapp_login_number)) {
+                            ->afterStateHydrated(function (TextInput $component, ?User $record) use ($canManageAccess): void {
+                                if ($canManageAccess && $record && blank($record->whatsapp_number) && filled($record->whatsapp_login_number)) {
                                     $component->state($record->whatsapp_login_number);
                                 }
                             })
                             ->mutateStateForValidationUsing(fn ($state) => PhoneNumber::canonical($state) ?? $state)
-                            ->rules($isSuperAdmin ? ['nullable', 'regex:/^[1-9][0-9]{9,14}$/D'] : ['nullable'])
+                            ->rules($canManageAccess ? ['nullable', 'regex:/^[1-9][0-9]{9,14}$/D'] : ['nullable'])
                             ->unique(User::class, 'whatsapp_login_number', ignoreRecord: true)
                             ->dehydrateStateUsing(fn ($state) => filled($state) ? preg_replace('/[^\d+]/', '', (string) $state) : null)
                             ->maxLength(32),
@@ -81,37 +106,69 @@ class UserResource extends Resource
                         TextInput::make('username')
                             ->maxLength(255)
                             ->unique(User::class, 'username', ignoreRecord: true)
-                            ->visible($isSuperAdmin),
+                            ->visible($canManageAccess),
                         TextInput::make('email')
                             ->email()
                             ->maxLength(255)
                             ->unique(User::class, 'email', ignoreRecord: true)
                             ->rules(['not_regex:/[\r\n]/'])
-                            ->visible($isSuperAdmin),
+                            ->visible($canManageAccess),
                         TextInput::make('password')
                             ->password()
                             ->dehydrateStateUsing(fn ($state) => Hash::make($state))
                             ->dehydrated(fn ($state) => filled($state))
                             ->maxLength(255)
-                            ->visible($isSuperAdmin),
+                            ->visible($canManageAccess),
                         DateTimePicker::make('email_verified_at')
                             ->label('Email Verified At')
-                            ->visible($isSuperAdmin),
+                            ->visible($canManageAccess),
+                        // Hanya role yang bisa diberikan viewer yang bisa dipilih. Role user
+                        // yang di luar itu tetap tampil tetapi terkunci (lihat syncAssignableRoles).
                         Select::make('roles')
                             ->label('Roles')
-                            ->relationship('roles', 'name')
+                            ->relationship('roles', 'name', fn (Builder $query, ?User $record): Builder => $query->whereKey([
+                                ...static::assignableRoleIds(),
+                                ...($record?->roles->modelKeys() ?? []),
+                            ]))
+                            ->disabled(fn (?User $record): bool => static::hasUnassignableRole($record))
+                            ->helperText(fn (?User $record): ?string => static::hasUnassignableRole($record)
+                                ? 'Role user ini memberi akses yang tidak Anda miliki, jadi tidak bisa Anda ubah.'
+                                : null)
+                            ->saveRelationshipsUsing(fn (User $record, $state) => static::syncAssignableRoles($record, array_filter((array) $state)))
                             ->preload()
                             ->searchable()
-                            ->visible($isSuperAdmin),
-                    ])->visible($isSuperAdmin),
+                            ->visible($canManageAccess),
+                    ])->visible($canManageAccess),
+                // Izin sendiri, terpisah dari "Kelola Akses": pemegangnya belum tentu
+                // boleh mengubah username, password, atau role.
+                Section::make('Akses Badan Usaha')
+                    ->schema([
+                        Toggle::make('access_all_business_entities')
+                            ->label('Akses semua badan usaha')
+                            ->helperText('Termasuk badan usaha yang dibuat nanti. Matikan untuk membatasi ke badan usaha asal dan yang dicentang di bawah.')
+                            ->live(),
+                        CheckboxList::make('accessibleBusinessEntities')
+                            ->label('Akses Badan Usaha')
+                            ->relationship('accessibleBusinessEntities', 'name')
+                            ->helperText('Badan usaha asal pengguna selalu termasuk. Centang badan usaha lain yang boleh dilihat dan dikelola pengguna ini.')
+                            ->searchable()
+                            ->bulkToggleable()
+                            ->columns([
+                                'default' => 1,
+                                'sm' => 2,
+                                'lg' => 3,
+                            ])
+                            ->visible(fn (Get $get): bool => ! $get('access_all_business_entities')),
+                    ])->visible(fn (): bool => static::viewerMayManageBusinessEntityAccess()),
             ]);
     }
 
     public static function table(Table $table): Table
     {
-        $isSuperAdmin = Auth::user()->hasRole('super_admin');
+        $canManageAccess = Auth::user()->can('manageAccess', User::class);
 
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'businessEntity', 'accessibleBusinessEntities']))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -120,10 +177,21 @@ class UserResource extends Resource
                 TextColumn::make('businessEntity.name')
                     ->translateLabel('Business Entity')
                     ->badge()
-                    ->color(fn ($record) => $record->businessEntity->color)
-                    ->getStateUsing(fn ($record) => $record->businessEntity->name ?? null)
+                    ->color(fn ($record) => $record->businessEntity?->color)
+                    ->getStateUsing(fn ($record) => $record->businessEntity?->name)
                     ->toggleable(),
+                TextColumn::make('business_entity_access')
+                    ->label(__('Business Entity Access'))
+                    ->badge()
+                    ->color('gray')
+                    ->getStateUsing(fn (User $record): array => static::businessEntityAccessLabels($record))
+                    ->placeholder('-')
+                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable()->toggleable(),
+                TextColumn::make('division.name')
+                    ->label('Divisi')
+                    ->placeholder('-')
+                    ->toggleable(),
                 TextColumn::make('employee_id')
                     ->label('Employee ID')
                     ->searchable()
@@ -135,12 +203,16 @@ class UserResource extends Resource
                 TextColumn::make('roles.name')
                     ->badge()
                     ->toggleable(isToggledHiddenByDefault: true)
-                    ->visible($isSuperAdmin),
+                    ->visible($canManageAccess),
             ])
             ->filters([
                 SelectFilter::make('businessEntity')
-                    ->relationship('businessEntity', 'name')
-                    ->label('Business Entity')
+                    ->relationship(
+                        'businessEntity',
+                        'name',
+                        fn (Builder $query): Builder => static::viewer()->limitToAccessibleBusinessEntities($query, 'business_entities.id'),
+                    )
+                    ->label(__('Business Entity'))
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('jobTitle')
@@ -153,7 +225,7 @@ class UserResource extends Resource
                     ->label('Roles')
                     ->searchable()
                     ->preload()
-                    ->visible($isSuperAdmin),
+                    ->visible($canManageAccess),
             ])
             ->defaultSort('created_at', 'desc')
             ->persistFiltersInSession()
@@ -161,6 +233,8 @@ class UserResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                Impersonate::make()
+                    ->redirectTo(fn (): string => filament()->getUrl()),
                 EditAction::make(),
             ])
             ->bulkActions([
@@ -187,17 +261,124 @@ class UserResource extends Resource
         ];
     }
 
+    /**
+     * Akun super admin hanya terlihat oleh super admin. Cakupan badan usaha
+     * berlaku untuk semua viewer, sama seperti UserPolicy: yang punya akses
+     * semua badan usaha melihat semuanya, yang lain hanya user di badan usaha
+     * yang bisa ia akses (plus akunnya sendiri).
+     */
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery();
+        $viewer = static::viewer();
 
-        if (Auth::user()->hasRole('super_admin')) {
+        if (! $viewer->isSuperAdmin()) {
+            $query->whereDoesntHave('roles', function (Builder $query): void {
+                $query->where('name', config('filament-shield.super_admin.name', 'super_admin'));
+            });
+        }
+
+        if ($viewer->hasUnrestrictedBusinessEntityAccess()) {
             return $query;
         }
 
-        return $query->whereDoesntHave('roles', function (Builder $query) {
-            $query->where('name', 'super_admin');
+        return $query->where(function (Builder $query) use ($viewer): void {
+            $viewer
+                ->limitToAccessibleBusinessEntities($query, 'users.business_entity_id')
+                ->orWhere($viewer->getQualifiedKeyName(), $viewer->getKey());
         });
+    }
+
+    protected static function viewer(): User
+    {
+        $user = Auth::user();
+
+        if (! $user instanceof User) {
+            abort(403);
+        }
+
+        return $user;
+    }
+
+    protected static function viewerHasUnrestrictedAccess(): bool
+    {
+        return static::viewer()->hasUnrestrictedBusinessEntityAccess();
+    }
+
+    /**
+     * Akses yang diberikan tidak boleh melebihi milik pemberi, jadi pemegang
+     * "Kelola Akses Badan Usaha" juga harus tidak dibatasi badan usaha.
+     */
+    protected static function viewerMayManageBusinessEntityAccess(): bool
+    {
+        $viewer = static::viewer();
+
+        return $viewer->can('manageBusinessEntityAccess', User::class)
+            && $viewer->hasUnrestrictedBusinessEntityAccess();
+    }
+
+    /**
+     * Role yang semua permission-nya juga dimiliki viewer, supaya tidak ada
+     * yang bisa memberi (termasuk ke dirinya sendiri) akses melebihi miliknya.
+     *
+     * @return list<int>
+     */
+    public static function assignableRoleIds(): array
+    {
+        $viewerPermissionIds = static::viewer()->getAllPermissions()->modelKeys();
+
+        return Role::query()
+            ->whereDoesntHave('permissions', fn (Builder $query): Builder => $query->whereKeyNot($viewerPermissionIds))
+            ->pluck('id')
+            ->all();
+    }
+
+    protected static function hasUnassignableRole(?User $user): bool
+    {
+        return $user?->exists
+            && $user->roles()->whereKeyNot(static::assignableRoleIds())->exists();
+    }
+
+    /**
+     * Pilihan role hanya berlaku untuk role yang bisa diberikan viewer; role
+     * user yang di luar itu dipertahankan.
+     *
+     * @param  array<int|string>  $roleIds
+     */
+    public static function syncAssignableRoles(User $user, array $roleIds): void
+    {
+        $assignable = static::assignableRoleIds();
+        $chosen = array_intersect(array_map('intval', $roleIds), $assignable);
+        $kept = $user->roles()->whereKeyNot($assignable)->pluck('roles.id')->all();
+
+        $user->syncRoles(Role::query()->whereKey([...$chosen, ...$kept])->get());
+    }
+
+    /**
+     * Badges describing every business entity a user can reach.
+     *
+     * @return list<string>
+     */
+    protected static function businessEntityAccessLabels(User $user): array
+    {
+        if ($user->hasUnrestrictedBusinessEntityAccess()) {
+            return ['Semua badan usaha'];
+        }
+
+        return $user->effectiveBusinessEntities()->pluck('name')->all();
+    }
+
+    /**
+     * Business entities the current viewer may assign to a user.
+     *
+     * @return array<int, string>
+     */
+    protected static function businessEntityOptions(): array
+    {
+        return static::viewer()
+            ->limitToAccessibleBusinessEntities(BusinessEntity::query()->orderBy('name'), 'business_entities.id')
+            ->pluck('name', 'id')
+            ->all();
     }
 
     public static function getModelLabel(): string
@@ -242,11 +423,20 @@ class UserResource extends Resource
                         Grid::make(2)
                             ->schema([
                                 TextEntry::make('businessEntity.name')
-                                    ->label('Business Entity')
+                                    ->label(__('Business Entity'))
+                                    ->placeholder('-')
                                     ->columnSpan(1),
                                 TextEntry::make('jobTitle.title')
                                     ->label('Job Title')
+                                    ->placeholder('-')
                                     ->columnSpan(1),
+                                TextEntry::make('business_entity_access')
+                                    ->label(__('Business Entity Access'))
+                                    ->badge()
+                                    ->color('gray')
+                                    ->state(fn (User $record): array => static::businessEntityAccessLabels($record))
+                                    ->placeholder('-')
+                                    ->columnSpan(2),
                             ]),
                     ]),
 

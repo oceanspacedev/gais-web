@@ -34,6 +34,10 @@ class CustomAssetAttributeResource extends Resource
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-adjustments-horizontal';
 
+    protected static string|\UnitEnum|null $navigationGroup = 'Master Aset';
+
+    protected static ?int $navigationSort = 4;
+
     public static function getCategoryOptions()
     {
         $categories = Category::with('children')->get();
