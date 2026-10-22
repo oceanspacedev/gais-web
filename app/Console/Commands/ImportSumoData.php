@@ -53,6 +53,15 @@ class ImportSumoData extends Command
         $this->newLine();
         $this->table(['Langkah', 'Jumlah'], collect($report->counts())->map(fn (int $count, string $key): array => [$key, $count])->values()->all());
 
+        if ($report->notes() !== []) {
+            $this->newLine();
+            $this->info('Pemetaan (periksa sebelum impor sungguhan):');
+
+            foreach ($report->notes() as $note) {
+                $this->line("  - {$note}");
+            }
+        }
+
         if ($report->warnings() !== []) {
             $this->newLine();
             $this->warn('Peringatan ('.count($report->warnings()).'):');

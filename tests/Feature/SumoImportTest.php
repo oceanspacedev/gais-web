@@ -11,6 +11,7 @@ use App\Services\Sumo\SumoImporter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\SumoLegacyFixture;
 use Tests\TestCase;
@@ -61,6 +62,10 @@ class SumoImportTest extends TestCase
         $this->assertTrue($hcm->hasRole('executor'));
         $this->assertTrue($hcm->can('import_insurance'));
         $this->assertSame(self::B + 6, $hcm->division_id);
+        // Aturan divisi sumo hanya untuk executor: staf biasa di HCM tidak ikut mengelola asuransi.
+        $hcmStaff = User::where('legacy_sumo_user_id', self::B + 6)->firstOrFail();
+        $this->assertTrue($hcmStaff->hasRole('requester'));
+        $this->assertFalse($hcmStaff->can('view_insurance'));
         $this->assertTrue($requester->hasRole('requester'));
         $this->assertFalse($requester->access_all_business_entities);
         $this->assertSame($this->entity->id, $requester->business_entity_id);
@@ -69,6 +74,9 @@ class SumoImportTest extends TestCase
         $this->assertTrue($warehouse->can('export_item::request'));
         $this->assertSame('gone-uji-nonaktif-sumo'.(self::B + 5), $gone->username);
         $this->assertCount(0, $gone->roles);
+        // Akun terhapus tanpa riwayat apa pun tidak perlu dibuat.
+        $this->assertSame(0, User::where('legacy_sumo_user_id', self::B + 8)->count());
+        $this->assertSame(1, $report->count('users.skipped_unused'));
 
         $request = ItemRequest::with('details', 'approvals', 'logs')->findOrFail(self::B + 10);
         $this->assertSame('REQ'.(self::B + 10), $request->request_code);
@@ -100,13 +108,98 @@ class SumoImportTest extends TestCase
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('requires_products'));
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
 
+        // Perubahan di shelf sesudah impor pertama tidak boleh ditimpa impor ulang.
+        DB::table('problem_reports')->where('id', self::B + 20)->update(['status' => 'CANCELLED', 'result_desc' => 'diubah di shelf']);
+        DB::table('item_requests')->where('id', self::B + 10)->update(['client_status' => 1, 'notes' => 'diproses di shelf']);
+        DB::table('item_request_approvals')->where('item_request_id', self::B + 10)->where('approval_type', 'MANAGER')->update(['approved_by_user_id' => $admin->id]);
+        DB::table('item_request_types')->where('id', self::B + 1)->update(['name' => 'Diganti di shelf']);
+        DB::table('users')->where('id', $requester->id)->update(['approver_user_id' => $admin->id]);
+        $requester->removeRole('requester');
+        ItemRequestScope::query()->where('division_id', self::B + 9)->delete();
+
         $usersBefore = User::count();
-        (new SumoImporter)->run();
+        $rerun = (new SumoImporter)->run();
 
         $this->assertSame($usersBefore, User::count(), 'Impor ulang tidak membuat user ganda.');
+        $this->assertSame('diubah di shelf', DB::table('problem_reports')->where('id', self::B + 20)->value('result_desc'));
+        $this->assertSame('CANCELLED', DB::table('problem_reports')->where('id', self::B + 20)->value('status'));
+        $this->assertSame('diproses di shelf', DB::table('item_requests')->where('id', self::B + 10)->value('notes'));
+        $this->assertEquals(1, DB::table('item_requests')->where('id', self::B + 10)->value('client_status'));
+        $this->assertEquals($admin->id, DB::table('item_request_approvals')->where('item_request_id', self::B + 10)->where('approval_type', 'MANAGER')->value('approved_by_user_id'));
+        $this->assertSame('Diganti di shelf', DB::table('item_request_types')->where('id', self::B + 1)->value('name'));
+        $this->assertEquals($admin->id, DB::table('users')->where('id', $requester->id)->value('approver_user_id'));
+        $this->assertFalse($requester->fresh()->hasRole('requester'), 'Role yang dicabut di shelf tidak dipasang lagi.');
+        $this->assertSame(0, ItemRequestScope::query()->where('division_id', self::B + 9)->count(), 'Cakupan yang dihapus di shelf tidak diisi lagi.');
+        $this->assertSame(0, $rerun->count('item_requests'));
+        $this->assertSame(2, $rerun->count('item_requests.existing'));
+        $this->assertSame(0, $rerun->count('users.created'));
         $this->assertSame(2, ItemRequest::findOrFail(self::B + 10)->details()->count());
         $this->assertSame(4, ItemRequest::findOrFail(self::B + 10)->approvals()->count());
-        $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
+        $this->assertSame(1, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
+    }
+
+    public function test_existing_shelf_people_are_reused_instead_of_duplicated(): void
+    {
+        $b = self::B;
+        $f = SumoLegacyFixture::class;
+        $hash = Hash::make('rahasia-sumo', ['rounds' => 4]);
+        $sumoUser = fn (int $id, string $username, string $fullname, int $role = 4): int => $f::insert('users', [
+            'id' => $b + $id, 'username' => $username, 'fullname' => $fullname, 'password' => $hash,
+            'badan_usaha_id' => $b + 2, 'division_id' => $b + 15, 'role_id' => $role, 'approval_id' => 0,
+        ]);
+
+        // Data karyawan shelf tanpa login: digabung dan dilengkapi login sumo.
+        $employee = User::factory()->create(['name' => 'PEGAWAI GABUNG UJI', 'username' => null, 'password' => null, 'business_entity_id' => null]);
+        $sumoUser(50, 'pegawai-uji', 'Pegawai  Gabung Uji', 3);
+
+        // Akun shelf aktif dengan role non-sumo: digabung lewat username, login dan cakupan tidak diubah.
+        $shelfAdmin = User::factory()->create(['name' => 'ADMIN SHELF UJI', 'username' => 'admin-shelf-uji', 'access_all_business_entities' => false]);
+        $shelfAdmin->assignRole(Role::findOrCreate('shelf-lain-uji', 'web'));
+        $sumoUser(51, 'admin-shelf-uji', 'ADMIN SHELF UJI', 1);
+
+        // Nama dipakai dua user shelf: tidak ditebak, dibuat akun baru.
+        User::factory()->count(2)->create(['name' => 'NAMA KEMBAR UJI']);
+        $sumoUser(52, 'kembar-uji', 'NAMA KEMBAR UJI');
+
+        // Satu kata terlalu umum untuk digabung.
+        User::factory()->create(['name' => 'TUNGGALUJI']);
+        $sumoUser(53, 'tunggal-uji', 'TUNGGALUJI');
+
+        // Config bisa memaksa akun baru walau namanya sama.
+        User::factory()->create(['name' => 'PAKSA BARU UJI']);
+        $sumoUser(54, 'paksa-uji', 'PAKSA BARU UJI');
+        config(['sumo-import.user_links' => [$b + 54 => false]]);
+
+        $usersBefore = User::count();
+        $report = (new SumoImporter)->run();
+
+        $employee->refresh();
+        $this->assertSame($b + 50, $employee->legacy_sumo_user_id);
+        $this->assertSame('PEGAWAI GABUNG UJI', $employee->name);
+        $this->assertSame('pegawai-uji', $employee->username);
+        $this->assertTrue(Hash::check('rahasia-sumo', $employee->password));
+        $this->assertSame($this->entity->id, $employee->business_entity_id);
+        $this->assertTrue($employee->hasRole('executor'));
+        $this->assertTrue($employee->access_all_business_entities);
+
+        $shelfAdmin->refresh();
+        $this->assertSame($b + 51, $shelfAdmin->legacy_sumo_user_id);
+        $this->assertFalse(Hash::check('rahasia-sumo', $shelfAdmin->password));
+        $this->assertFalse($shelfAdmin->access_all_business_entities, 'Akses akun shelf yang sudah dipakai tidak diperluas diam-diam.');
+        $this->assertTrue($shelfAdmin->hasRole('pengajuan_admin'));
+
+        foreach ([52, 53, 54] as $id) {
+            $this->assertSame(1, User::where('legacy_sumo_user_id', $b + $id)->whereNotNull('username')->count());
+        }
+
+        $this->assertSame(1, $report->count('users.linked_by_name'));
+        $this->assertSame(1, $report->count('users.linked_by_username'));
+        $this->assertSame(1, $report->count('users.login_filled'));
+        $this->assertNotEmpty(array_filter($report->warnings(), fn (string $warning): bool => str_contains($warning, 'NAMA KEMBAR UJI')));
+        $this->assertNotEmpty(array_filter($report->notes(), fn (string $note): bool => str_contains($note, 'PT Uji Sumo')));
+
+        // 6 user fixture lama + 3 akun baru (kembar, tunggal, paksa); dua orang digabung.
+        $this->assertSame($usersBefore + 9, User::count());
     }
 
     public function test_dry_run_reports_without_saving(): void
@@ -138,6 +231,8 @@ class SumoImportTest extends TestCase
         $f::insert('users', ['id' => $b + 2, 'username' => 'ga-uji', 'fullname' => 'ADMIN GA UJI', 'password' => $hash, 'badan_usaha_id' => $b + 1, 'division_id' => $b + 6, 'role_id' => 3, 'approval_id' => $b + 1]);
         $f::insert('users', ['id' => $b + 3, 'username' => 'cs-uji', 'fullname' => 'CS-UJI', 'password' => $hash, 'badan_usaha_id' => $b + 2, 'division_id' => $b + 15, 'role_id' => 4, 'approval_id' => $b + 2]);
         $f::insert('users', ['id' => $b + 4, 'username' => 'whm-uji', 'fullname' => 'WHM UJI', 'password' => $hash, 'badan_usaha_id' => $b + 1, 'division_id' => $b + 9, 'role_id' => 3, 'approval_id' => $b + 1]);
+        $f::insert('users', ['id' => $b + 6, 'username' => 'staf-hcm-uji', 'fullname' => 'STAF HCM UJI', 'password' => $hash, 'badan_usaha_id' => $b + 1, 'division_id' => $b + 6, 'role_id' => 4, 'approval_id' => $b + 2]);
+        $f::insert('users', ['id' => $b + 8, 'username' => 'lama-uji', 'fullname' => 'LAMA TANPA RIWAYAT UJI', 'password' => $hash, 'badan_usaha_id' => $b + 2, 'division_id' => $b + 15, 'role_id' => 4, 'approval_id' => 0, 'deleted_at' => '2024-01-01 00:00:00']);
         $f::insert('users', ['id' => $b + 5, 'username' => 'gone-uji', 'fullname' => 'GONE UJI', 'password' => $hash, 'badan_usaha_id' => $b + 2, 'division_id' => $b + 15, 'role_id' => 4, 'approval_id' => $b + 2, 'deleted_at' => '2025-06-01 00:00:00']);
 
         $f::insert('categories', ['id' => $b + 2, 'category' => 'ATK-UJI']);
@@ -161,6 +256,7 @@ class SumoImportTest extends TestCase
         }
 
         $f::insert('request_logs', ['id' => $b + 1, 'user_id' => (string) ($b + 1), 'request_id' => (string) ($b + 10), 'activity' => 'ADMIN merubah pemohon']);
+        $f::insert('request_logs', ['id' => $b + 2, 'user_id' => (string) ($b + 5), 'request_id' => (string) ($b + 10), 'activity' => 'GONE melihat pengajuan']);
 
         $f::insert('problem_report_categories', ['id' => $b + 7, 'problem_report_category' => 'UMUM-UJI']);
         $f::insert('problem_report', ['id' => $b + 20, 'problem_report_code' => 'PR'.($b + 20), 'user_id' => $b + 3, 'date' => '2026-09-05 08:00:00', 'description' => 'AC bocor', 'status' => 'CLOSED', 'status_client' => 1, 'closed_by' => $b + 2, 'closed_at' => '2026-09-06 08:00:00', 'pr_category_id' => $b + 7, 'photo_before' => 'Problem_Report_File/a.jpg']);

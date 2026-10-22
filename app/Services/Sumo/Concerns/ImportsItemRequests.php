@@ -3,6 +3,7 @@
 namespace App\Services\Sumo\Concerns;
 
 use App\Enums\ItemRequestApprovalType;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Pengajuan barang beserta detail, approval, dan log. Id sumo dipertahankan
@@ -12,7 +13,7 @@ trait ImportsItemRequests
 {
     protected function importItemRequests(): void
     {
-        $this->source('requests')->orderBy('id')->chunk(500, function ($requests): void {
+        $this->source('requests')->chunkById(500, function ($requests): void {
             $rows = [];
 
             foreach ($requests as $request) {
@@ -64,7 +65,7 @@ trait ImportsItemRequests
 
     private function importItemRequestDetails(): void
     {
-        $this->source('request_details')->orderBy('id')->chunk(1000, function ($details): void {
+        $this->source('request_details')->chunkById(1000, function ($details): void {
             $rows = [];
 
             foreach ($details as $detail) {
@@ -92,8 +93,11 @@ trait ImportsItemRequests
     private function importItemRequestApprovals(): void
     {
         $types = array_map(fn (ItemRequestApprovalType $type): string => $type->value, ItemRequestApprovalType::cases());
+        // Tahap yang sudah ada di shelf (bisa sudah diisi di shelf) tidak ditimpa duplikat sumo.
+        $existing = DB::table('item_request_approvals')->get(['item_request_id', 'approval_type'])
+            ->mapWithKeys(fn (object $row): array => [$row->item_request_id.'|'.$row->approval_type => true])->all();
 
-        $this->source('request_approvals')->orderBy('id')->chunk(1000, function ($approvals) use ($types): void {
+        $this->source('request_approvals')->chunkById(1000, function ($approvals) use ($types, $existing): void {
             $rows = [];
 
             foreach ($approvals as $approval) {
@@ -105,8 +109,16 @@ trait ImportsItemRequests
                     continue;
                 }
 
+                $key = (int) $approval->request_id.'|'.$type;
+
+                if (isset($existing[$key])) {
+                    $this->report->add('item_request_approvals.existing');
+
+                    continue;
+                }
+
                 // Satu baris per tahap; bila sumo punya duplikat, baris terakhir yang menang.
-                $rows[(int) $approval->request_id.'|'.$type] = [
+                $rows[$key] = [
                     'id' => (int) $approval->id,
                     'item_request_id' => (int) $approval->request_id,
                     'approval_type' => $type,

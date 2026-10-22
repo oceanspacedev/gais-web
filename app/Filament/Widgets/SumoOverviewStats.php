@@ -27,6 +27,9 @@ class SumoOverviewStats extends StatsOverviewWidget
 
     protected ?string $heading = 'Pengajuan, Gangguan, Asuransi & Sewa';
 
+    // Tanpa polling 5 detik bawaan Filament: angkanya tidak perlu real-time dan querynya berat.
+    protected ?string $pollingInterval = null;
+
     public static function canView(): bool
     {
         $permission = static::getWidgetPermission();

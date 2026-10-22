@@ -9,7 +9,7 @@ trait ImportsProblemReports
 {
     protected function importProblemReports(): void
     {
-        $this->source('problem_report')->orderBy('id')->chunk(500, function ($reports): void {
+        $this->source('problem_report')->chunkById(500, function ($reports): void {
             $rows = [];
 
             foreach ($reports as $report) {

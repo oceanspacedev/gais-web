@@ -22,6 +22,9 @@ class InsuranceCostChart extends ChartWidget
 
     protected ?string $heading = 'Biaya Premi Asuransi per Bulan';
 
+    // Tanpa polling 5 detik bawaan Filament: angkanya tidak perlu real-time dan querynya berat.
+    protected ?string $pollingInterval = null;
+
     protected ?string $maxHeight = '320px';
 
     public static function canView(): bool

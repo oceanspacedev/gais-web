@@ -38,6 +38,17 @@ class SumoImporter
     /** @var array<int, int|null> id user shelf => business_entity_id */
     protected array $userEntity = [];
 
+    /**
+     * User shelf yang baru dibuat atau baru ditautkan di run ini; hanya mereka yang
+     * diberi role/izin sumo (null = langkah users tidak dijalankan, semua user sumo).
+     *
+     * @var array<int, true>|null
+     */
+    protected ?array $accessTargets = null;
+
+    /** Belum ada user sumo yang tertaut sebelum run ini. */
+    protected bool $firstImport = true;
+
     /** @var array<string, array<int, true>> */
     private array $idSets = [];
 
@@ -51,7 +62,9 @@ class SumoImporter
         $this->report = new SumoImportReport;
         $this->logger = $logger;
         $this->idSets = [];
+        $this->accessTargets = null;
         $this->loadUserMap();
+        $this->firstImport = $this->userMap === [];
 
         $methods = [
             'areas' => 'importAreas',
@@ -116,14 +129,28 @@ class SumoImporter
     }
 
     /**
+     * Hanya baris yang id-nya belum ada di shelf yang ditulis: impor ulang tidak
+     * menimpa perubahan yang dibuat di shelf sesudah impor pertama (status yang
+     * sudah diproses, pengaturan yang diubah, dst.), hanya menambah baris baru.
+     *
      * @param  list<array<string, mixed>>  $rows
-     * @param  list<string>  $update  kolom yang diperbarui bila id sudah ada
+     * @param  list<string>  $update  kolom yang diperbarui bila baris baru bentrok di unique key lain
      */
     protected function upsert(string $table, array $rows, array $update, string $countKey): void
     {
         foreach (array_chunk($rows, 500) as $chunk) {
-            DB::table($table)->upsert($chunk, ['id'], $update);
-            $this->report->add($countKey, count($chunk));
+            $existing = DB::table($table)->whereIn('id', array_column($chunk, 'id'))->pluck('id')
+                ->mapWithKeys(fn ($id): array => [(int) $id => true])->all();
+            $new = array_values(array_filter($chunk, fn (array $row): bool => ! isset($existing[(int) $row['id']])));
+
+            if ($new !== []) {
+                DB::table($table)->upsert($new, ['id'], $update);
+                $this->report->add($countKey, count($new));
+            }
+
+            if ($existing !== []) {
+                $this->report->add("{$countKey}.existing", count($existing));
+            }
         }
 
         $this->forgetIds($table);

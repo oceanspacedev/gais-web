@@ -11,8 +11,27 @@ final class SumoImportReport
     /** @var array<string, int> */
     private array $counts = [];
 
-    /** @var list<string> */
+    /** @var array<string, true> pesan sebagai key, supaya cek duplikat tidak O(n) */
     private array $warnings = [];
+
+    /** @var list<string> */
+    private array $notes = [];
+
+    /**
+     * Informasi untuk diperiksa (mis. pemetaan badan usaha), bukan masalah.
+     */
+    public function note(string $message): void
+    {
+        $this->notes[] = $message;
+    }
+
+    /**
+     * @return list<string>
+     */
+    public function notes(): array
+    {
+        return $this->notes;
+    }
 
     public function add(string $key, int $amount = 1): void
     {
@@ -21,9 +40,7 @@ final class SumoImportReport
 
     public function warn(string $message): void
     {
-        if (! in_array($message, $this->warnings, true)) {
-            $this->warnings[] = $message;
-        }
+        $this->warnings[$message] = true;
     }
 
     /**
@@ -46,6 +63,6 @@ final class SumoImportReport
      */
     public function warnings(): array
     {
-        return $this->warnings;
+        return array_keys($this->warnings);
     }
 }

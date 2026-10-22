@@ -25,7 +25,7 @@ return [
         4 => 2,    // PT.MKLI => PT. MAJU KENDARAAN LISTRIK INDONESIA
         5 => 9,    // COMPLETEME => COMPLETE ME
         6 => 8,    // AMAZY
-        7 => null, // TKANAN (tidak ada padanannya di shelf)
+        7 => 10,   // TKANAN => TOKO MAS AN AN (format TKN/; nama lengkap user sumo "tkanan" = TOKO MAS AN AN)
         8 => 44,   // CMULIA => COMPLETE MULIA PURWAKARTA
         9 => 5,    // PT. RISM => PT. RETAIL INDONESIA SELALU MAJU (shelf punya duplikat id 39)
         10 => 1,   // CV MAJU TECNOLOGI
@@ -82,6 +82,9 @@ return [
         'MIS-IT' => ['view_all_item::request'],
     ],
 
+    // roles.id (sumo) yang menerima division_permissions; di sumo aturan divisi hanya untuk EXECUTOR.
+    'division_permission_roles' => [3],
+
     // users.id (sumo) => izin khusus (sumo: user 75 boleh membuka menu asuransi).
     'legacy_user_permissions' => [
         75 => ['view_any_insurance', 'view_insurance'],
@@ -101,6 +104,14 @@ return [
         80 => [[2, 6], [2, 11]],                     // MKLI-HO: ATK area MKLI
         1 => [[null, 14], [null, 4]],                // divisi "-": area tertentu
     ],
+
+    /*
+     * Penggabungan user manual: users.id (sumo) => users.id (shelf), atau false
+     * supaya selalu dibuat akun baru. Tanpa entri, impor menggabungkan otomatis bila
+     * username sama, atau bila nama lengkap (minimal dua kata) hanya dipakai satu
+     * user di masing-masing sisi. Akun sumo yang sudah dihapus hanya lewat sini.
+     */
+    'user_links' => [],
 
     // Akhiran username untuk akun sumo yang sudah dihapus (tetap dibuat demi riwayat).
     'inactive_username_suffix' => '-nonaktif-sumo',

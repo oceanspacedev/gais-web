@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Models\ProblemReport;
+use App\Models\ProblemReportCategory;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -25,13 +26,42 @@ final class ProblemReportVisibility
             return $query;
         }
 
-        return $query->whereHas('category', fn (Builder $category) => $category->whereIn('name', $categories));
+        return $query->whereIn(
+            'problem_reports.problem_report_category_id',
+            ProblemReportCategory::withTrashed()->select('problem_report_categories.id')->whereIn('name', $categories),
+        );
     }
 
+    /**
+     * Dipanggil policy untuk setiap record dan setiap aksi di tabel, jadi aturan
+     * apply() dievaluasi di PHP bila bisa; selain itu jatuh ke query.
+     */
     public static function allows(User $user, ProblemReport $report): bool
     {
         if (! $report->isAccessibleBy($user)) {
             return false;
+        }
+
+        // Query visibleTo memakai scope SoftDeletes, jadi laporan terhapus tidak pernah lolos.
+        if ($report->trashed()) {
+            return false;
+        }
+
+        if (! $user->can('view_all_problem::report')) {
+            return (int) $report->user_id === $user->getKey();
+        }
+
+        $categories = self::restrictedCategoriesFor($user);
+
+        if ($categories === null) {
+            return true;
+        }
+
+        if ($report->relationLoaded('category')) {
+            // whereIn('name') di MySQL tidak peka huruf besar/kecil (collation *_ci).
+            $name = $report->category?->name;
+
+            return $name !== null && in_array(mb_strtolower($name), array_map('mb_strtolower', $categories), true);
         }
 
         return ProblemReport::query()->whereKey($report->getKey())->visibleTo($user)->exists();

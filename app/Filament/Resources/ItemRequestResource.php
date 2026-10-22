@@ -279,7 +279,8 @@ class ItemRequestResource extends Resource
                         ->icon('heroicon-o-qr-code')
                         ->color('gray')
                         ->url(fn (ItemRequest $record): string => route('item-requests.qr-labels', $record), shouldOpenInNewTab: true)
-                        ->visible(fn (ItemRequest $record): bool => $record->details()->exists()),
+                        // details_count dari kolom Item; query hanya bila record dimuat tanpa hitungan itu.
+                        ->visible(fn (ItemRequest $record): bool => isset($record->details_count) ? $record->details_count > 0 : $record->details()->exists()),
                     EditAction::make()->visible(fn (ItemRequest $record): bool => (auth()->user()?->can('update', $record) ?? false) && (auth()->user()?->can('changeApplicant', ItemRequest::class) ?? false)),
                     DeleteAction::make(),
                 ]),

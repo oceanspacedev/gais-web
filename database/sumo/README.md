@@ -9,6 +9,27 @@ php artisan sumo:import --dry-run   # laporan jumlah dan pemetaan, tanpa menulis
 php artisan sumo:import             # impor sungguhan, bisa diulang (idempoten)
 ```
 
+Impor tidak menggandakan data yang sudah ada di shelf:
+
+- **Badan usaha** tidak pernah dibuat baru. Semuanya dipetakan ke badan usaha shelf lewat
+  `business_entities` di `config/sumo-import.php`. Hasil pemetaannya tercetak di laporan
+  (bagian "Pemetaan"), jadi periksa saat `--dry-run`.
+- **User** digabung ke akun shelf milik orang yang sama. Urutannya: `user_links` di config,
+  lalu username yang sama, lalu nama lengkap (minimal dua kata) yang hanya dipakai satu user
+  di shelf dan satu user aktif di sumo. Nama, badan usaha, dan login shelf dipertahankan.
+  Akun shelf yang belum punya username/password (data karyawan) dilengkapi login sumo.
+  Nama yang dipakai lebih dari satu orang tidak ditebak; impor menulis peringatan, dan
+  penggabungannya bisa diisi manual di `user_links`.
+- **Akun sumo yang sudah dihapus** hanya dibuat (nonaktif, tanpa role) bila punya riwayat
+  pengajuan, approval, laporan, atau kontrak.
+- **Akses semua badan usaha** tidak diberikan otomatis ke akun shelf yang sudah memakai role
+  non-sumo, karena akses itu berlaku di seluruh shelf. Impor menulis peringatan untuk akun ini.
+
+Di server, install dengan `composer install --no-dev`. Dengan paket dev, Ignition merekam
+setiap query beserta binding upsert 500 baris. Akibatnya impor bisa melewati `memory_limit`
+128M begitu data sumo sekitar 5x ukuran sekarang. Kalau terpaksa menjalankan di lingkungan
+dev, pakai `php -d memory_limit=512M artisan sumo:import`.
+
 ## Aturan utama: dump sumo TIDAK BOLEH di-import ke database shelf
 
 Dump sumo memakai `DROP TABLE IF EXISTS` dan punya tabel bernama sama dengan shelf

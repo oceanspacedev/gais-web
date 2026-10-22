@@ -8,6 +8,7 @@ use App\Models\ItemRequest;
 use App\Models\ItemRequestScope;
 use App\Models\ItemRequestType;
 use App\Models\User;
+use App\Support\ItemRequestVisibility;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
@@ -101,6 +102,95 @@ class ItemRequestVisibilityTest extends TestCase
 
         $this->assertSame([$a->id, $b->id], $this->visibleIds($executor));
         $this->assertSame([$a->id, $b->id], $this->visibleIds($admin));
+    }
+
+    public function test_policy_check_agrees_with_the_visibility_query(): void
+    {
+        $depo = Area::create(['name' => 'DEPO-test']);
+        $ho = Area::create(['name' => 'HO-test']);
+        $warehouse = Division::create(['name' => 'WHM-test', 'area_id' => $ho->id]);
+        $audit = Division::create(['name' => 'AUDIT-test', 'area_id' => $ho->id]);
+        $purchasing = Division::create(['name' => 'PURCH-test', 'area_id' => $ho->id]);
+        $hcm = Division::create(['name' => 'HCM-test']);
+        $depoDivision = Division::create(['name' => 'DEPO-DIV-test', 'area_id' => $depo->id]);
+        $hoDivision = Division::create(['name' => 'HO-DIV-test', 'area_id' => $ho->id]);
+        $closedDivision = Division::create(['name' => 'CLOSED-DIV-test', 'area_id' => $depo->id]);
+        $retiredType = ItemRequestType::create(['name' => 'RETIRED-test', 'requires_accounting_approval' => true]);
+
+        ItemRequestScope::create(['division_id' => $warehouse->id, 'item_request_type_id' => $this->atk->id, 'area_id' => $depo->id]);
+        ItemRequestScope::create(['division_id' => $audit->id, 'item_request_type_id' => $this->asset->id]);
+        ItemRequestScope::create(['division_id' => $purchasing->id, 'area_id' => $ho->id]);
+        ItemRequestScope::create(['division_id' => $hcm->id]);
+
+        $manager = User::factory()->create();
+        $requester = User::factory()->create(['approver_user_id' => $manager->id, 'division_id' => $depoDivision->id]);
+        $hoUser = User::factory()->create(['division_id' => $hoDivision->id]);
+        $closedUser = User::factory()->create(['division_id' => $closedDivision->id]);
+
+        $viewers = [
+            'requester' => $requester,
+            'manager' => $manager,
+            'stranger' => User::factory()->create(),
+            'accounting' => $this->userWith(['approve_accounting_item::request']),
+            'executor type+area' => $this->userWith(['process_item::request'], $warehouse),
+            'audit type only' => $this->userWith(['audit_item::request'], $audit),
+            'manager area only' => $this->userWith(['approve_manager_item::request'], $purchasing),
+            'executor everything' => $this->userWith(['process_item::request'], $hcm),
+            'scoped division without permission' => User::factory()->create(['division_id' => $hcm->id]),
+            'executor without division' => $this->userWith(['process_item::request']),
+            'view all' => $this->userWith(['view_all_item::request']),
+        ];
+
+        $requests = [
+            $this->request($requester, $this->atk),
+            $this->request($requester, $this->asset),
+            $this->request($hoUser, $this->atk),
+            $this->request($hoUser, $this->asset),
+            $this->request($closedUser, $this->atk),
+            $this->request($hoUser, $retiredType),
+            ItemRequest::create(['user_id' => null, 'item_request_type_id' => $this->asset->id, 'requested_at' => now()]),
+            ItemRequest::create(['user_id' => null, 'item_request_type_id' => $this->atk->id, 'requested_at' => now()]),
+        ];
+        $trashed = $this->request($requester, $this->atk);
+        $trashed->delete();
+        $closedDivision->delete();
+        $retiredType->delete();
+
+        $ids = [...array_map(fn (ItemRequest $request): int => $request->id, $requests), $trashed->id];
+
+        foreach ($viewers as $label => $viewer) {
+            $visible = ItemRequest::query()->whereKey($ids)->visibleTo($viewer)->pluck('id')->all();
+
+            // Seperti di tabel (relasi dimuat) dan seperti halaman view/edit (tanpa relasi).
+            $loadings = [
+                'eager' => ItemRequest::withTrashed()->whereKey($ids)->with(['user.division', 'type'])->get(),
+                'lazy' => ItemRequest::withTrashed()->whereKey($ids)->get(),
+            ];
+
+            foreach ($loadings as $loading => $records) {
+                foreach ($records as $record) {
+                    $this->assertSame(
+                        in_array($record->id, $visible, true),
+                        ItemRequestVisibility::allows($viewer, $record),
+                        "{$label} / {$loading} / pengajuan #{$record->id}",
+                    );
+                }
+            }
+        }
+    }
+
+    /**
+     * @param  list<string>  $permissions
+     */
+    private function userWith(array $permissions, ?Division $division = null): User
+    {
+        $user = User::factory()->create(['division_id' => $division?->id]);
+
+        foreach ($permissions as $permission) {
+            $user->givePermissionTo($this->permission($permission));
+        }
+
+        return $user;
     }
 
     private function request(User $user, ItemRequestType $type): ItemRequest
