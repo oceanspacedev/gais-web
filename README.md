@@ -381,6 +381,15 @@ Production memanggil scheduler setiap menit:
 
 Contoh unit worker: [`deploy/web-shelf-queue.service`](deploy/web-shelf-queue.service).
 
+Setiap deploy production, cache konfigurasi, route, view, serta komponen dan ikon Filament supaya setiap request panel tidak memindai ulang file (ulangi setelah `git pull`):
+
+```bash
+php artisan optimize
+php artisan filament:optimize
+```
+
+Jangan jalankan keduanya di local: perubahan `.env`, route, atau resource baru tidak terbaca sampai `php artisan optimize:clear && php artisan filament:optimize-clear`.
+
 ## Workflow development
 
 Branch default repositori adalah `main`. Buat cabang pekerjaan dari `main` dengan pola `feat/<scope>`, `fix/<scope>`, atau `docs/<scope>`.

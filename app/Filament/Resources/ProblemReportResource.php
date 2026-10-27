@@ -9,6 +9,7 @@ use App\Models\ProblemReport;
 use App\Models\User;
 use App\Services\ProblemReportWorkflow;
 use App\Support\LegacyUpload;
+use App\Support\RelationSearch;
 use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -183,7 +184,7 @@ class ProblemReportResource extends Resource
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user.division', 'category', 'closedBy']))
             ->columns([
                 TextColumn::make('code')->label('Kode')->searchable()->sortable()->badge()->color('primary'),
-                TextColumn::make('user.name')->label('Pelapor')->searchable()->sortable()->description(fn (ProblemReport $record): ?string => $record->user?->division?->name),
+                TextColumn::make('user.name')->label('Pelapor')->searchable(query: RelationSearch::on('user', 'name'))->sortable()->description(fn (ProblemReport $record): ?string => $record->user?->division?->name),
                 TextColumn::make('category.name')->label('Jenis')->sortable()->placeholder('-'),
                 TextColumn::make('description')->label('Keterangan')->limit(50)->wrap()->toggleable(),
                 TextColumn::make('reported_at')->label('Dilaporkan')->dateTime('d/m/Y H:i')->sortable(),

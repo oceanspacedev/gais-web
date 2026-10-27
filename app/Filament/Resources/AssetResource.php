@@ -19,6 +19,7 @@ use App\Models\CustomAssetAttribute;
 use App\Models\User;
 use App\Services\AssetQrLabelHistoryService;
 use App\Services\AssetQrService;
+use App\Support\RelationSearch;
 use App\Support\StoredFile;
 use Carbon\Carbon;
 use Filament\Actions\Action;
@@ -148,13 +149,49 @@ class AssetResource extends Resource
         return StoredFile::url($path);
     }
 
-    protected static function customAttributeType($customAttributeId): ?string
+    /**
+     * Definisi atribut kustom per id. Closure visible/required tiap item repeater
+     * menanyakannya puluhan kali per render, jadi tabel kecil ini dimuat sekali per request.
+     */
+    protected static function findCustomAttribute($customAttributeId): ?CustomAssetAttribute
     {
-        if (! filled($customAttributeId)) {
+        if (! filled($customAttributeId) || ! is_numeric($customAttributeId)) {
             return null;
         }
 
-        return CustomAssetAttribute::find($customAttributeId)?->type;
+        return self::customAttributeDefinitions()->get((int) $customAttributeId);
+    }
+
+    /**
+     * Atribut aktif untuk kategori aset: yang memuat salah satu kategorinya atau
+     * berlaku untuk semua kategori (category_id kosong).
+     *
+     * @param  list<int|string>  $categoryIds
+     * @return array<int, string>
+     */
+    protected static function attributeOptionsForCategories(array $categoryIds): array
+    {
+        $categoryIds = array_map('intval', $categoryIds);
+
+        return self::customAttributeDefinitions()
+            ->filter(fn (CustomAssetAttribute $attribute): bool => $attribute->is_active
+                && is_array($attribute->category_id)
+                && ($attribute->category_id === [] || array_intersect(array_map('intval', $attribute->category_id), $categoryIds) !== []))
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
+     * @return Collection<int, CustomAssetAttribute>
+     */
+    private static function customAttributeDefinitions(): Collection
+    {
+        return once(fn (): Collection => CustomAssetAttribute::query()->get()->keyBy('id'));
+    }
+
+    protected static function customAttributeType($customAttributeId): ?string
+    {
+        return self::findCustomAttribute($customAttributeId)?->type;
     }
 
     protected static function attributeUsesType($customAttributeId, string $type): bool
@@ -164,16 +201,12 @@ class AssetResource extends Resource
 
     protected static function customAttributeIsRequired($customAttributeId): bool
     {
-        if (! filled($customAttributeId)) {
-            return false;
-        }
-
-        return (bool) CustomAssetAttribute::find($customAttributeId)?->required;
+        return (bool) self::findCustomAttribute($customAttributeId)?->required;
     }
 
     protected static function prepareAttributeRelationshipData(array $data): array
     {
-        $customAttribute = CustomAssetAttribute::find($data['custom_attribute_id'] ?? null);
+        $customAttribute = self::findCustomAttribute($data['custom_attribute_id'] ?? null);
 
         if ($customAttribute?->type === CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY) {
             $documentPath = $data['document_file_path'] ?? null;
@@ -215,7 +248,9 @@ class AssetResource extends Resource
 
     protected static function attributeFormState(AssetAttribute $attribute): array
     {
-        $customAttribute = $attribute->customAttribute ?? CustomAssetAttribute::find($attribute->custom_attribute_id);
+        $customAttribute = $attribute->relationLoaded('customAttribute')
+            ? $attribute->customAttribute
+            : self::findCustomAttribute($attribute->custom_attribute_id);
         $attribute->setRelation('customAttribute', $customAttribute);
         $payload = $attribute->documentPayload();
         $type = $customAttribute?->type;
@@ -236,7 +271,7 @@ class AssetResource extends Resource
 
     protected static function documentStatusFromForm(callable $get): string
     {
-        $customAttribute = CustomAssetAttribute::find($get('custom_attribute_id'));
+        $customAttribute = self::findCustomAttribute($get('custom_attribute_id'));
 
         if (! $customAttribute) {
             return 'Pilih atribut dokumen terlebih dahulu.';
@@ -299,31 +334,40 @@ class AssetResource extends Resource
 
     /**
      * Cek apakah aset memiliki atribut bertipe document_expiry (atau kategorinya mendukung).
+     * Dipanggil per baris tabel, jadi memakai relasi attributes yang sudah dimuat dan
+     * daftar atribut dokumen aktif yang diambil sekali per request.
      */
     public static function hasDocumentExpiryAttributes(Asset $record): bool
     {
-        $hasExisting = $record->attributes()
-            ->whereHas('customAttribute', fn ($q) => $q->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)->where('is_active', true))
-            ->exists();
+        $documentAttributes = self::activeDocumentExpiryAttributes();
 
-        if ($hasExisting) {
+        if ($documentAttributes->isEmpty()) {
+            return false;
+        }
+
+        $attributeIds = $record->relationLoaded('attributes')
+            ? $record->getRelation('attributes')->pluck('custom_attribute_id')
+            : $record->attributes()->pluck('custom_attribute_id');
+
+        if ($attributeIds->intersect($documentAttributes->modelKeys())->isNotEmpty()) {
             return true;
         }
 
-        $categoryIds = is_array($record->category_id) ? $record->category_id : array_filter([$record->category_id]);
+        $categoryIds = array_map('intval', is_array($record->category_id) ? $record->category_id : array_filter([$record->category_id]));
 
-        return CustomAssetAttribute::where('is_active', true)
+        return $documentAttributes->contains(fn (CustomAssetAttribute $attribute): bool => blank($attribute->category_id)
+            || array_intersect(array_map('intval', $attribute->category_id), $categoryIds) !== []);
+    }
+
+    /**
+     * @return Collection<int, CustomAssetAttribute>
+     */
+    private static function activeDocumentExpiryAttributes(): Collection
+    {
+        return once(fn (): Collection => CustomAssetAttribute::query()
+            ->where('is_active', true)
             ->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)
-            ->where(function ($query) use ($categoryIds) {
-                if (! empty($categoryIds)) {
-                    foreach ($categoryIds as $id) {
-                        $query->orWhereJsonContains('category_id', (int) $id);
-                    }
-                }
-                $query->orWhereJsonLength('category_id', 0)
-                    ->orWhereNull('category_id');
-            })
-            ->exists();
+            ->get(['id', 'category_id']));
     }
 
     /**
@@ -542,7 +586,7 @@ class AssetResource extends Resource
                             ->columns(2),
 
                         Repeater::make('attributes')
-                            ->relationship('attributes')
+                            ->relationship('attributes', modifyQueryUsing: fn (Builder $query): Builder => $query->with('customAttribute'))
                             ->schema([
                                 // Dropdown untuk memilih atribut
                                 Select::make('custom_attribute_id')
@@ -557,19 +601,12 @@ class AssetResource extends Resource
                                                 ->pluck('custom_attribute_id')
                                                 ->filter()
                                                 ->toArray();
-                                            // Filter atribut yang sesuai dengan kategori dan belum dipilih
-                                            $attributes = CustomAssetAttribute::where('is_active', true)
-                                                ->where(function ($query) use ($categoryId) {
-                                                    foreach ($categoryId as $id) {
-                                                        $query->orWhereJsonContains('category_id', (int) $id);
-                                                    }
-                                                    $query->orWhereJsonLength('category_id', 0);
-                                                })
-                                                ->whereNotIn('id', $selectedAttributes) // Pastikan atribut yang sudah dipilih tidak muncul lagi
-                                                ->pluck('name', 'id')
-                                                ->toArray();
 
-                                            return $attributes;
+                                            // Filter atribut yang sesuai dengan kategori dan belum dipilih
+                                            return array_diff_key(
+                                                self::attributeOptionsForCategories($categoryId),
+                                                array_flip(array_map('intval', $selectedAttributes)),
+                                            );
                                         }
 
                                         return [];
@@ -590,7 +627,7 @@ class AssetResource extends Resource
                                     ->afterStateHydrated(function ($state, callable $set) {
                                         if ($state) {
                                             // Ambil nama atribut berdasarkan ID
-                                            $customAttribute = CustomAssetAttribute::find($state);
+                                            $customAttribute = self::findCustomAttribute($state);
 
                                             if ($customAttribute) {
                                                 // Tetapkan ID untuk backend dan nama untuk dropdown
@@ -950,10 +987,10 @@ class AssetResource extends Resource
                 TextColumn::make('name')->translateLabel()->sortable()->searchable()->toggleable(),
                 TextColumn::make('catalogItem.external_code')
                     ->label('Kode Item CSA')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('catalogItem', 'external_code'))
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('category.name')->translateLabel()->sortable()->toggleable(),
-                TextColumn::make('brand.name')->translateLabel()->sortable()->searchable()->toggleable(),
+                TextColumn::make('brand.name')->translateLabel()->sortable()->searchable(query: RelationSearch::on('brand', 'name'))->toggleable(),
                 self::identityColumn(CustomAssetAttribute::KEY_TYPE)->toggleable(isToggledHiddenByDefault: true),
                 self::identityColumn(CustomAssetAttribute::KEY_SERIAL_NUMBER)->toggleable(),
                 self::identityColumn(CustomAssetAttribute::KEY_IMEI1)->toggleable(isToggledHiddenByDefault: true),
@@ -973,7 +1010,7 @@ class AssetResource extends Resource
                     ->formatStateUsing(fn (bool $state): string => $state ? 'Aktif' : 'Saldo 0')
                     ->color(fn (bool $state): string => $state ? 'success' : 'gray')
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('assetLocation.name')->translateLabel()->sortable()->searchable()->toggleable(),
+                TextColumn::make('assetLocation.name')->translateLabel()->sortable()->searchable(query: RelationSearch::on('assetLocation', 'name'))->toggleable(),
                 TextColumn::make('condition_status_label')
                     ->label('Status Aset')
                     ->badge()

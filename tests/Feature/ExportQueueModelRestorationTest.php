@@ -25,18 +25,14 @@ class ExportQueueModelRestorationTest extends TestCase
 {
     protected function setUp(): void
     {
-        $this->useSqliteMemoryDatabase();
-
         parent::setUp();
 
+        // Lewat config, bukan env: Dotenv menimpa DB_CONNECTION dari .env pada
+        // setiap boot setelah yang pertama, jadi env hanya berlaku bila tes ini jalan paling awal.
+        config(['database.default' => 'sqlite', 'database.connections.sqlite.database' => ':memory:']);
+        DB::purge('sqlite');
+
         $this->createQueueTables();
-    }
-
-    protected function tearDown(): void
-    {
-        parent::tearDown();
-
-        $this->clearDatabaseEnv();
     }
 
     public function test_queue_connections_wait_until_database_transactions_commit(): void
@@ -245,23 +241,6 @@ class ExportQueueModelRestorationTest extends TestCase
             'successful_rows' => 0,
             'user_id' => 1,
         ]);
-    }
-
-    private function useSqliteMemoryDatabase(): void
-    {
-        putenv('DB_CONNECTION=sqlite');
-        putenv('DB_DATABASE=:memory:');
-        $_ENV['DB_CONNECTION'] = 'sqlite';
-        $_ENV['DB_DATABASE'] = ':memory:';
-        $_SERVER['DB_CONNECTION'] = 'sqlite';
-        $_SERVER['DB_DATABASE'] = ':memory:';
-    }
-
-    private function clearDatabaseEnv(): void
-    {
-        putenv('DB_CONNECTION');
-        putenv('DB_DATABASE');
-        unset($_ENV['DB_CONNECTION'], $_ENV['DB_DATABASE'], $_SERVER['DB_CONNECTION'], $_SERVER['DB_DATABASE']);
     }
 }
 

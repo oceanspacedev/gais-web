@@ -7,6 +7,7 @@ use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource\Pages;
 use App\Models\Asset;
 use App\Models\AssetService;
+use App\Support\RelationSearch;
 use App\Support\StoredFile;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -292,7 +293,7 @@ class AssetServiceResource extends Resource
                 TextColumn::make('asset.name')
                     ->label('Aset')
                     ->description(fn (AssetService $record): string => $record->asset?->serial_number ? "SN: {$record->asset->serial_number}" : '')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('asset', 'name'))
                     ->sortable(),
 
                 TextColumn::make('provider_label')
@@ -334,7 +335,7 @@ class AssetServiceResource extends Resource
 
                 TextColumn::make('creator.name')
                     ->label('Dibuat Oleh')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('creator', 'name'))
                     ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
 

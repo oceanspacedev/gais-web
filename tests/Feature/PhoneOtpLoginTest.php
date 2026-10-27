@@ -339,7 +339,7 @@ class PhoneOtpLoginTest extends TestCase
 
     public function test_login_page_links_to_the_matching_mekaya_phone_page(): void
     {
-        $this->get('/admin/login')->assertOk()->assertSee('Username or Email')
+        $this->get('/admin/login')->assertOk()->assertSee(__('Username or Email'))
             ->assertSee('Atau masuk dengan')->assertSee(route('phone-login'), false);
         $this->get('/phone-login')->assertOk()->assertSee('Masuk dengan Nomor HP')
             ->assertSee('Kembali ke halaman masuk')->assertSee('Kirim OTP WhatsApp');

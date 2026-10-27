@@ -105,7 +105,10 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
             ])
             ->databaseNotifications(isLazy: false)
-            ->databaseNotificationsPolling('2s')
+            // Tiap polling adalah satu request penuh per tab yang terbuka; 2 detik membebani
+            // server dan memperlambat request lain. Tautan unduhan ekspor tetap muncul <= 10 detik.
+            ->databaseNotificationsPolling('10s')
+            ->globalSearchDebounce('300ms')
             ->plugins([
                 ResizedColumnPlugin::make(),
                 FilamentPWAPlugin::make(),

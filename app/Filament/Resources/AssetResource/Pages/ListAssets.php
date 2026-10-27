@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AssetResource\Pages;
 
 use App\Filament\Actions\ExportCsaAuditFormatAction;
 use App\Filament\Actions\ExportVehicleAuditFormatAction;
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Exports\AssetExporter;
 use App\Filament\Resources\AssetReconciliationResource;
 use App\Filament\Resources\AssetResource;
@@ -17,7 +18,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListAssets extends ListRecords
 {
-    use HasResizableColumn;
+    use HasResizableColumn, MemoizesTableQuery;
 
     protected static string $resource = AssetResource::class;
 

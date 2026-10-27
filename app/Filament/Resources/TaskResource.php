@@ -4,18 +4,23 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\TaskResource\Pages;
 use App\Models\Task;
+use App\Support\RelationSearch;
 use App\Support\StoredFile;
-use Filament\Forms;
+use Filament\Actions\Action;
+use Filament\Actions\ActionGroup;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -139,14 +144,14 @@ class TaskResource extends Resource
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('businessEntity.name')
                     ->label('Badan Usaha')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('businessEntity', 'name'))
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('vendor.name')
                     ->label('Vendor')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('vendor', 'name'))
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('cost')
                     ->money('IDR')
@@ -155,7 +160,7 @@ class TaskResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('PIC')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('user', 'name'))
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status') // Label in Indonesian
@@ -209,15 +214,15 @@ class TaskResource extends Resource
             ->columnToggleFormColumns(2)
             ->actions([
                 // Group the custom actions together
-                \Filament\Actions\ActionGroup::make([
+                ActionGroup::make([
                     // Edit Action (with pencil icon)
-                    \Filament\Actions\EditAction::make()
+                    EditAction::make()
                         ->label('Edit')
                         ->icon('heroicon-o-pencil') // Use the pencil icon for edit
                         ->visible(fn ($record) => ! in_array($record->status, ['in_progress', 'completed'])),
 
                     // Custom Process Action (color: blue, with play icon)
-                    \Filament\Actions\Action::make('process')
+                    Action::make('process')
                         ->label('Process')
                         ->icon('heroicon-o-play') // Use the play icon for process
                         ->color('primary') // Use 'primary' for blue
@@ -227,7 +232,7 @@ class TaskResource extends Resource
                         }),
 
                     // Custom Complete Action (color: green, with check icon)
-                    \Filament\Actions\Action::make('complete')
+                    Action::make('complete')
                         ->label('Complete')
                         ->icon('heroicon-o-check-circle') // Use the check circle icon for complete
                         ->color('success') // Use 'success' for green
@@ -249,7 +254,7 @@ class TaskResource extends Resource
                             ]);
                         }),
 
-                    \Filament\Actions\Action::make('upload')
+                    Action::make('upload')
                         ->label('Upload')
                         ->icon('heroicon-o-check-circle') // Use the check circle icon for complete
                         ->color('success') // Use 'success' for green
@@ -269,7 +274,7 @@ class TaskResource extends Resource
                         }),
 
                     // Custom Download Action (color: red, with download icon)
-                    \Filament\Actions\Action::make('download')
+                    Action::make('download')
                         ->label('Download')
                         ->icon('heroicon-o-arrow-down-tray') // Use the download icon for download
                         ->color('danger') // Use 'danger' for red
@@ -280,8 +285,8 @@ class TaskResource extends Resource
 
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -344,6 +349,7 @@ class TaskResource extends Resource
                                     return "<div style='display: flex; flex-wrap: wrap; gap: 10px;'>"
                                         .collect($state)->map(function ($image) {
                                             $url = e(StoredFile::url($image));
+
                                             return "<img src='{$url}' alt='Lampiran' style='max-width: 100px; border-radius: 5px;'>";
                                         })->implode('').
                                         '</div>';
@@ -352,6 +358,7 @@ class TaskResource extends Resource
                                 // Jika hanya satu gambar
                                 if (is_string($state) && ! empty($state)) {
                                     $url = e(StoredFile::url($state));
+
                                     return "<img src='{$url}' alt='Lampiran' style='max-width: 100px; border-radius: 5px;'>";
                                 }
 

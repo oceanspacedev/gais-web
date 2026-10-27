@@ -14,6 +14,7 @@ use App\Models\Product;
 use App\Models\User;
 use App\Services\ItemRequestWorkflow;
 use App\Support\LegacyUpload;
+use App\Support\RelationSearch;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -244,7 +245,7 @@ class ItemRequestResource extends Resource
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user.division', 'type', 'approvals', 'closedBy']))
             ->columns([
                 TextColumn::make('request_code')->label('Kode')->searchable()->sortable()->badge()->color('primary'),
-                TextColumn::make('user.name')->label('Pemohon')->searchable()->sortable()->description(fn (ItemRequest $record): ?string => $record->user?->division?->name),
+                TextColumn::make('user.name')->label('Pemohon')->searchable(query: RelationSearch::on('user', 'name'))->sortable()->description(fn (ItemRequest $record): ?string => $record->user?->division?->name),
                 TextColumn::make('type.name')->label('Tipe')->sortable(),
                 TextColumn::make('requested_at')->label('Tanggal')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('details_count')->label('Item')->counts('details')->badge()->color('gray'),

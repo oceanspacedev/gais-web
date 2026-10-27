@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ProblemReportResource\Pages;
 
 use App\Enums\ProblemReportStatus;
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\ProblemReportResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListProblemReports extends ListRecords
 {
+    use MemoizesTableQuery;
+
     protected static string $resource = ProblemReportResource::class;
 
     protected function getHeaderActions(): array

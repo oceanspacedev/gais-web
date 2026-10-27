@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Asset;
 use App\Models\AssetQrScan;
+use App\Services\AssetQrService;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -23,8 +24,11 @@ class PublicAssetQrTest extends TestCase
         $response->assertSee((string) $asset->qty);
         $response->assertSee('Terakhir dilihat (GPS)');
         $response->assertSee('Belum ada data GPS');
+        // Harga dalam format apa pun; bukan sekadar "Rp" yang bisa muncul di token CSRF acak.
         $response->assertDontSee('999999');
-        $response->assertDontSee('Rp');
+        $response->assertDontSee('999.999');
+        $response->assertDontSee('999,999');
+        $response->assertDontSee('Rp ');
         $this->assertDatabaseHas('asset_qr_scans', ['asset_qr_id' => $qr->id]);
     }
 
@@ -88,7 +92,7 @@ class PublicAssetQrTest extends TestCase
     {
         $asset = Asset::factory()->create();
         $oldId = $asset->fresh()->qr->id;
-        app(\App\Services\AssetQrService::class)->regenerate($asset);
+        app(AssetQrService::class)->regenerate($asset);
 
         $this->get('/qr/'.$oldId)->assertNotFound();
         $this->get(route('qr.show', $asset->fresh()->qr))->assertOk();

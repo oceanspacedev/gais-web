@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\AssetQrLabelHistoryResource\Pages;
 use App\Models\AssetQrLabelHistory;
 use App\Services\AssetQrLabelHistoryService;
+use App\Support\RelationSearch;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
 use Filament\Infolists\Components\TextEntry;
@@ -139,7 +140,7 @@ class AssetQrLabelHistoryResource extends Resource
                     ->toggleable(),
                 TextColumn::make('user.name')
                     ->label('Di-generate oleh')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('user', 'name'))
                     ->sortable()
                     ->placeholder('—'),
                 TextColumn::make('user.email')

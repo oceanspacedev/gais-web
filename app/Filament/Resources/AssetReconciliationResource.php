@@ -6,6 +6,7 @@ use App\Filament\Resources\AssetReconciliationResource\Pages;
 use App\Filament\Resources\AssetReconciliationResource\RelationManagers\ItemsRelationManager;
 use App\Models\Asset;
 use App\Models\AssetReconciliation;
+use App\Support\RelationSearch;
 use Filament\Actions\CreateAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
@@ -130,7 +131,7 @@ class AssetReconciliationResource extends Resource
                         default => $state ?? '-',
                     })
                     ->color(fn (?string $state): string => $state === 'VEHICLE_AUDIT' ? 'info' : 'gray'),
-                TextColumn::make('businessEntity.name')->label('Badan Usaha Default')->searchable()->sortable()->toggleable(),
+                TextColumn::make('businessEntity.name')->label('Badan Usaha Default')->searchable(query: RelationSearch::on('businessEntity', 'name'))->sortable()->toggleable(),
                 TextColumn::make('status')
                     ->label('Status')
                     ->badge()

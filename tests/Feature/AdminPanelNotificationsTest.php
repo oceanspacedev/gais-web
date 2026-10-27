@@ -22,7 +22,7 @@ class AdminPanelNotificationsTest extends TestCase
         $panel = Filament::getPanel('admin');
 
         $this->assertFalse($panel->hasLazyLoadedDatabaseNotifications());
-        $this->assertSame('2s', $panel->getDatabaseNotificationsPollingInterval());
+        $this->assertSame('10s', $panel->getDatabaseNotificationsPollingInterval());
     }
 
     public function test_export_started_notification_tells_user_to_open_the_bell(): void

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AssetTransferResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Exports\AssetTransferDetailExporter;
 use App\Filament\Resources\AssetTransferResource;
 use App\Models\AssetTransfer;
@@ -12,7 +13,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListAssetTransfers extends ListRecords
 {
-    use HasResizableColumn;
+    use HasResizableColumn, MemoizesTableQuery;
 
     protected static string $resource = AssetTransferResource::class;
 

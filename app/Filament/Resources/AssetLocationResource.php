@@ -48,9 +48,9 @@ class AssetLocationResource extends Resource
     {
         return $table
             ->columns([
-                TextColumn::make('name')->translateLabel(),
+                TextColumn::make('name')->translateLabel()->searchable()->sortable(),
                 TextColumn::make('external_code')->label('Kode Gudang CSA')->searchable()->badge(),
-                TextColumn::make('address')->translateLabel(),
+                TextColumn::make('address')->translateLabel()->searchable(),
                 TextColumn::make('description')->translateLabel(),
             ])
             ->filters([

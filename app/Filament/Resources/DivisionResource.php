@@ -119,6 +119,7 @@ class DivisionResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['area', 'approvers.user.jobTitle']))
             ->columns([
                 Tables\Columns\TextColumn::make('name')
                     ->label('Nama Divisi')

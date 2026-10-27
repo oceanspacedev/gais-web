@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ObRoomResource\Pages;
 use App\Models\ObRoom;
+use App\Support\RelationSearch;
 use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
@@ -104,7 +105,7 @@ class ObRoomResource extends Resource
                 TextColumn::make('location.name')
                     ->label('Lokasi')
                     ->placeholder('Semua lokasi')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('location', 'name'))
                     ->sortable(),
 
                 TextColumn::make('shifts_count')

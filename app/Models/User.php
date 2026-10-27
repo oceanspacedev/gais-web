@@ -5,6 +5,7 @@ namespace App\Models;
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
 use App\Models\Concerns\HasBusinessEntityAccess;
+use App\Support\IndexedPermissionRegistrar;
 use App\Support\PhoneNumber;
 use BezhanSalleh\FilamentShield\Traits\HasPanelShield;
 use Filament\Facades\Filament;
@@ -19,11 +20,17 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use InvalidArgumentException;
 use Laravel\Sanctum\HasApiTokens;
+use Spatie\Permission\PermissionRegistrar;
 use Spatie\Permission\Traits\HasRoles;
+
+use function Illuminate\Support\enum_value;
 
 class User extends Authenticatable implements FilamentUser, HasName
 {
-    use HasApiTokens, HasBusinessEntityAccess, HasFactory, HasPanelShield, HasRoles, Notifiable;
+    use HasApiTokens, HasBusinessEntityAccess, HasFactory, HasPanelShield, Notifiable;
+    use HasRoles {
+        checkPermissionTo as private checkPermissionToUncached;
+    }
 
     /**
      * Role operasional yang boleh mengeluarkan aset dari stok (BA Serah Terima)
@@ -100,6 +107,22 @@ class User extends Authenticatable implements FilamentUser, HasName
         }
 
         $this->attributes['whatsapp_login_number'] = $phone;
+    }
+
+    /**
+     * Dipanggil Gate untuk setiap can(); hasilnya diingat per request
+     * (lihat IndexedPermissionRegistrar::rememberCheck()).
+     */
+    public function checkPermissionTo($permission, ?string $guardName = null): bool
+    {
+        $registrar = app(PermissionRegistrar::class);
+        $name = enum_value($permission);
+
+        if (! $registrar instanceof IndexedPermissionRegistrar || ! is_string($name)) {
+            return $this->checkPermissionToUncached($permission, $guardName);
+        }
+
+        return $registrar->rememberCheck($this, $name, $guardName, fn (): bool => $this->checkPermissionToUncached($permission, $guardName));
     }
 
     public function canAccessPanel(Panel $panel): bool

@@ -23,8 +23,11 @@ class AssetTransferFilterTest extends TestCase
     ];
 
     private BusinessEntity $entityA;
+
     private BusinessEntity $entityB;
+
     private BusinessEntity $entityC;
+
     private User $user;
 
     protected function setUp(): void
@@ -94,6 +97,27 @@ class AssetTransferFilterTest extends TestCase
             ])
             ->assertCanSeeTableRecords([$transferEarly, $transferMid])
             ->assertCanNotSeeTableRecords([$transferLate]);
+    }
+
+    public function test_search_matches_the_recipient_name(): void
+    {
+        $recipient = User::factory()->create(['name' => '__atflt_penerima_unik__']);
+        $match = AssetTransfer::create([
+            'business_entity_id' => $this->entityA->id,
+            'from_user_id' => $this->user->id,
+            'to_user_id' => $recipient->id,
+            'document_type' => AssetTransferDocumentType::PengalihanBarang->value,
+            'letter_number' => 'BA/FLT/40',
+            'transfer_date' => '2026-06-04',
+        ]);
+        $other = $this->createTransfer($this->entityA, '2026-06-05', 'BA/FLT/41');
+
+        $this->actingAs($this->user);
+
+        Livewire::test(ListAssetTransfers::class)
+            ->searchTable('penerima_unik')
+            ->assertCanSeeTableRecords([$match])
+            ->assertCanNotSeeTableRecords([$other]);
     }
 
     private function createTransfer(BusinessEntity $entity, string $transferDate, string $letterNumber): AssetTransfer

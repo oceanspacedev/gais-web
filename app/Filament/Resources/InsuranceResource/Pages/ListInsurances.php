@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\InsuranceResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\InsuranceResource;
 use App\Imports\InsuranceImport;
 use App\Models\Insurance;
@@ -11,6 +12,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListInsurances extends ListRecords
 {
+    use MemoizesTableQuery;
+
     protected static string $resource = InsuranceResource::class;
 
     protected function getHeaderActions(): array
