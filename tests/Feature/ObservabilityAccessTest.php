@@ -52,7 +52,7 @@ class ObservabilityAccessTest extends TestCase
     {
         $this->assertTrue(config('filament-shield.shield_resource.tabs.custom_permissions'));
         $this->assertSame(
-            ['View:Horizon', 'View:LogViewer', 'Download:LogViewer', 'Delete:LogViewer', 'View:Pulse'],
+            ['View:Horizon', 'View:LogViewer', 'Download:LogViewer', 'Delete:LogViewer', 'View:Pulse', 'Manage:SumoImport'],
             array_keys(FilamentShield::getCustomPermissions()),
         );
     }

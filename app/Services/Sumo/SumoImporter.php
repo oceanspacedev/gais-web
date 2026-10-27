@@ -11,6 +11,7 @@ use Carbon\Carbon;
 use Closure;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\PermissionRegistrar;
 use Throwable;
 
 /**
@@ -90,6 +91,35 @@ class SumoImporter
         }
 
         return $this->report;
+    }
+
+    /**
+     * Jalankan impor dalam satu transaksi shelf. Uji coba dibatalkan di akhir,
+     * jadi laporannya sama dengan impor sungguhan tanpa ada yang tersimpan.
+     *
+     * @param  list<string>|null  $only
+     */
+    public function runInTransaction(?array $only = null, bool $dryRun = false, ?Closure $logger = null): SumoImportReport
+    {
+        DB::beginTransaction();
+
+        try {
+            $report = $this->run($only, $logger);
+
+            if ($dryRun) {
+                DB::rollBack();
+            } else {
+                DB::commit();
+            }
+
+            return $report;
+        } catch (Throwable $exception) {
+            DB::rollBack();
+
+            throw $exception;
+        } finally {
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+        }
     }
 
     protected function source(string $table): Builder

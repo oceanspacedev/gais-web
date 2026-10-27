@@ -71,6 +71,17 @@ return [
             'after_commit' => true,
         ],
 
+        // Job panjang yang tidak boleh diulang otomatis (impor sumo). retry_after harus
+        // lebih lama dari timeout job, kalau tidak Redis membagikan job yang sama dua kali.
+        'redis-long' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'long-running',
+            'retry_after' => (int) env('REDIS_LONG_QUEUE_RETRY_AFTER', 3900),
+            'block_for' => (int) env('REDIS_QUEUE_BLOCK_FOR', 5),
+            'after_commit' => true,
+        ],
+
     ],
 
     /*

@@ -7,7 +7,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
 /**
- * Tiruan kecil skema sumo-web di SQLite memori untuk menguji sumo:import.
+ * Tiruan kecil skema sumo-web di SQLite memori untuk menguji sumo:import, atau
+ * sebagai teks dump MySQL untuk menguji unggah dump dari panel.
  * Hanya kolom yang dibaca importer yang dibuat; semuanya nullable.
  */
 final class SumoLegacyFixture
@@ -15,7 +16,7 @@ final class SumoLegacyFixture
     public const CONNECTION = 'sumo';
 
     /** @var array<string, array<string, string>> tabel => kolom => tipe Blueprint */
-    private const TABLES = [
+    public const TABLES = [
         'areas' => ['area' => 'string'],
         'badan_usahas' => ['badan_usaha' => 'string'],
         'divisions' => ['division' => 'string', 'area_id' => 'integer'],
@@ -115,5 +116,49 @@ final class SumoLegacyFixture
     public static function insert(string $table, array $row): int
     {
         return (int) DB::connection(self::CONNECTION)->table($table)->insertGetId($row + ['created_at' => '2025-01-01 08:00:00', 'updated_at' => '2025-01-01 08:00:00']);
+    }
+
+    /**
+     * Dump bergaya mysqldump berisi semua tabel fixture dan baris yang diberikan.
+     *
+     * @param  array<string, list<array<string, mixed>>>  $rows  tabel => baris
+     */
+    public static function mysqlDump(array $rows = []): string
+    {
+        $types = ['string' => 'varchar(255)', 'integer' => 'bigint', 'float' => 'double', 'dateTime' => 'datetime', 'date' => 'date', 'text' => 'text', 'boolean' => 'tinyint(1)'];
+        $value = fn (mixed $value): string => match (true) {
+            $value === null => 'NULL',
+            is_bool($value) => $value ? '1' : '0',
+            is_int($value), is_float($value) => (string) $value,
+            default => "'".str_replace(['\\', "'", "\n"], ['\\\\', "\\'", '\\n'], (string) $value)."'",
+        };
+
+        $sql = "-- MySQL dump (fixture sumo)\n/*!40101 SET NAMES utf8mb4 */;\n/*!40014 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0 */;\n\n";
+
+        foreach (self::TABLES as $table => $columns) {
+            $definitions = ['`id` bigint unsigned NOT NULL AUTO_INCREMENT'];
+
+            foreach ($columns as $column => $type) {
+                $definitions[] = "`{$column}` {$types[$type]} DEFAULT NULL";
+            }
+
+            array_push($definitions, '`created_at` timestamp NULL DEFAULT NULL', '`updated_at` timestamp NULL DEFAULT NULL', '`deleted_at` timestamp NULL DEFAULT NULL', 'PRIMARY KEY (`id`)');
+
+            $sql .= "--\n-- Table structure for table `{$table}`\n--\n\nDROP TABLE IF EXISTS `{$table}`;\n";
+            $sql .= "CREATE TABLE `{$table}` (\n  ".implode(",\n  ", $definitions)."\n) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;\n\n";
+
+            if (($rows[$table] ?? []) !== []) {
+                $tuples = array_map(function (array $row) use ($value): string {
+                    $row += ['created_at' => '2025-01-01 08:00:00', 'updated_at' => '2025-01-01 08:00:00'];
+
+                    return '('.implode(',', array_map($value, $row)).')';
+                }, $rows[$table]);
+                $names = implode('`,`', array_keys($rows[$table][0] + ['created_at' => null, 'updated_at' => null]));
+
+                $sql .= "LOCK TABLES `{$table}` WRITE;\nINSERT INTO `{$table}` (`{$names}`) VALUES ".implode(',', $tuples).";\nUNLOCK TABLES;\n\n";
+            }
+        }
+
+        return $sql."/*!40014 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS */;\n-- Dump completed\n";
     }
 }

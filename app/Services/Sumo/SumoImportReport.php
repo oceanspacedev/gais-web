@@ -65,4 +65,12 @@ final class SumoImportReport
     {
         return array_keys($this->warnings);
     }
+
+    /**
+     * @return array{counts: array<string, int>, notes: list<string>, warnings: list<string>}
+     */
+    public function toArray(): array
+    {
+        return ['counts' => $this->counts(), 'notes' => $this->notes(), 'warnings' => $this->warnings()];
+    }
 }

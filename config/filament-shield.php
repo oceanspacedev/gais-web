@@ -14,8 +14,10 @@ use App\Filament\Resources\ObChecksheetResource;
 use App\Filament\Resources\ProblemReportResource;
 use App\Filament\Resources\ProductResource;
 use App\Filament\Resources\RentResource;
+use App\Filament\Resources\SumoImportRunResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
+use App\Models\SumoImportRun;
 use App\Support\ObservabilityAccess;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
@@ -196,6 +198,8 @@ return [
             // Rekonsiliasi mewarisi izin import Asset agar tidak membuat
             // permission paralel yang dapat melewati kontrol import utama.
             AssetReconciliationResource::class,
+            // Satu izin custom Manage:SumoImport (custom_permissions di bawah).
+            SumoImportRunResource::class,
         ],
     ],
 
@@ -218,7 +222,10 @@ return [
     ],
 
     // Horizon & Log Viewer access, managed from the Shield role form (Custom tab).
-    'custom_permissions' => ObservabilityAccess::shieldPermissions(),
+    'custom_permissions' => [
+        ...ObservabilityAccess::shieldPermissions(),
+        SumoImportRun::PERMISSION => 'Kelola Impor Data Sumo',
+    ],
 
     'discovery' => [
         'discover_all_resources' => false,
