@@ -2,6 +2,7 @@
 
 namespace Tests\Support;
 
+use App\Models\AssetAttribute;
 use App\Models\CustomAssetAttribute;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -9,7 +10,8 @@ use Illuminate\Support\Facades\Schema;
 /**
  * Tabel atribut kustom untuk tes yang membangun skema SQLite sendiri. Serial
  * number, IMEI, dan tipe aset disimpan di asset_attributes (atribut ber-key),
- * jadi setiap skema yang menyimpan aset membutuhkannya.
+ * dan pencarian aset membaca asset_attributes.search_value, jadi setiap skema
+ * yang menyimpan aset membutuhkannya.
  */
 final class AssetIdentitySchema
 {
@@ -56,7 +58,13 @@ final class AssetIdentitySchema
                 $table->unsignedBigInteger('asset_id');
                 $table->unsignedBigInteger('custom_attribute_id');
                 $table->text('attribute_value')->nullable();
+                $table->text('search_value')->nullable()->storedAs(AssetAttribute::SEARCH_VALUE_SQL);
                 $table->timestamps();
+            });
+        } elseif (! Schema::hasColumn('asset_attributes', 'search_value')) {
+            // SQLite hanya bisa menambah kolom generated VIRTUAL lewat ALTER TABLE.
+            Schema::table('asset_attributes', function (Blueprint $table): void {
+                $table->text('search_value')->nullable()->virtualAs(AssetAttribute::SEARCH_VALUE_SQL);
             });
         }
 
