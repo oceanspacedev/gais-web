@@ -6,13 +6,12 @@ use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
-use App\Imports\UserImport;
 use App\Models\BusinessEntity;
+use App\Models\JobTitle;
 use App\Models\User;
 use App\Services\TalentaUserImportService;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
-use Illuminate\Support\Collection;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
@@ -275,13 +274,67 @@ class UserBusinessEntityAccessTest extends TestCase
         $this->assertFalse($other->fresh()->access_all_business_entities);
     }
 
+    public function test_talenta_synced_user_keeps_identity_fields_locked(): void
+    {
+        $title = JobTitle::create(['title' => '__bea_title__']);
+        $target = User::factory()->create([
+            'name' => '__bea_talenta_name__',
+            'employee_id' => '__bea_talenta_emp__',
+            'business_entity_id' => $this->alpha->id,
+            'job_title_id' => $title->id,
+            'whatsapp_number' => '081234567890',
+            'whatsapp_login_number' => '6281234567890',
+        ]);
+
+        $this->actingAs($this->superAdmin());
+
+        $page = Livewire::test(EditUser::class, ['record' => $target->getRouteKey()]);
+
+        foreach (['name', 'employee_id', 'business_entity_id', 'job_title_id', 'whatsapp_number', 'email'] as $field) {
+            $page->assertFormFieldDisabled($field);
+        }
+
+        $page
+            ->assertFormFieldEnabled('username')
+            ->fillForm(['name' => '__bea_manual_rename__', 'whatsapp_number' => '089999999999'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $target->refresh();
+        $this->assertSame('__bea_talenta_name__', $target->name);
+        $this->assertSame('081234567890', $target->whatsapp_number);
+        $this->assertSame('6281234567890', $target->whatsapp_login_number);
+    }
+
+    public function test_user_without_employee_id_stays_fully_editable(): void
+    {
+        $target = User::factory()->create(['business_entity_id' => $this->alpha->id, 'employee_id' => null]);
+
+        $this->actingAs($this->superAdmin());
+
+        $page = Livewire::test(EditUser::class, ['record' => $target->getRouteKey()]);
+
+        foreach (['name', 'employee_id', 'business_entity_id', 'job_title_id', 'whatsapp_number', 'email'] as $field) {
+            $page->assertFormFieldEnabled($field);
+        }
+
+        $page
+            ->fillForm(['name' => '__bea_manual_rename__'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertSame('__bea_manual_rename__', $target->fresh()->name);
+    }
+
     public function test_flagged_importer_may_still_create_new_business_entities(): void
     {
         $admin = $this->scopedUser($this->alpha);
         $admin->forceFill(['access_all_business_entities' => true])->save();
 
-        (new UserImport)->forActor($admin->fresh())->collection(Collection::make([
-            collect(['__bea_flag_import__', '__bea_flag_new_entity__', '__bea_title__', '__bea_flag_emp__', '']),
+        (new TalentaUserImportService($admin->fresh()))->importFromContent(json_encode([
+            'data' => [
+                ['id_employee' => '__bea_flag_emp__', 'full_name' => '__bea_flag_import__', 'branch' => '__bea_flag_new_entity__', 'job_position' => '__bea_title__'],
+            ],
         ]));
 
         $newEntityId = BusinessEntity::query()->where('name', '__bea_flag_new_entity__')->value('id');
@@ -305,32 +358,6 @@ class UserBusinessEntityAccessTest extends TestCase
             [$this->alpha->name, $this->beta->name, $this->gamma->name],
             $loaded->effectiveBusinessEntities()->pluck('name')->all(),
         );
-    }
-
-    public function test_excel_import_skips_rows_outside_the_importers_entities(): void
-    {
-        $admin = $this->scopedUser($this->alpha);
-        $existingInGamma = User::factory()->create([
-            'business_entity_id' => $this->gamma->id,
-            'employee_id' => '__bea_emp_gamma__',
-        ]);
-
-        (new UserImport)->forActor($admin)->collection(Collection::make([
-            collect(['Nama', 'Badan Usaha', 'Jabatan', 'Employee ID', 'No. HP']),
-            collect(['__bea_import_alpha__', $this->alpha->name, '__bea_title__', '__bea_emp_alpha__', '']),
-            collect(['__bea_import_gamma__', $this->gamma->name, '__bea_title__', '__bea_emp_gamma_new__', '']),
-            collect(['__bea_import_unknown__', '__bea_brand_new_entity__', '__bea_title__', '__bea_emp_unknown__', '']),
-            collect(['__bea_moved__', $this->alpha->name, '__bea_title__', '__bea_emp_gamma__', '']),
-        ]));
-
-        $this->assertDatabaseHas('users', ['name' => '__bea_import_alpha__', 'business_entity_id' => $this->alpha->id]);
-        $this->assertDatabaseMissing('users', ['name' => '__bea_import_gamma__']);
-        $this->assertDatabaseMissing('users', ['name' => '__bea_import_unknown__']);
-        $this->assertDatabaseMissing('business_entities', ['name' => '__bea_brand_new_entity__']);
-
-        $existingInGamma->refresh();
-        $this->assertSame($this->gamma->id, $existingInGamma->business_entity_id);
-        $this->assertNotSame('__bea_moved__', $existingInGamma->name);
     }
 
     public function test_talenta_import_rejects_rows_outside_the_importers_entities(): void

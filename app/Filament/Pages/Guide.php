@@ -83,9 +83,10 @@ class Guide extends Page
                 ['actor' => 'sistem', 'title' => 'Queue (Redis + Horizon)', 'text' => 'Export, email, dan notifikasi antre di sini. Tanpa php artisan horizon, job tidak diproses.'],
             ],
             'import' => [
-                ['actor' => 'sistem', 'title' => 'Baca database sumo', 'text' => 'Koneksi sumo (db_sumo) hanya dibaca, tidak pernah diubah.'],
-                ['actor' => 'admin', 'title' => 'Jalankan --dry-run', 'text' => 'Semua langkah dijalankan lalu di-rollback. Hanya laporan yang ditampilkan.'],
-                ['actor' => 'admin', 'title' => 'Jalankan impor sungguhan', 'text' => 'Satu transaksi. Idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
+                ['actor' => 'admin', 'title' => 'Unggah dump', 'text' => 'Menu Pengaturan, Impor Data Sumo, tombol Unggah dump. File .sql atau .gz disimpan privat dan tercatat sebagai satu run.'],
+                ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running mengosongkan database staging sumo lalu memuat dump. Database shelf ditolak sebagai target.'],
+                ['actor' => 'sistem', 'title' => 'Uji coba otomatis', 'text' => 'Semua langkah dijalankan lalu di-rollback. Laporan jumlah, pemetaan badan usaha, dan peringatan user tampil di run.'],
+                ['actor' => 'admin', 'title' => 'Impor sungguhan', 'text' => 'Ketik IMPOR. Satu transaksi dan idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
                 ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke pengajuan_admin, accounting, executor, requester. Cache permission direset.'],
             ],
         ];

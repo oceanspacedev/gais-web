@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Imports\UserImport;
 use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Services\TalentaUserImportService;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -142,6 +140,81 @@ class TalentaUserImportTest extends TestCase
         $this->assertSame('6281234567890', $user->whatsapp_login_number);
     }
 
+    public function test_same_name_users_are_told_apart_by_business_entity(): void
+    {
+        $cook = User::create([
+            'name' => 'Rani Maharani',
+            'business_entity_id' => BusinessEntity::create(['name' => 'AMAZY'])->id,
+            'job_title_id' => JobTitle::create(['title' => 'COOK'])->id,
+        ]);
+        $admin = User::create([
+            'name' => 'Rani Maharani',
+            'business_entity_id' => BusinessEntity::create(['name' => 'PT Media Selular Indonesia'])->id,
+            'job_title_id' => JobTitle::create(['title' => 'STAFF ADMIN'])->id,
+        ]);
+
+        $result = (new TalentaUserImportService)->importFromContent(json_encode([
+            $this->talentaEmployee([
+                'id_employee' => '2025.06.12.01',
+                'first_name' => 'RANI',
+                'last_name' => 'MAHARANI',
+                'branch' => 'PT MEDIA SELULAR INDONESIA',
+                'job' => 'STAFF ADMIN',
+            ]),
+        ]));
+
+        $this->assertSame(0, $result['error_count']);
+        $this->assertSame(0, $result['created_count']);
+        $this->assertSame('2025.06.12.01', $admin->fresh()->employee_id);
+        $this->assertNull($cook->fresh()->employee_id);
+    }
+
+    public function test_same_name_users_are_told_apart_by_phone_before_entity(): void
+    {
+        $entity = BusinessEntity::create(['name' => 'PT Media Selular Indonesia']);
+        $other = User::create(['name' => 'Kurniawan', 'business_entity_id' => $entity->id]);
+        $owner = User::create([
+            'name' => 'Kurniawan',
+            'whatsapp_number' => '085159353114',
+            'whatsapp_login_number' => '6285159353114',
+        ]);
+
+        $result = (new TalentaUserImportService)->importFromContent(json_encode([
+            $this->talentaEmployee([
+                'id_employee' => '2026.07.22.01',
+                'first_name' => 'KURNIAWAN',
+                'mobile_phone' => '085159353114',
+            ]),
+        ]));
+
+        $this->assertSame(0, $result['error_count']);
+        $this->assertSame('2026.07.22.01', $owner->fresh()->employee_id);
+        $this->assertNull($other->fresh()->employee_id);
+    }
+
+    public function test_indistinguishable_duplicates_are_rejected_with_their_ids(): void
+    {
+        $entity = BusinessEntity::create(['name' => 'CV Maju Tecnologi']);
+        $title = JobTitle::create(['title' => 'MT WAREHOUSE STAFF']);
+        $first = User::create(['name' => 'Muhammad Raindy', 'business_entity_id' => $entity->id, 'job_title_id' => $title->id]);
+        $second = User::create(['name' => 'Muhammad Raindy', 'business_entity_id' => $entity->id, 'job_title_id' => $title->id]);
+
+        $result = (new TalentaUserImportService)->importFromContent(json_encode([
+            $this->talentaEmployee([
+                'id_employee' => '2024.12.30.01',
+                'first_name' => 'MUHAMMAD',
+                'last_name' => 'RAINDY',
+                'branch' => 'CV Maju Tecnologi',
+                'job' => 'MT WAREHOUSE STAFF',
+            ]),
+        ]));
+
+        $this->assertSame(1, $result['error_count']);
+        $this->assertStringContainsString("#{$first->id}, #{$second->id}", $result['errors'][0]);
+        $this->assertSame(2, User::count());
+        $this->assertSame(0, User::query()->whereNotNull('employee_id')->count());
+    }
+
     public function test_talenta_json_does_not_steal_another_users_login_number(): void
     {
         User::create([
@@ -163,46 +236,6 @@ class TalentaUserImportTest extends TestCase
         $this->assertSame(1, $result['error_count']);
         $this->assertSame(0, $result['created_count']);
         $this->assertNull(User::query()->where('employee_id', '2020.02.02.02')->first());
-    }
-
-    public function test_excel_import_stores_employee_id_and_phone(): void
-    {
-        $import = new UserImport;
-        $import->collection(Collection::make([
-            collect(['Nama', 'Badan Usaha', 'Jabatan', 'Employee ID', 'No. HP']),
-            collect(['Siti Aminah', 'CV Complete Selular', 'FRONTLINER', '2023.11.01.03', '081222295165']),
-        ]));
-
-        $user = User::query()->first();
-        $this->assertNotNull($user);
-        $this->assertSame('Siti Aminah', $user->name);
-        $this->assertSame('2023.11.01.03', $user->employee_id);
-        $this->assertSame('081222295165', $user->whatsapp_number);
-        $this->assertSame('6281222295165', $user->whatsapp_login_number);
-        $this->assertSame('CV Complete Selular', $user->businessEntity->name);
-        $this->assertSame('FRONTLINER', $user->jobTitle->title);
-    }
-
-    public function test_excel_import_updates_phone_for_existing_employee_id(): void
-    {
-        $entity = BusinessEntity::create(['name' => 'CV Complete Selular']);
-        $title = JobTitle::create(['title' => 'FRONTLINER']);
-        User::create([
-            'name' => 'Siti Aminah',
-            'employee_id' => '2023.11.01.03',
-            'business_entity_id' => $entity->id,
-            'job_title_id' => $title->id,
-        ]);
-
-        $import = new UserImport;
-        $import->collection(Collection::make([
-            collect(['Siti Aminah', 'CV Complete Selular', 'FRONTLINER', '2023.11.01.03', '081999888777']),
-        ]));
-
-        $this->assertSame(1, User::count());
-        $user = User::query()->first();
-        $this->assertSame('081999888777', $user->whatsapp_number);
-        $this->assertSame('6281999888777', $user->whatsapp_login_number);
     }
 
     /**

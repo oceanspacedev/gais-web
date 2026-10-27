@@ -59,13 +59,22 @@ class UserResource extends Resource
             return $lockedByRecord[$record?->getKey() ?? 0] ??= static::hasUnassignableRole($record, $assignable());
         };
 
+        // User dari Talenta (punya Employee ID) memakai Talenta sebagai sumber data
+        // identitasnya: field berikut dikunci dan hanya berubah lewat import JSON Talenta.
+        $fromTalenta = fn (?User $record): bool => static::isSyncedFromTalenta($record);
+        $talentaHint = fn (?User $record): ?string => static::isSyncedFromTalenta($record)
+            ? 'Mengikuti Talenta. Ubah di Talenta lalu import ulang JSON Talenta.'
+            : null;
+
         return $form
             ->schema([
                 Section::make('Informasi Pengguna')
                     ->schema([
                         TextInput::make('name')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->disabled($fromTalenta)
+                            ->helperText($talentaHint),
                         Select::make('business_entity_id')
                             ->options(fn (): array => static::businessEntityOptions())
                             ->label(__('Business Entity'))
@@ -73,15 +82,21 @@ class UserResource extends Resource
                             // Scoped admins must place every new user inside an entity they can
                             // reach, otherwise the record would vanish from their own list.
                             ->required(fn (string $operation): bool => $operation === 'create' && ! static::viewerHasUnrestrictedAccess())
-                            ->in(fn (): array => array_keys(static::businessEntityOptions())),
+                            ->in(fn (): array => array_keys(static::businessEntityOptions()))
+                            ->disabled($fromTalenta)
+                            ->helperText($talentaHint),
                         Select::make('job_title_id')
                             ->options(JobTitle::all()->pluck('title', 'id'))
                             ->label('Job Title')
-                            ->searchable(),
+                            ->searchable()
+                            ->disabled($fromTalenta)
+                            ->helperText($talentaHint),
                         TextInput::make('employee_id')
                             ->label('Employee ID')
                             ->maxLength(64)
-                            ->unique(User::class, 'employee_id', ignoreRecord: true),
+                            ->unique(User::class, 'employee_id', ignoreRecord: true)
+                            ->disabled($fromTalenta)
+                            ->helperText($talentaHint),
                         // Tanpa preload: opsi baru diambil saat dicari, jadi halaman user tetap
                         // terbuka walau tabel divisi belum ada (lihat PhoneOtpLoginTest).
                         Select::make('division_id')
@@ -100,7 +115,9 @@ class UserResource extends Resource
                             ->label('Nomor WhatsApp')
                             ->tel()
                             ->placeholder('081234567890')
-                            ->helperText('Dipakai untuk pengingat aset via WhatsApp dan login OTP. Kosongkan untuk menonaktifkan login WhatsApp.')
+                            ->disabled($fromTalenta)
+                            ->helperText(fn (?User $record): string => $talentaHint($record)
+                                ?? 'Dipakai untuk pengingat aset via WhatsApp dan login OTP. Kosongkan untuk menonaktifkan login WhatsApp.')
                             ->afterStateHydrated(function (TextInput $component, ?User $record) use ($canManageAccess): void {
                                 if ($canManageAccess && $record && blank($record->whatsapp_number) && filled($record->whatsapp_login_number)) {
                                     $component->state($record->whatsapp_login_number);
@@ -126,6 +143,8 @@ class UserResource extends Resource
                             ->maxLength(255)
                             ->unique(User::class, 'email', ignoreRecord: true)
                             ->rules(['not_regex:/[\r\n]/'])
+                            ->disabled($fromTalenta)
+                            ->helperText($talentaHint)
                             ->visible($canManageAccess),
                         TextInput::make('password')
                             ->password()
@@ -305,6 +324,15 @@ class UserResource extends Resource
                 ->limitToAccessibleBusinessEntities($query, 'users.business_entity_id')
                 ->orWhere($viewer->getQualifiedKeyName(), $viewer->getKey());
         });
+    }
+
+    /**
+     * Employee ID hanya datang dari Talenta, jadi user yang memilikinya
+     * datanya disinkronkan dari import JSON Talenta.
+     */
+    public static function isSyncedFromTalenta(?User $user): bool
+    {
+        return $user?->exists === true && filled($user->getOriginal('employee_id'));
     }
 
     protected static function viewer(): User
