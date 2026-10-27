@@ -6,10 +6,17 @@ use App\Filament\Resources\ItemRequestResource;
 use App\Models\ItemRequest;
 use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
+use Illuminate\Database\Eloquent\Model;
 
 class ViewItemRequest extends ViewRecord
 {
     protected static string $resource = ItemRequestResource::class;
+
+    // Relasi yang dibaca infolist (pemohon, divisi, approver per tahap) dimuat sekaligus.
+    protected function resolveRecord(int|string $key): Model
+    {
+        return parent::resolveRecord($key)->loadMissing(['user.division', 'type', 'closedBy', 'approvals.approver']);
+    }
 
     public function getTitle(): string
     {

@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\ObShiftResource\Pages;
 use App\Models\ObRoom;
 use App\Models\ObShift;
+use App\Support\RelationSearch;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -126,7 +127,7 @@ class ObShiftResource extends Resource
                 TextColumn::make('location.name')
                     ->label('Lokasi')
                     ->placeholder('Semua lokasi')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('location', 'name'))
                     ->sortable(),
 
                 TextColumn::make('shift_rooms_count')

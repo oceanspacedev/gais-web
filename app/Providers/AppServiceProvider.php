@@ -60,6 +60,7 @@ use App\Policies\RentUpdatePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\UnitTypePolicy;
+use App\Support\IndexedPermissionRegistrar;
 use App\Support\MekayaAssets;
 use App\Support\ObservabilityAccess;
 use App\Support\StoredFile;
@@ -82,6 +83,7 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Support\Facades\FilamentColor;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Table;
 use Filament\Widgets\Widget;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
@@ -94,6 +96,7 @@ use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -124,6 +127,8 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->app->singleton(Mekaya::class, fn (): MekayaAssets => new MekayaAssets);
+        // Spatie mendaftarkan registrarnya saat boot, jadi penggantinya juga di sini.
+        $this->app->singleton(PermissionRegistrar::class, IndexedPermissionRegistrar::class);
 
         Livewire::component('phone-login', PhoneLogin::class);
         ObservabilityAccess::register();
@@ -145,6 +150,8 @@ class AppServiceProvider extends ServiceProvider
         ImageColumn::configureUsing(fn (ImageColumn $image) => $image->visibility(fn (): string => StoredFile::uploadVisibility()));
         ExportAction::configureUsing(fn (ExportAction $action) => $action->fileDisk(fn (): string => config('filesystems.default')));
         ExportBulkAction::configureUsing(fn (ExportBulkAction $action) => $action->fileDisk(fn (): string => config('filesystems.default')));
+        // Pencarian tabel sudah di bawah ~200 ms, jadi tunggu ketikan lebih singkat dari bawaan 500 ms.
+        Table::configureUsing(fn (Table $table) => $table->searchDebounce('300ms'));
 
         LanguageSwitch::configureUsing(function (LanguageSwitch $switch) {
             $switch

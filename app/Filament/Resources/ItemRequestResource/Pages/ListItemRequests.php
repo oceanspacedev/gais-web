@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\ItemRequestResource\Pages;
 
 use App\Enums\ItemRequestClientStatus;
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\ItemRequestResource;
 use Filament\Actions\CreateAction;
 use Filament\Resources\Pages\ListRecords;
@@ -11,6 +12,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class ListItemRequests extends ListRecords
 {
+    use MemoizesTableQuery;
+
     protected static string $resource = ItemRequestResource::class;
 
     protected function getHeaderActions(): array

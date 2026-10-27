@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\CategoryResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\CategoryResource;
 use Asmit\ResizedColumn\HasResizableColumn;
 use Filament\Actions;
@@ -9,7 +10,7 @@ use Filament\Resources\Pages\ManageRecords;
 
 class ManageCategories extends ManageRecords
 {
-    use HasResizableColumn;
+    use HasResizableColumn, MemoizesTableQuery;
 
     protected static string $resource = CategoryResource::class;
 

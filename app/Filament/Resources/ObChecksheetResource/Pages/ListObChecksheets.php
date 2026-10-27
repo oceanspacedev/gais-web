@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\ObChecksheetResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Exports\ObChecksheetExporter;
 use App\Filament\Resources\ObChecksheetResource;
 use App\Forms\Components\CameraCapture;
@@ -33,6 +34,8 @@ use Illuminate\Support\Carbon;
 
 class ListObChecksheets extends ListRecords
 {
+    use MemoizesTableQuery;
+
     protected static string $resource = ObChecksheetResource::class;
 
     protected function getHeaderActions(): array

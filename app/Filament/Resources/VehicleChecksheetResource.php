@@ -6,17 +6,19 @@ use App\Filament\Resources\VehicleChecksheetResource\Pages;
 use App\Models\AssetAttribute;
 use App\Models\VehicleChecksheet;
 use App\Support\StoredFile;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Utilities\Get;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -311,16 +313,17 @@ class VehicleChecksheetResource extends Resource
                         ->pluck('location', 'location')
                         ->all()),
             ])
+            ->defaultSort('created_at', 'desc')
             ->persistFiltersInSession()
             ->persistSearchInSession()
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
-                \Filament\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->visible(fn () => auth()->user()->can('export', static::getModel()))
                         ->exports([
@@ -358,12 +361,6 @@ class VehicleChecksheetResource extends Resource
                         ]),
                 ]),
             ]);
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->orderBy('created_at', 'desc');
     }
 
     protected static function mutateFormDataBeforeCreate(array $data): array

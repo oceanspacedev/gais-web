@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\RentResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\RentResource;
 use App\Imports\RentImport;
 use App\Models\Rent;
@@ -11,6 +12,8 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListRents extends ListRecords
 {
+    use MemoizesTableQuery;
+
     protected static string $resource = RentResource::class;
 
     protected function getHeaderActions(): array

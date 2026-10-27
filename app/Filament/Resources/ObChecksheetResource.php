@@ -9,6 +9,7 @@ use App\Models\ObChecksheet;
 use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\User;
+use App\Support\RelationSearch;
 use App\Support\StoredFile;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -324,7 +325,7 @@ class ObChecksheetResource extends Resource
                             ->label('Petugas OB')
                             ->icon('heroicon-m-user')
                             ->placeholder('Belum diambil')
-                            ->searchable()
+                            ->searchable(query: RelationSearch::on('user', 'name'))
                             ->sortable(),
                         TextColumn::make('scheduled_date')
                             ->label('Tanggal')

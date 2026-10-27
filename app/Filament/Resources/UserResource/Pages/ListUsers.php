@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\UserResource;
 use App\Imports\UserImport;
 use App\Services\TalentaUserImportService;
@@ -15,7 +16,7 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class ListUsers extends ListRecords
 {
-    use HasResizableColumn;
+    use HasResizableColumn, MemoizesTableQuery;
 
     protected static string $resource = UserResource::class;
 

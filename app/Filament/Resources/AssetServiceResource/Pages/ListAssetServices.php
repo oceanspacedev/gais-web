@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\AssetServiceResource\Pages;
 
+use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource;
 use App\Models\AssetService;
@@ -12,7 +13,7 @@ use Filament\Resources\Pages\ListRecords;
 
 class ListAssetServices extends ListRecords
 {
-    use HasResizableColumn;
+    use HasResizableColumn, MemoizesTableQuery;
 
     protected static string $resource = AssetServiceResource::class;
 

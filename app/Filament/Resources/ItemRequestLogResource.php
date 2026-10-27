@@ -4,6 +4,7 @@ namespace App\Filament\Resources;
 
 use App\Filament\Resources\ItemRequestLogResource\Pages;
 use App\Models\ItemRequestLog;
+use App\Support\RelationSearch;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -41,7 +42,7 @@ class ItemRequestLogResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('created_at')->label('Waktu')->dateTime('d/m/Y H:i')->sortable(),
-                TextColumn::make('request.request_code')->label('Pengajuan')->searchable()->badge(),
+                TextColumn::make('request.request_code')->label('Pengajuan')->searchable(query: RelationSearch::on('request', 'request_code'))->badge(),
                 TextColumn::make('user.name')->label('Oleh')->placeholder('-'),
                 TextColumn::make('activity')->label('Aktivitas')->wrap()->searchable(),
             ])

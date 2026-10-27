@@ -12,6 +12,7 @@ use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Support\PhoneNumber;
+use App\Support\RelationSearch;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -48,6 +49,15 @@ class UserResource extends Resource
     public static function form(Schema $form): Schema
     {
         $canManageAccess = Auth::user()->can('manageAccess', User::class);
+        // Query role yang bisa diberikan cukup sekali per render; Select memanggilnya berulang.
+        $assignableRoleIds = null;
+        $assignable = function () use (&$assignableRoleIds): array {
+            return $assignableRoleIds ??= static::assignableRoleIds();
+        };
+        $lockedByRecord = [];
+        $hasUnassignableRole = function (?User $record) use ($assignable, &$lockedByRecord): bool {
+            return $lockedByRecord[$record?->getKey() ?? 0] ??= static::hasUnassignableRole($record, $assignable());
+        };
 
         return $form
             ->schema([
@@ -131,11 +141,11 @@ class UserResource extends Resource
                         Select::make('roles')
                             ->label('Roles')
                             ->relationship('roles', 'name', fn (Builder $query, ?User $record): Builder => $query->whereKey([
-                                ...static::assignableRoleIds(),
+                                ...$assignable(),
                                 ...($record?->roles->modelKeys() ?? []),
                             ]))
-                            ->disabled(fn (?User $record): bool => static::hasUnassignableRole($record))
-                            ->helperText(fn (?User $record): ?string => static::hasUnassignableRole($record)
+                            ->disabled(fn (?User $record): bool => $hasUnassignableRole($record))
+                            ->helperText(fn (?User $record): ?string => $hasUnassignableRole($record)
                                 ? 'Role user ini memberi akses yang tidak Anda miliki, jadi tidak bisa Anda ubah.'
                                 : null)
                             ->saveRelationshipsUsing(fn (User $record, $state) => static::syncAssignableRoles($record, array_filter((array) $state)))
@@ -191,7 +201,7 @@ class UserResource extends Resource
                     ->getStateUsing(fn (User $record): array => static::businessEntityAccessLabels($record))
                     ->placeholder('-')
                     ->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable()->toggleable(),
+                TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable(query: RelationSearch::on('jobTitle', 'title'))->toggleable(),
                 TextColumn::make('division.name')
                     ->label('Divisi')
                     ->placeholder('-')
@@ -341,10 +351,13 @@ class UserResource extends Resource
             ->all();
     }
 
-    protected static function hasUnassignableRole(?User $user): bool
+    /**
+     * @param  list<int>|null  $assignableRoleIds
+     */
+    protected static function hasUnassignableRole(?User $user, ?array $assignableRoleIds = null): bool
     {
         return $user?->exists
-            && $user->roles()->whereKeyNot(static::assignableRoleIds())->exists();
+            && $user->roles()->whereKeyNot($assignableRoleIds ?? static::assignableRoleIds())->exists();
     }
 
     /**

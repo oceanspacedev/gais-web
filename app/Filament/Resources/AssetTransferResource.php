@@ -10,6 +10,7 @@ use App\Models\AssetTransfer;
 use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
+use App\Support\RelationSearch;
 use App\Support\StoredFile;
 use Carbon\Carbon;
 use Filament\Actions\Action;
@@ -222,10 +223,11 @@ class AssetTransferResource extends Resource
                             ->translateLabel()
                             ->searchable()
                             ->disabled($lockedOnEdit)
-                            ->options(fn (Get $get): array => static::assetOptions(
+                            // Opsi sama untuk setiap baris (semua aset terpilih dikecualikan), jadi dihitung sekali.
+                            ->options(fn (Get $get): array => static::memoizedAssetOptions(
                                 static::documentType($get, '../../document_type'),
                                 $get('../../from_user_id'),
-                                collect($get('../../details'))->pluck('asset_id')->filter()->all(),
+                                collect($get('../../details'))->pluck('asset_id')->filter()->values()->all(),
                             ))
                             ->getSearchResultsUsing(fn (string $search, Get $get): array => static::assetOptions(
                                 static::documentType($get, '../../document_type'),
@@ -233,7 +235,9 @@ class AssetTransferResource extends Resource
                                 collect($get('../../details'))->pluck('asset_id')->filter()->all(),
                                 $search,
                             ))
-                            ->getOptionLabelUsing(fn ($value): ?string => Asset::find($value)?->name),
+                            ->getOptionLabelUsing(fn ($value, Get $get): ?string => static::assetNames(
+                                collect($get('../../details'))->pluck('asset_id')->filter()->values()->all(),
+                            )[$value] ?? Asset::find($value)?->name),
                         TextInput::make('equipment')
                             ->translateLabel()
                             ->disabled($lockedOnEdit),
@@ -271,13 +275,13 @@ class AssetTransferResource extends Resource
                     ->translateLabel()
                     ->badge()
                     ->color('danger')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('fromUser', 'name'))
                     ->toggleable(),
                 TextColumn::make('toUser.name')
                     ->translateLabel()
                     ->badge()
                     ->color('success')
-                    ->searchable()
+                    ->searchable(query: RelationSearch::on('toUser', 'name'))
                     ->toggleable(),
                 TextColumn::make('transfer_date')->translateLabel()->date()->toggleable(),
                 TextColumn::make('document')
@@ -610,9 +614,31 @@ class AssetTransferResource extends Resource
     }
 
     /**
-     * Opsi aset per baris detail, dievaluasi ulang setiap render form. Dibatasi
-     * supaya stok yang besar tidak dikirim utuh ke browser; aset lain dicari
-     * lewat nama atau serial number.
+     * Opsi aset per baris detail, dievaluasi ulang setiap render form; hasilnya
+     * sama untuk semua baris, jadi diingat selama request.
+     *
+     * @param  list<int|string>  $selectedAssetIds
+     * @return array<int, string>
+     */
+    protected static function memoizedAssetOptions(?AssetTransferDocumentType $type, mixed $fromUserId, array $selectedAssetIds): array
+    {
+        return once(fn (): array => static::assetOptions($type, $fromUserId, $selectedAssetIds));
+    }
+
+    /**
+     * Nama aset yang sudah dipilih di repeater, sekali query untuk semua baris.
+     *
+     * @param  list<int|string>  $assetIds
+     * @return array<int, string>
+     */
+    protected static function assetNames(array $assetIds): array
+    {
+        return once(fn (): array => Asset::query()->whereKey($assetIds)->pluck('name', 'id')->all());
+    }
+
+    /**
+     * Dibatasi supaya stok yang besar tidak dikirim utuh ke browser; aset lain
+     * dicari lewat nama atau serial number.
      *
      * @param  list<int|string>  $selectedAssetIds
      * @return array<int, string>
