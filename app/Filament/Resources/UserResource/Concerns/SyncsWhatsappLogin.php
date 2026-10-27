@@ -17,7 +17,9 @@ trait SyncsWhatsappLogin
         $actor = Auth::user();
         $canManageLogin = $actor?->can('manageAccess', User::class) ?? false;
 
-        if (! $canManageLogin) {
+        // Nomor yang dikunci (user dari Talenta) tidak ikut dikirim form, jadi
+        // nomor login yang sudah ada dibiarkan.
+        if (! $canManageLogin || ! array_key_exists('whatsapp_number', $data)) {
             unset($data['whatsapp_login_number']);
 
             return $data;

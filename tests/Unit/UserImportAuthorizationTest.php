@@ -24,7 +24,7 @@ class UserImportAuthorizationTest extends TestCase
         $this->assertFalse($policy->import($this->userThatCan([])));
     }
 
-    public function test_users_list_exposes_excel_and_talenta_import_actions(): void
+    public function test_users_list_only_imports_from_talenta_json(): void
     {
         $page = new class extends ListUsers
         {
@@ -38,7 +38,7 @@ class UserImportAuthorizationTest extends TestCase
             return $action instanceof ActionGroup ? $action->getActions() : [$action];
         });
 
-        $this->assertTrue($actions->contains(fn ($action) => $action instanceof ExcelImportAction));
+        $this->assertFalse($actions->contains(fn ($action) => $action instanceof ExcelImportAction));
         $this->assertTrue($actions->contains(
             fn ($action) => $action instanceof Action && $action->getName() === 'importTalenta',
         ));

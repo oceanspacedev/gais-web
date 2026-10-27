@@ -2,13 +2,11 @@
 
 namespace Tests\Feature;
 
-use App\Imports\UserImport;
 use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Services\TalentaUserImportService;
 use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -163,46 +161,6 @@ class TalentaUserImportTest extends TestCase
         $this->assertSame(1, $result['error_count']);
         $this->assertSame(0, $result['created_count']);
         $this->assertNull(User::query()->where('employee_id', '2020.02.02.02')->first());
-    }
-
-    public function test_excel_import_stores_employee_id_and_phone(): void
-    {
-        $import = new UserImport;
-        $import->collection(Collection::make([
-            collect(['Nama', 'Badan Usaha', 'Jabatan', 'Employee ID', 'No. HP']),
-            collect(['Siti Aminah', 'CV Complete Selular', 'FRONTLINER', '2023.11.01.03', '081222295165']),
-        ]));
-
-        $user = User::query()->first();
-        $this->assertNotNull($user);
-        $this->assertSame('Siti Aminah', $user->name);
-        $this->assertSame('2023.11.01.03', $user->employee_id);
-        $this->assertSame('081222295165', $user->whatsapp_number);
-        $this->assertSame('6281222295165', $user->whatsapp_login_number);
-        $this->assertSame('CV Complete Selular', $user->businessEntity->name);
-        $this->assertSame('FRONTLINER', $user->jobTitle->title);
-    }
-
-    public function test_excel_import_updates_phone_for_existing_employee_id(): void
-    {
-        $entity = BusinessEntity::create(['name' => 'CV Complete Selular']);
-        $title = JobTitle::create(['title' => 'FRONTLINER']);
-        User::create([
-            'name' => 'Siti Aminah',
-            'employee_id' => '2023.11.01.03',
-            'business_entity_id' => $entity->id,
-            'job_title_id' => $title->id,
-        ]);
-
-        $import = new UserImport;
-        $import->collection(Collection::make([
-            collect(['Siti Aminah', 'CV Complete Selular', 'FRONTLINER', '2023.11.01.03', '081999888777']),
-        ]));
-
-        $this->assertSame(1, User::count());
-        $user = User::query()->first();
-        $this->assertSame('081999888777', $user->whatsapp_number);
-        $this->assertSame('6281999888777', $user->whatsapp_login_number);
     }
 
     /**
