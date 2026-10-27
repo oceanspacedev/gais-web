@@ -13,6 +13,8 @@ use App\Services\CsaAssetAuditWorkbookParser;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use PhpOffice\PhpSpreadsheet\IOFactory;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class CsaAssetAuditWorkbookExporterTest extends TestCase
@@ -73,10 +75,6 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
             $table->string('name');
             $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
-            $table->string('type')->nullable();
-            $table->string('serial_number')->nullable();
-            $table->string('imei1')->nullable();
-            $table->string('imei2')->nullable();
             $table->bigInteger('item_price')->nullable();
             $table->unsignedBigInteger('asset_location_id')->nullable();
             $table->integer('qty')->default(1);
@@ -97,6 +95,8 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
             $table->unsignedBigInteger('recipient_business_entity_id')->nullable();
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
 
         $migration = require database_path('migrations/2026_08_01_000001_create_asset_reconciliation_tables.php');
         $migration->up();
@@ -184,7 +184,7 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
         $this->assertSame(1, $bySerial['VSC-1']['system_qty']);
         $this->assertSame('CSN', $bySerial['VSC-1']['external_business_entity_code']);
 
-        $reader = \PhpOffice\PhpSpreadsheet\IOFactory::load($exportedPath);
+        $reader = IOFactory::load($exportedPath);
         $this->assertNotNull($reader->getSheetByName('PETUNJUK'));
         $this->assertSame('ASET', $reader->getSheet(0)->getTitle());
         $reader->disconnectWorksheets();

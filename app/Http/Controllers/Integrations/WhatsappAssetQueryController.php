@@ -148,7 +148,8 @@ class WhatsappAssetQueryController extends Controller
             ->whereHas('asset', fn (Builder $asset) => $this->applyAssetFilters($asset, $query))
             ->with([
                 'customAttribute:id,name,type,is_notifiable,notification_type,notification_offset',
-                'asset:id,name,category_id,brand_id,type,serial_number,imei1,imei2,asset_location_id,recipient_id,business_entity_id,condition_status,nbh_status,is_available,qty,updated_at',
+                'asset:id,name,category_id,brand_id,asset_location_id,recipient_id,business_entity_id,condition_status,nbh_status,is_available,qty,updated_at',
+                'asset.attributes:id,asset_id,custom_attribute_id,attribute_value',
                 'asset.category:id,name,parent_id',
                 'asset.brand:id,name',
                 'asset.assetLocation:id,name,address,description',
@@ -225,11 +226,11 @@ class WhatsappAssetQueryController extends Controller
         }
 
         if ($serialNumber !== '') {
-            $this->whereIdentifierMatches($assetQuery, ['serial_number'], ['Serial Number'], $serialNumber);
+            $this->whereIdentifierMatches($assetQuery, [CustomAssetAttribute::KEY_SERIAL_NUMBER], [], $serialNumber);
         }
 
         if ($imei !== '') {
-            $this->whereIdentifierMatches($assetQuery, ['imei1', 'imei2'], ['IMEI1', 'IMEI2'], $imei);
+            $this->whereIdentifierMatches($assetQuery, [CustomAssetAttribute::KEY_IMEI1, CustomAssetAttribute::KEY_IMEI2], [], $imei);
         }
 
         if ($plateNumber !== '') {
@@ -266,8 +267,7 @@ class WhatsappAssetQueryController extends Controller
             $assetQuery->where(function (Builder $q) use ($keywords): void {
                 foreach ($keywords as $keyword) {
                     $q->orWhere('name', 'like', '%'.$keyword.'%')
-                        ->orWhere('type', 'like', '%'.$keyword.'%')
-                        ->orWhere('serial_number', 'like', '%'.$keyword.'%');
+                        ->orWhereIdentity([CustomAssetAttribute::KEY_TYPE, CustomAssetAttribute::KEY_SERIAL_NUMBER], $keyword);
                 }
             });
         }
@@ -291,7 +291,7 @@ class WhatsappAssetQueryController extends Controller
         }
 
         if ($assetType !== '') {
-            $query->where('type', 'like', '%'.$assetType.'%');
+            $query->whereIdentity(CustomAssetAttribute::KEY_TYPE, $assetType);
         }
 
         if ($categoryName !== '') {
@@ -307,9 +307,17 @@ class WhatsappAssetQueryController extends Controller
      * @param  array<int, string>  $nativeColumns
      * @param  array<int, string>  $customAttributeNames
      */
+    /**
+     * Cocokkan identitas tanpa memedulikan spasi, tanda hubung, titik, dan garis
+     * miring. Identitas aset (serial number, IMEI) dicari lewat key atributnya;
+     * atribut lain (Plat Nomor) lewat nama atribut yang aktif.
+     *
+     * @param  array<int, string>  $identityKeys
+     * @param  array<int, string>  $customAttributeNames
+     */
     private function whereIdentifierMatches(
         Builder $query,
-        array $nativeColumns,
+        array $identityKeys,
         array $customAttributeNames,
         string $value,
     ): void {
@@ -319,35 +327,22 @@ class WhatsappAssetQueryController extends Controller
             return;
         }
 
-        $query->where(function (Builder $identifier) use ($nativeColumns, $customAttributeNames, $needle): void {
-            $hasClause = false;
+        $identityIds = array_map(CustomAssetAttribute::idForKey(...), $identityKeys);
 
-            foreach ($nativeColumns as $column) {
-                if ($hasClause) {
-                    $identifier->orWhereRaw($this->normalizedIdentifierExpression($column).' LIKE ?', ['%'.$needle.'%']);
-                } else {
-                    $identifier->whereRaw($this->normalizedIdentifierExpression($column).' LIKE ?', ['%'.$needle.'%']);
-                    $hasClause = true;
-                }
-            }
+        $query->whereHas('attributes', function (Builder $attribute) use ($identityIds, $customAttributeNames, $needle): void {
+            $attribute
+                ->whereRaw($this->normalizedIdentifierExpression('attribute_value').' LIKE ?', ['%'.$needle.'%'])
+                ->where(function (Builder $which) use ($identityIds, $customAttributeNames): void {
+                    if ($identityIds !== []) {
+                        $which->whereIn('custom_attribute_id', $identityIds);
+                    }
 
-            if ($customAttributeNames !== []) {
-                $customFilter = function (Builder $attribute) use ($customAttributeNames, $needle): void {
-                    $attribute
-                        ->whereRaw($this->normalizedIdentifierExpression('attribute_value').' LIKE ?', ['%'.$needle.'%'])
-                        ->whereHas('customAttribute', function (Builder $custom) use ($customAttributeNames): void {
-                            $custom
-                                ->whereIn('name', $customAttributeNames)
-                                ->where('is_active', true);
-                        });
-                };
-
-                if ($hasClause) {
-                    $identifier->orWhereHas('attributes', $customFilter);
-                } else {
-                    $identifier->whereHas('attributes', $customFilter);
-                }
-            }
+                    if ($customAttributeNames !== []) {
+                        $which->orWhereHas('customAttribute', fn (Builder $custom) => $custom
+                            ->whereIn('name', $customAttributeNames)
+                            ->where('is_active', true));
+                    }
+                });
         });
     }
 
@@ -414,9 +409,9 @@ class WhatsappAssetQueryController extends Controller
             'category' => $this->idName($asset->category),
             'brand' => $this->idName($asset->brand),
             'type' => $asset->type,
-            'serial_number' => $this->assetIdentifier($asset, 'serial_number', ['Serial Number']),
-            'imei1' => $this->assetIdentifier($asset, 'imei1', ['IMEI1']),
-            'imei2' => $this->assetIdentifier($asset, 'imei2', ['IMEI2']),
+            'serial_number' => $this->assetIdentifier($asset, CustomAssetAttribute::KEY_SERIAL_NUMBER),
+            'imei1' => $this->assetIdentifier($asset, CustomAssetAttribute::KEY_IMEI1),
+            'imei2' => $this->assetIdentifier($asset, CustomAssetAttribute::KEY_IMEI2),
             'plate_number' => $this->customAssetIdentifier($asset, ['Plat Nomor']),
             'condition_status' => $condition ? [
                 'value' => $condition->value,
@@ -629,15 +624,11 @@ class WhatsappAssetQueryController extends Controller
     /**
      * @param  array<int, string>  $customAttributeNames
      */
-    private function assetIdentifier(Asset $asset, string $nativeColumn, array $customAttributeNames): ?string
+    private function assetIdentifier(Asset $asset, string $key): ?string
     {
-        $nativeValue = $this->text($asset->getAttribute($nativeColumn));
+        $value = $this->text($asset->{$key});
 
-        if ($nativeValue !== '' && ! $this->isPlaceholderIdentifier($nativeValue)) {
-            return $nativeValue;
-        }
-
-        return $this->customAssetIdentifier($asset, $customAttributeNames);
+        return $value === '' || $this->isPlaceholderIdentifier($value) ? null : $value;
     }
 
     /**

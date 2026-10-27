@@ -3,6 +3,7 @@
 namespace App\Filament\Exports;
 
 use App\Models\Asset;
+use App\Models\CustomAssetAttribute;
 use Filament\Actions\Exports\Enums\ExportFormat;
 use Filament\Actions\Exports\ExportColumn;
 use Filament\Actions\Exports\Exporter;
@@ -23,10 +24,10 @@ class AssetExporter extends Exporter
             ExportColumn::make('name')->label('Nama Aset'),
             ExportColumn::make('category.name')->label('Kategori'),
             ExportColumn::make('brand.name')->label('Merek'),
-            ExportColumn::make('type')->label('Tipe'),
-            ExportColumn::make('serial_number')->label('Serial Number'),
-            ExportColumn::make('imei1')->label('IMEI 1'),
-            ExportColumn::make('imei2')->label('IMEI 2'),
+            ExportColumn::make('type')->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_TYPE)),
+            ExportColumn::make('serial_number')->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_SERIAL_NUMBER)),
+            ExportColumn::make('imei1')->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_IMEI1)),
+            ExportColumn::make('imei2')->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_IMEI2)),
             ExportColumn::make('item_price')->label('Harga Aset'),
             ExportColumn::make('assetLocation.name')->label('Lokasi Aset'),
             ExportColumn::make('condition_status_label')->label('Status Aset'),

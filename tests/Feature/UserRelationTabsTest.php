@@ -74,6 +74,8 @@ class UserRelationTabsTest extends TestCase
         $this->heldAsset = Asset::factory()->create([
             'business_entity_id' => $this->home->id,
             'condition_status' => AssetCondition::Transferred,
+            // Factory mengacak is_available, yang ikut menentukan kondisi (dan melepas pemegang).
+            'is_available' => false,
             'recipient_id' => $this->owner->id,
         ]);
 

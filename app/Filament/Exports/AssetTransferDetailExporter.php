@@ -102,7 +102,7 @@ class AssetTransferDetailExporter extends Exporter
             'assetTransfer.businessEntity',
             'assetTransfer.fromUser',
             'assetTransfer.toUser',
-            'asset',
+            'asset.attributes',
         ]);
     }
 

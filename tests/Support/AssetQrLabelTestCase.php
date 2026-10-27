@@ -38,6 +38,8 @@ abstract class AssetQrLabelTestCase extends TestCase
             $table->foreignId('asset_location_id')->nullable()->constrained();
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
         Schema::create('asset_reconciliations', function (Blueprint $table): void {
             $table->id();
             $table->string('stored_path');

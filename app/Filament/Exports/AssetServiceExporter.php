@@ -38,6 +38,7 @@ class AssetServiceExporter extends Exporter
                     if ($record->provider_type === 'internal') {
                         return $record->servicedByUser?->name ?? 'Staf Internal';
                     }
+
                     return $record->vendor?->name ?? $record->technician_name ?? 'Vendor Luar';
                 }),
 
@@ -64,7 +65,7 @@ class AssetServiceExporter extends Exporter
 
             ExportColumn::make('total_cost')
                 ->label('Total Biaya (Rp)')
-                ->state(fn (AssetService $record): string => 'Rp ' . number_format($record->total_cost ?: 0, 0, ',', '.')),
+                ->state(fn (AssetService $record): string => 'Rp '.number_format($record->total_cost ?: 0, 0, ',', '.')),
 
             ExportColumn::make('receipt_document_path')
                 ->label('Dokumen / Nota')
@@ -103,10 +104,10 @@ class AssetServiceExporter extends Exporter
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Ekspor data servis aset Anda telah selesai dan ' . Number::format($export->successful_rows) . ' baris berhasil diekspor.';
+        $body = 'Ekspor data servis aset Anda telah selesai dan '.Number::format($export->successful_rows).' baris berhasil diekspor.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' ' . Number::format($failedRowsCount) . ' baris gagal diekspor.';
+            $body .= ' '.Number::format($failedRowsCount).' baris gagal diekspor.';
         }
 
         return $body;
@@ -135,14 +136,14 @@ class AssetServiceExporter extends Exporter
 
     public function getFileName(Export $export): string
     {
-        return 'export_servis_aset_' . now()->format('Y-m-d_His');
+        return 'export_servis_aset_'.now()->format('Y-m-d_His');
     }
 
     public static function modifyQuery(Builder $query): Builder
     {
         $user = auth()->user();
 
-        $query = $query->with(['asset', 'servicedByUser', 'vendor', 'creator']);
+        $query = $query->with(['asset.attributes', 'servicedByUser', 'vendor', 'creator']);
 
         if ($user && ! $user->can('viewAll', AssetService::class)) {
             $query->where(function ($q) use ($user) {

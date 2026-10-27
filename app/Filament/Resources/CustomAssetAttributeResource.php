@@ -192,6 +192,7 @@ class CustomAssetAttributeResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('name')
+                    ->description(fn (CustomAssetAttribute $record): ?string => $record->isIdentity() ? 'Identitas aset (dipakai pencarian, export, rekonsiliasi; tidak bisa dihapus)' : null)
                     ->searchable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('type')

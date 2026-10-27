@@ -262,7 +262,8 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | Tabel | Kolom yang perlu dipahami |
 | --- | --- |
 | `users` | `business_entity_id`, `access_all_business_entities`, `division_id`, `approver_user_id` (atasan), `whatsapp_number`, `whatsapp_login_number` (unik, OTP), `employee_id` (Talenta), `legacy_sumo_user_id` |
-| `assets` | `condition_status` (Tersedia, Digunakan, Dijual, Hilang, Rusak), `recipient_id` (pemegang, kosong bila Tersedia), `recipient_business_entity_id`, `nbh_*`, `sold_*`, `qty`, `last_reconciliation_id` |
+| `assets` | `condition_status` (Tersedia, Digunakan, Dijual, Hilang, Rusak), `recipient_id` (pemegang, kosong bila Tersedia), `recipient_business_entity_id`, `nbh_*`, `sold_*`, `qty`, `last_reconciliation_id`. Serial number, IMEI 1/2, dan tipe **bukan kolom**: lihat `custom_asset_attributes.key` |
+| `custom_asset_attributes` | `key` (`serial_number`, `imei1`, `imei2`, `type`): atribut identitas aset yang dibaca kode lewat key, jadi namanya boleh diganti admin tetapi tidak bisa dihapus. Di kode tetap `$asset->serial_number` (properti virtual di `Asset`, simpan ke `asset_attributes`); query memakai `whereIdentity()` / `identitySubquery()`, dan daftar aset memuat `withIdentity()` supaya tidak N+1 |
 | `asset_transfers` | `document_type` (BA, BAPAB, BAPEB), `letter_number`, `from_user_id`, `to_user_id`, `transfer_date`, `document` |
 | `item_requests` | `request_code`, `item_request_type_id`, `total_cost`, `po_status`, `po_number`, `client_status`, `closed_by_user_id` |
 | `problem_reports` | `code`, `status`, `client_status`, `scheduled_at`, `photo_before`, `photo_after`, `closed_by_user_id` |

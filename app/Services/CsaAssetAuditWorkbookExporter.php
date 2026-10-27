@@ -128,6 +128,7 @@ class CsaAssetAuditWorkbookExporter
                 'assetLocation:id,name,external_code',
                 'catalogItem:id,external_code,name',
                 'businessEntity:id,name',
+                'attributes:id,asset_id,custom_attribute_id,attribute_value',
             ])
             ->where('inventory_active', true)
             ->whereNotNull('asset_location_id')

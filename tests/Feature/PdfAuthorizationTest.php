@@ -11,6 +11,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class PdfAuthorizationTest extends TestCase
@@ -217,12 +218,10 @@ class PdfAuthorizationTest extends TestCase
             $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
             $table->unsignedBigInteger('asset_location_id')->nullable();
-            $table->string('type')->nullable();
-            $table->string('serial_number')->nullable();
-            $table->string('imei1')->nullable();
-            $table->string('imei2')->nullable();
             $table->integer('qty')->default(1);
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
     }
 }

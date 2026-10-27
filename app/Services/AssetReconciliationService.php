@@ -51,15 +51,15 @@ class AssetReconciliationService
                     ->get(['id', 'source_system', 'external_code', 'name', 'normalized_name']);
                 $businessEntities = BusinessEntity::query()->get(['id', 'name']);
                 $assets = Asset::query()
-                    ->with('catalogItem:id,source_system,external_code,name,normalized_name')
+                    ->with([
+                        'catalogItem:id,source_system,external_code,name,normalized_name',
+                        'attributes:id,asset_id,custom_attribute_id,attribute_value',
+                    ])
                     ->get([
                         'id',
                         'business_entity_id',
                         'name',
                         'asset_catalog_item_id',
-                        'serial_number',
-                        'imei1',
-                        'imei2',
                         'qty',
                         'asset_location_id',
                         'inventory_active',

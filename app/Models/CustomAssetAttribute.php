@@ -23,7 +23,41 @@ class CustomAssetAttribute extends Model
 
     public const CHANNEL_EMAIL = 'email';
 
+    public const KEY_SERIAL_NUMBER = 'serial_number';
+
+    public const KEY_IMEI1 = 'imei1';
+
+    public const KEY_IMEI2 = 'imei2';
+
+    public const KEY_TYPE = 'type';
+
+    /**
+     * Atribut identitas aset yang dibaca kode lewat `key` (bukan nama, yang boleh
+     * diganti admin): key => [nama awal, tipe]. Dulu kolom di tabel assets.
+     */
+    public const IDENTITY_KEYS = [
+        self::KEY_SERIAL_NUMBER => ['Serial Number', self::TYPE_TEXT],
+        self::KEY_IMEI1 => ['IMEI1', self::TYPE_TEXT],
+        self::KEY_IMEI2 => ['IMEI2', self::TYPE_TEXT],
+        self::KEY_TYPE => ['Type', self::TYPE_TEXT],
+    ];
+
+    /** @var array<string, int>|null */
+    private static ?array $keyIds = null;
+
+    /** @var array<string, string>|null */
+    private static ?array $keyLabels = null;
+
+    protected static function booted(): void
+    {
+        static::saved(fn () => self::forgetKeyIds());
+        static::deleted(fn () => self::forgetKeyIds());
+        // Atribut identitas dibaca kode lewat key-nya (pencarian, export, rekonsiliasi).
+        static::deleting(fn (CustomAssetAttribute $attribute): bool => ! $attribute->isIdentity());
+    }
+
     protected $fillable = [
+        'key',
         'name',
         'type',
         'required',
@@ -51,6 +85,43 @@ class CustomAssetAttribute extends Model
         'notification_recipient_emails' => 'array',
         'notification_recipient_whatsapp_numbers' => 'array',
     ];
+
+    /**
+     * Id atribut untuk sebuah key identitas, dibuat bila belum ada.
+     */
+    public static function idForKey(string $key): int
+    {
+        self::$keyIds ??= static::query()->whereNotNull('key')->pluck('id', 'key')->map(fn ($id): int => (int) $id)->all();
+
+        if (! isset(self::$keyIds[$key])) {
+            [$name, $type] = self::IDENTITY_KEYS[$key] ?? throw new \InvalidArgumentException("Key atribut identitas tidak dikenal: {$key}");
+
+            self::$keyIds[$key] = (int) static::query()->firstOrCreate(['key' => $key], ['name' => $name, 'type' => $type, 'is_active' => true, 'category_id' => []])->id;
+        }
+
+        return self::$keyIds[$key];
+    }
+
+    /**
+     * Nama atribut identitas saat ini (admin boleh mengganti nama, misalnya "No. IMEI").
+     */
+    public static function labelForKey(string $key): string
+    {
+        self::$keyLabels ??= static::query()->whereNotNull('key')->pluck('name', 'key')->all();
+
+        return self::$keyLabels[$key] ?? self::IDENTITY_KEYS[$key][0] ?? $key;
+    }
+
+    public static function forgetKeyIds(): void
+    {
+        self::$keyIds = null;
+        self::$keyLabels = null;
+    }
+
+    public function isIdentity(): bool
+    {
+        return filled($this->key);
+    }
 
     public static function typeOptions(): array
     {
