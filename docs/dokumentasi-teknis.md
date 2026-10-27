@@ -1,6 +1,6 @@
 # Dokumentasi Teknis shelf-web
 
-Halaman **Dokumentasi Teknis** di panel (`/admin/dokumentasi-teknis`) merender file ini. Setiap `##` menjadi satu bab, setiap `###` menjadi bagian yang bisa dibuka-tutup, dan komentar `<!-- desc: ... -->` di bawah judul bab menjadi deskripsi singkatnya. Ditulis 14 Oktober 2026.
+Halaman **Dokumentasi Teknis** di panel (`/admin/dokumentasi-teknis`) merender file ini. Setiap `##` menjadi satu bab, setiap `###` menjadi bagian yang bisa dibuka-tutup, dan komentar `<!-- desc: ... -->` di bawah judul bab menjadi deskripsi singkatnya. Ditulis 14 Oktober 2026, diperbarui 27 Oktober 2026.
 
 ## Ringkasan
 <!-- desc: Apa itu Shelf dan dari mana modulnya berasal -->
@@ -18,7 +18,7 @@ Shelf adalah aplikasi manajemen aset internal. Dibangun dengan Laravel 12 + Fila
 
 ### Asal modul sumo-web
 
-Modul dari aplikasi lama **sumo-web (Web Gais)** dibangun ulang sebagai resource Filament di branch `feature/sumo-modules`. Data lamanya diimpor dengan command `sumo:import`.
+Modul dari aplikasi lama **sumo-web (Web Gais)** dibangun ulang sebagai resource Filament dan sudah di-merge ke `main`. Data lamanya diimpor lewat menu **Pengaturan > Impor Data Sumo** atau command `sumo:import`.
 
 ### Hubungan dengan README
 
@@ -77,41 +77,41 @@ Versi diambil dari `composer.lock` dan `package.json` per 14 Oktober 2026.
 ## Setup lokal
 <!-- desc: Instalasi dan menjalankan aplikasi di Laragon -->
 
-Di Laragon ini, `php` di PATH adalah 8.3 dan akan ditolak composer. Pakai binary PHP 8.4. MySQL ada di port **3308**.
+Butuh PHP **8.4+**, MySQL 8, Redis, dan Node. Contoh di bawah memakai `php`; di Laragon (Windows) `php` di PATH bisa masih 8.3, jadi buat alias ke binary 8.4 seperti contoh.
 
 ### Instalasi
 
 ```bash
-# alias yang disarankan (Git Bash)
-alias php84=/c/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe
+# Laragon (Git Bash) saja, bila php di PATH masih 8.3:
+# alias php=/c/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe
 
 composer install
 cp .env.example .env
-php84 artisan key:generate
+php artisan key:generate
 npm ci
 
-# .env: DB_HOST=127.0.0.1, DB_PORT=3308, DB_DATABASE=db_shelf
-php84 artisan migrate --seed
-php84 artisan storage:link
+# .env: DB_HOST, DB_PORT, DB_DATABASE sesuai MySQL lokal (Laragon: port 3308, db_shelf)
+php artisan migrate --seed
+php artisan storage:link
 ```
 
 ### Menjalankan aplikasi
 
 Jalankan masing-masing di terminal terpisah:
 
-1. `php84 artisan serve` (atau virtual host Laragon), lalu buka `/admin`.
+1. `php artisan serve` (atau virtual host Laragon/Herd), lalu buka `/admin`.
 2. `npm run dev` untuk Vite, atau `npm run build` sekali saja.
-3. `php84 artisan horizon` bila menyentuh notifikasi atau export. Butuh Redis.
-4. `php84 artisan schedule:work` bila mengembangkan pengingat atau auto-confirm.
+3. `php artisan horizon` bila menyentuh notifikasi, export, atau Impor Data Sumo. Butuh Redis.
+4. `php artisan schedule:work` bila mengembangkan pengingat atau auto-confirm.
 
 ### Database legacy sumo
 
-Hanya dibutuhkan untuk import. Koneksinya `sumo` di `config/database.php`, nama database lewat `SUMO_DB_DATABASE` (lokal: `db_sumo_latest`).
+Hanya dibutuhkan untuk import. Koneksinya `sumo` di `config/database.php`, nama database lewat `SUMO_DB_DATABASE` (default `db_sumo`). Database ini adalah **staging**: impor lewat panel mengosongkannya lalu memuat dump yang diunggah.
 
 ### Peringatan
 
-- Feature test berjalan di database `.env` (`db_shelf`) dengan `DatabaseTransactions`. **Jangan** jalankan `migrate:fresh`, `migrate:refresh`, atau `db:wipe` di sana.
-- **Jangan** impor dump sumo langsung ke `db_shelf`: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Pakai database terpisah, langkahnya di `database/sumo/README.md`.
+- Feature test berjalan di database `.env` dengan `DatabaseTransactions`. **Jangan** jalankan `migrate:fresh`, `migrate:refresh`, atau `db:wipe` di sana.
+- **Jangan** impor dump sumo langsung ke database shelf: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Pakai database terpisah, langkahnya di `database/sumo/README.md`. Loader di panel menolak target yang sama dengan database shelf.
 
 ## Struktur kode
 <!-- desc: Peta folder, rute, dan jadwal command -->
@@ -130,7 +130,7 @@ Pola Laravel standar: panel Filament → model Eloquent, logika bisnis di `app/S
 
 | Folder | Isi |
 | --- | --- |
-| `Resources` | 38 resource CRUD. Satu resource = `XxxResource.php` + `Pages/`, opsional `RelationManagers/` dan `Widgets/` |
+| `Resources` | 36 resource CRUD. Satu resource = `XxxResource.php` + `Pages/`, opsional `RelationManagers/` dan `Widgets/` |
 | `Pages` | Halaman custom: `Guide`, `TechnicalDocs`, `ScanItemRequestQr`, `ScanProductQr`, `WaNotificationSettings`, `Auth/Login` |
 | `Auth/Pages` | `PhoneLogin` (login OTP WhatsApp di `/phone-login`) |
 | `Widgets` | 10 widget dashboard modul sumo |
@@ -142,13 +142,14 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 
 | Folder | Isi |
 | --- | --- |
-| `Models` | 50 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
+| `Models` | 51 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
 | `Enums` | Enum status. Trait `Concerns/Utilities` untuk label dan opsi |
-| `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, `Sumo/SumoImporter` |
-| `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload` |
+| `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
+| `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
 | `Policies` | 39 policy hasil `shield:generate` |
-| `Imports` | Import Excel aset, produk, asuransi, sewa, user, checksheet kendaraan |
-| `Jobs`, `Mail` | Kirim notifikasi aset via WhatsApp dan email |
+| `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan. User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
+| `Jobs`, `Mail` | Kirim notifikasi aset via WhatsApp dan email; `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`) untuk Impor Data Sumo; `Jobs/Filament` menimpa job export/import Filament |
+| `Queue` | `RestoresQueuedModels`: job export tidak gagal bila baris `exports` belum terlihat |
 | `Console/Commands` | Pengingat, auto-confirm, import sumo, migrasi S3, generate QR |
 | `Http/Controllers` | PDF, label QR, QR publik, upload kamera, unduhan bertanda tangan, integrasi WhatsApp |
 
@@ -157,12 +158,12 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 | Folder | Isi |
 | --- | --- |
 | `config/` | Konfigurasi domain: `item-request.php`, `problem-report.php`, `asset-transfer.php`, `asset-reconciliation.php`, `sumo-import.php` |
-| `database/migrations` | 101 migration |
+| `database/migrations` | 109 migration |
 | `database/sumo` | README import dan pemulihan data sumo |
 | `tests/` | `Feature`, `Unit`, dan `Support/SumoLegacyFixture.php` |
 | `docs/` | Dokumen ini dan dokumen pendukung lain |
 
-File paling besar: `AssetResource.php` (±1.440 baris), lalu `ObChecksheetResource`, `AssetTransferResource`, `AssetServiceResource`, `ItemRequestResource`.
+File paling besar: `AssetResource.php` (±1.450 baris), lalu `ObChecksheetResource`, `AssetTransferResource`, `AssetServiceResource`, `ItemRequestResource`.
 
 ### Rute di luar panel
 
@@ -189,6 +190,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ### Aset
 
 - **Resource:** `AssetResource`, `AssetTransferResource` (BA), `AssetServiceResource`, `AssetReconciliationResource` (Import & Laporan Audit), `AssetQrLabelHistoryResource`
+- **Pencarian:** kotak cari daftar aset (dan pemilih aset di form BA dan servis) juga mencocokkan semua atribut kustom aktif non-dokumen, misalnya plat nomor dan serial number. Spasi, strip, titik, dan garis miring diabaikan (`Asset::scopeWhereAnyAttribute` memakai `asset_attributes.search_value`)
 - **Logika:** `AssetReconciliationService`, `VehicleAssetReconciliationService`, `*AuditWorkbookParser/Exporter`, `AssetQrService`, `AssetQrScanService`, `AssetNotificationService`
 - **Asal:** Shelf
 
@@ -238,18 +240,20 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ### Organisasi
 
 - **Resource:** `UserResource`, `BusinessEntityResource`, `DivisionResource`, `JobTitleResource`, `AreaResource`, `AssetLocationResource`
-- **Logika:** `TalentaUserImportService`, `UserImport`, `HasBusinessEntityAccess`
+- **Logika:** `TalentaUserImportService` (satu-satunya import user, dari JSON Talenta), `HasBusinessEntityAccess`
+- **Halaman user:** lima tab relasi baca-saja di `UserResource/RelationManagers`: Aset Dipegang, Berita Acara (BA), Pengajuan Barang, Approval Pengajuan, Laporan Gangguan
+- **Talenta:** user yang punya `employee_id` dianggap tersinkron dari Talenta (`UserResource::isSyncedFromTalenta`). Nama, Employee ID, WhatsApp, email, badan usaha, dan jabatan dikunci di form dan hanya berubah lewat import ulang JSON
 - **Asal:** Shelf
 
 ### Pengaturan dan lainnya
 
-- **Pengaturan:** page `WaNotificationSettings`, role Shield, `ExceptionResource`; logika di `WhatsappService` dan `WhatsAppGateway`
+- **Pengaturan:** page `WaNotificationSettings`, `SumoImportRunResource` (Impor Data Sumo), role Shield, `ExceptionResource`; logika di `WhatsappService`, `WhatsAppGateway`, dan `app/Services/Sumo`
 - **Di luar grup:** page Panduan (`Guide.php`), page Dokumentasi Teknis (`TechnicalDocs.php`), dan dashboard dengan widget dari `app/Filament/Widgets`
 
 ## Database
 <!-- desc: Peta tabel, kolom kunci, dan relasi Eloquent -->
 
-MySQL `db_shelf`, dibangun dari 101 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
+MySQL `db_shelf`, dibangun dari 109 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
 
 ### Peta tabel
 
@@ -261,9 +265,11 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 
 | Tabel | Kolom yang perlu dipahami |
 | --- | --- |
-| `users` | `business_entity_id`, `access_all_business_entities`, `division_id`, `approver_user_id` (atasan), `whatsapp_number`, `whatsapp_login_number` (unik, OTP), `employee_id` (Talenta), `legacy_sumo_user_id` |
+| `users` | `business_entity_id`, `access_all_business_entities`, `division_id`, `approver_user_id` (atasan), `whatsapp_number`, `whatsapp_login_number` (unik, OTP), `employee_id` (Talenta; terisi = field identitas dikunci di form), `legacy_sumo_user_id` |
 | `assets` | `condition_status` (Tersedia, Digunakan, Dijual, Hilang, Rusak), `recipient_id` (pemegang, kosong bila Tersedia), `recipient_business_entity_id`, `nbh_*`, `sold_*`, `qty`, `last_reconciliation_id`. Serial number, IMEI 1/2, dan tipe **bukan kolom**: lihat `custom_asset_attributes.key` |
 | `custom_asset_attributes` | `key` (`serial_number`, `imei1`, `imei2`, `type`): atribut identitas aset yang dibaca kode lewat key, jadi namanya boleh diganti admin tetapi tidak bisa dihapus. Di kode tetap `$asset->serial_number` (properti virtual di `Asset`, simpan ke `asset_attributes`); query memakai `whereIdentity()` / `identitySubquery()`, dan daftar aset memuat `withIdentity()` supaya tidak N+1 |
+| `asset_attributes` | `asset_id`, `custom_attribute_id`, `value`, `search_value` (nilai dinormalisasi tanpa spasi/strip/titik/garis miring, diisi otomatis saat simpan; dipakai pencarian daftar aset) |
+| `sumo_import_runs` | `status`, `file_disk`/`file_path`, `staged`, `source_tables`, `dry_run_report`, `import_report`, `log`, `error`, `user_id`, `imported_by_id`; satu baris per unggahan di menu Impor Data Sumo |
 | `asset_transfers` | `document_type` (BA, BAPAB, BAPEB), `letter_number`, `from_user_id`, `to_user_id`, `transfer_date`, `document` |
 | `item_requests` | `request_code`, `item_request_type_id`, `total_cost`, `po_status`, `po_number`, `client_status`, `closed_by_user_id` |
 | `problem_reports` | `code`, `status`, `client_status`, `scheduled_at`, `photo_before`, `photo_after`, `closed_by_user_id` |
@@ -300,7 +306,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 ### Tabel bawaan dan soft delete
 
 - **Spatie:** `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`.
-- **Paket lain:** `activity_log`, `settings`, `pulse_*`, `filament_exceptions_table`, `jobs`, `failed_jobs`, `personal_access_tokens`.
+- **Paket lain:** `activity_log`, `settings`, `pulse_*`, `filament_exceptions_table`, `jobs`, `failed_jobs`, `exports`, `personal_access_tokens`.
 - **Soft delete:** model modul sumo, OB, `Task`, dan `VehicleChecksheet`. Hapus dari panel hanya mengisi `deleted_at`.
 
 ## Akses & permission
@@ -337,25 +343,26 @@ Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibilit
 ### Catatan
 
 - Halaman ini dijaga permission `View:TechnicalDocs` (awalnya hanya `super_admin`).
-- Setelah mengubah permission lewat kode, jalankan `php84 artisan permission:cache-reset`.
+- Menu Impor Data Sumo dijaga permission `Manage:SumoImport` (awalnya hanya `super_admin`).
+- Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
 
 ## Testing & konvensi
 <!-- desc: Menjalankan test, gaya kode, dan alur git -->
 
-PHPUnit dengan dua testsuite: `tests/Unit` dan `tests/Feature` (±55 file). Feature test berjalan di database `.env`, bukan SQLite.
+PHPUnit dengan dua testsuite: `tests/Unit` dan `tests/Feature` (±86 file). Feature test berjalan di database `.env`, bukan SQLite.
 
 ### Menjalankan test
 
 ```bash
-php84 artisan test
-php84 artisan test --filter=ItemRequestWorkflowTest
-php84 vendor/bin/pint --test
+php artisan test
+php artisan test --filter=ItemRequestWorkflowTest
+vendor/bin/pint --test
 npm run build
 ```
 
 `phpunit.xml` memaksa queue `sync`, cache/session/mail `array`, tapi **tidak** memaksa SQLite.
 
-Gagal yang sudah ada dan bukan dari modul sumo: `ObChecksheetAssignmentTest` (startAll), `ObChecksheetTest` (permission export), `PhoneOtpLoginTest` (teks login locale `id`), dua kasus `S3StorageTest`.
+Per 27 Oktober 2026 tidak ada test gagal yang diketahui. Bila muncul `Allowed memory size of 134217728 bytes exhausted`, naikkan batas memori PHP: `php -d memory_limit=1G artisan test`.
 
 ### Konvensi kode
 
@@ -369,7 +376,7 @@ Gagal yang sudah ada dan bukan dari modul sumo: `ObChecksheetAssignmentTest` (st
 
 - Branch dari `main`: `feat/<scope>`, `fix/<scope>`, `docs/<scope>`. Satu tujuan per branch.
 - Commit gaya Conventional Commits, bahasa Inggris: `feat: ...`, `fix: ...`, `test: ...`, `chore: ...`.
-- Modul sumo masih di `feature/sumo-modules`, belum di-merge.
+- Perubahan masuk ke `main` lewat pull request.
 
 ### Definition of Done
 
@@ -387,8 +394,8 @@ Ikuti urutan yang dipakai modul sumo saat menambah fitur, dan cek daftar jebakan
 
 1. **Migration** baru di `database/migrations` (`YYYY_MM_DD_00000N_...`). Tambah `softDeletes()` untuk data operasional.
 2. **Model** di `app/Models`: `$fillable`, `casts()`, relasi, dan `HasBusinessEntityAccess` bila data per badan usaha. Status sebagai enum di `app/Enums`.
-3. **Resource**: `php84 artisan make:filament-resource NamaModel --view`, isi `$navigationGroup`. Grup baru didaftarkan di `navigationGroups()` dan `NavigationGroupsTest`.
-4. **Permission**: `php84 artisan shield:generate --resource=NamaModelResource`. Permission tambahan dibuat lewat migration (contoh: `2026_10_13_000007_create_sumo_module_permissions_and_roles.php`).
+3. **Resource**: `php artisan make:filament-resource NamaModel --view`, isi `$navigationGroup`. Grup baru didaftarkan di `navigationGroups()` dan `NavigationGroupsTest`.
+4. **Permission**: `php artisan shield:generate --resource=NamaModelResource`. Permission tambahan dibuat lewat migration (contoh: `2026_10_13_000007_create_sumo_module_permissions_and_roles.php`).
 5. **Logika**: workflow di `app/Services/NamaWorkflow.php`, aturan siapa-melihat-apa di `app/Support/NamaVisibility.php`.
 6. **Test** feature untuk resource, policy, dan workflow.
 7. **Dokumentasi**: tambah bab di `Guide.php` (rekam ulang dengan `tools/guide-capture`) dan perbarui file ini.
@@ -398,12 +405,14 @@ Ikuti urutan yang dipakai modul sumo saat menambah fitur, dan cek daftar jebakan
 - **Invarian stok aset:** aset Tersedia selalu tanpa `recipient_id`. Pindah pemegang hanya lewat `AssetTransfer::applyLifecycleToAssets`.
 - **Badan usaha:** query baru wajib ikut `accessibleBy`, dan policy wajib menolak record di luar akses.
 - **File upload:** pakai `StoredFile` dan disk yang dikonfigurasi; production memakai bucket S3 privat.
-- **Queue:** tanpa Redis + Horizon, notifikasi dan export menumpuk diam-diam.
+- **Queue:** tanpa Redis + Horizon, notifikasi dan export menumpuk diam-diam. Impor Data Sumo memakai koneksi `redis-long` dan queue `long-running` (supervisor terpisah di `config/horizon.php`); setelah deploy jalankan `php artisan horizon:terminate`.
+- **Data user dari Talenta:** jangan menambah cara lain untuk mengubah field yang dikunci untuk user ber-Employee ID; perubahan harus lewat import JSON Talenta.
 - **Endpoint publik:** `POST /api/integrations/whatsapp/assets/query` dan `qr/{qr}` tanpa auth. Jangan tambah data sensitif.
 
 ### Sisa pekerjaan migrasi sumo
 
-- [ ] Petakan badan usaha CV.CS, PT. RISM, dan TKANAN di `config/sumo-import.php`.
+- [x] Petakan badan usaha CV.CS, PT. RISM, dan TKANAN di `config/sumo-import.php` (CV.CS dan PT. RISM masih perlu dicek ulang, lihat komentar di config).
+- [x] Impor data sumo dari panel (menu Pengaturan > Impor Data Sumo).
 - [ ] Salin folder upload lama (`Request_File`, `Problem_Report_File`, `Rent_File`, `product`) ke disk public.
 - [ ] Pasang cron `schedule:run` tiap menit di server.
 

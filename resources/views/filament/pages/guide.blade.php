@@ -160,7 +160,7 @@
                             ['Lapor Gangguan', 'Laporan gangguan dan kategorinya.'],
                             ['Asuransi & Sewa', 'Polis asuransi dan kontrak sewa beserta penyedia, kategori, cakupan.'],
                             ['Organisasi', 'Area, lokasi, badan usaha, divisi, jabatan, pengguna.'],
-                            ['Pengaturan', 'Pengaturan notifikasi WhatsApp dan peralatan admin lain.'],
+                            ['Pengaturan', 'Pengaturan notifikasi WhatsApp, Impor Data Sumo, dan peralatan admin lain.'],
                         ] as $k => [$name, $desc])
                             <div class="pg-tile" style="--k: {{ $k }}">
                                 <h3>{{ $name }}</h3>
@@ -176,7 +176,7 @@
                     <ul class="pg-list">
                         <li><strong>Semua dibatasi per badan usaha.</strong> Kecuali super admin dan user dengan flag "Akses semua badan usaha", Anda hanya melihat data badan usaha Anda sendiri.</li>
                         <li><strong>Akses ditentukan permission, bukan nama role.</strong> Role hanyalah kumpulan permission yang diatur lewat Shield.</li>
-                        <li><strong>Pekerjaan lama tidak hilang.</strong> Data dari sumo-web diimpor dengan <code>sumo:import</code>, dan kode lama seperti <code>REQ123</code> tetap dipakai.</li>
+                        <li><strong>Pekerjaan lama tidak hilang.</strong> Data dari sumo-web diimpor lewat menu <strong>Pengaturan, Impor Data Sumo</strong> (atau <code>sumo:import</code>), dan kode lama seperti <code>REQ123</code> tetap dipakai.</li>
                     </ul>
                 </div>
             </section>
@@ -214,7 +214,7 @@
                         'login-03-dasbor.png' => 'Dasbor setelah masuk',
                     ]" />
                     <ul class="pg-list">
-                        <li>Lupa kata sandi: minta admin mengubahnya di menu Organisasi, Users. Reset mandiri dimatikan.</li>
+                        <li>Lupa kata sandi: minta admin mengubahnya di menu Organisasi, Pengguna. Reset mandiri dimatikan.</li>
                         <li>Masuk lewat WhatsApp (OTP) dijelaskan di tab <strong>Masuk ke aplikasi</strong>.</li>
                         <li>Untuk keluar, tekan tombol <strong>Keluar</strong> di dasbor atau menu akun di pojok kanan atas.</li>
                     </ul>
@@ -246,6 +246,8 @@
                     <ul class="pg-list">
                         <li>Halaman detail memuat informasi aset, <strong>Atribut Khusus</strong> (misalnya dokumen STNK), status dan NBH, lokasi, pemegang, serta QR code.</li>
                         <li>Tombol di kanan atas: cetak atau unduh label QR, buat ulang QR, dan <strong>Ubah</strong>.</li>
+                        <li>Kotak pencarian juga mencari isi atribut kustom seperti <strong>Plat Nomor</strong>, serial number, dan IMEI, termasuk yang kolomnya disembunyikan. Spasi, strip, titik, dan garis miring diabaikan, jadi <code>B1234XYZ</code> menemukan <code>B 1234 XYZ</code>. Pencarian yang sama berlaku saat memilih aset di form BA dan servis.</li>
+                        <li>Model/tipe, serial number, dan IMEI diisi sebagai atribut di bagian <strong>Attributes</strong>, bukan kolom tetap di form.</li>
                         <li>Cara membuat aset baru beserta dokumen bermasa berlaku ada di bab 4.</li>
                     </ul>
                 </div>
@@ -489,6 +491,9 @@
                         <li>Menu <strong>Organisasi</strong>, <strong>Pengguna</strong>, tombol <strong>Buat Pengguna</strong>.</li>
                         <li>Tanpa role, pengguna tidak bisa masuk. Role menentukan menu yang tampil (lihat tab <strong>Role dan akses</strong>).</li>
                         <li>Untuk pengajuan barang, isi juga <strong>Divisi</strong> dan <strong>Atasan (approver pengajuan barang)</strong>. Untuk login WhatsApp, isi <strong>Nomor WhatsApp</strong>.</li>
+                        <li>Data karyawan sebaiknya masuk lewat tombol <strong>Import JSON (Talenta)</strong>, satu-satunya import pengguna. Baris dicocokkan lewat Employee ID, lalu nama; bila ada beberapa pengguna bernama sama, dipersempit dengan nomor HP, email, badan usaha, dan jabatan.</li>
+                        <li>Pengguna yang punya <strong>Employee ID</strong> mengikuti Talenta: Nama, Employee ID, Nomor WhatsApp, Email, Badan Usaha, dan Jabatan terkunci di form. Ubah di Talenta lalu import ulang JSON-nya. Divisi, atasan, username, kata sandi, dan role tetap diatur di Shelf.</li>
+                        <li>Halaman pengguna punya tab <strong>Aset Dipegang</strong>, <strong>Berita Acara (BA)</strong>, <strong>Pengajuan Barang</strong>, <strong>Approval Pengajuan</strong>, dan <strong>Laporan Gangguan</strong> untuk melihat riwayatnya.</li>
                     </ul>
                 </div>
 
@@ -607,7 +612,7 @@
                 </div>
                 <div class="pg-block">
                     <h3>1. Username atau email dan kata sandi</h3>
-                    <p>Buka <code>/admin/login</code>. Lupa kata sandi: minta admin mengubahnya di Organisasi, Users.</p>
+                    <p>Buka <code>/admin/login</code>. Lupa kata sandi: minta admin mengubahnya di Organisasi, Pengguna.</p>
                 </div>
                 <div class="pg-block">
                     <h3>2. Kode OTP lewat WhatsApp</h3>
@@ -808,7 +813,7 @@
                 <div class="pg-block">
                     <h3>Cara memberi akses ke karyawan baru</h3>
                     <ul class="pg-list">
-                        <li>Organisasi, Users: buat user, isi badan usaha, divisi, dan atasan (approver).</li>
+                        <li>Organisasi, Pengguna: import JSON Talenta atau buat user manual, lalu isi divisi dan atasan (approver). Untuk user dari Talenta, badan usaha dan jabatan mengikuti Talenta.</li>
                         <li>Isi Nomor WhatsApp login bila ingin masuk lewat OTP.</li>
                         <li>Beri role yang sesuai. Tanpa role, user tidak bisa masuk <code>/admin</code>.</li>
                         <li>Untuk role baru atau penyesuaian: menu Roles (Shield), centang permission yang dibutuhkan.</li>
@@ -837,7 +842,7 @@
                                 <tr><td><code>app/Filament/Resources</code></td><td>Semua menu data (CRUD, tabel, form, aksi)</td></tr>
                                 <tr><td><code>app/Filament/Pages</code></td><td>Halaman khusus: scan QR, pengaturan WA, panduan ini</td></tr>
                                 <tr><td><code>app/Filament/Widgets</code></td><td>Widget dashboard</td></tr>
-                                <tr><td><code>app/Services</code></td><td>Aturan bisnis: ItemRequestWorkflow, ProblemReportWorkflow, OTP, WhatsApp, pengingat, rekonsiliasi</td></tr>
+                                <tr><td><code>app/Services</code></td><td>Aturan bisnis: ItemRequestWorkflow, ProblemReportWorkflow, OTP, WhatsApp, pengingat, rekonsiliasi, import Talenta, impor sumo (<code>app/Services/Sumo</code>)</td></tr>
                                 <tr><td><code>app/Models</code>, <code>app/Policies</code></td><td>Data dan otorisasi</td></tr>
                                 <tr><td><code>app/Console/Commands</code></td><td><code>sumo:import</code>, <code>reminder:whatsapp</code>, <code>problem-reports:auto-confirm</code></td></tr>
                                 <tr><td><code>routes/web.php</code>, <code>routes/console.php</code></td><td>Route PDF dan QR, jadwal scheduler</td></tr>
@@ -880,6 +885,8 @@ php artisan schedule:work   # bila menguji pengingat</pre>
                 <div class="pg-block">
                     <h3>Mengimpor data dari sumo-web</h3>
                     <x-guide.flow :steps="$flows['import']" />
+<p>Cara yang disarankan: menu <strong>Pengaturan, Impor Data Sumo</strong> (izin <code>Manage:SumoImport</code>, awalnya hanya super admin). Unggah dump <code>.sql</code> atau <code>.gz</code> (batas default 12 MB), tunggu uji coba otomatis selesai, periksa laporannya, lalu tekan Impor sungguhan dan ketik <code>IMPOR</code>. Setiap run menyimpan file, tabel yang dimuat, laporan, dan log. Butuh Horizon dengan supervisor antrean <code>long-running</code>.</p>
+                    <p>Dump yang lebih besar dimuat manual ke database staging, lalu lewat CLI:</p>
 <pre>php artisan sumo:import --dry-run
 php artisan sumo:import
 php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
@@ -893,7 +900,8 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                             <thead><tr><th>Variabel</th><th>Fungsi</th></tr></thead>
                             <tbody>
                                 <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_shelf)</td></tr>
-                                <tr><td><code>SUMO_DB_CONNECTION</code></td><td>Database sumo lama untuk <code>sumo:import</code></td></tr>
+                                <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database shelf.</td></tr>
+                                <tr><td><code>SUMO_IMPORT_MAX_UPLOAD_KB</code></td><td>Batas unggah dump di menu Impor Data Sumo (default 12288)</td></tr>
                                 <tr><td><code>QUEUE_CONNECTION</code>, <code>REDIS_*</code></td><td>Antrean (default redis, butuh Horizon)</td></tr>
                                 <tr><td><code>WAG_URL</code>, <code>WAG_TOKEN</code></td><td>Gateway WhatsApp untuk OTP dan pengingat</td></tr>
                                 <tr><td><code>ITEM_REQUEST_MAX_OPEN_PER_TYPE</code></td><td>Batas pengajuan terbuka per tipe (default 2)</td></tr>
@@ -910,7 +918,7 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                         <li><strong>Perubahan tidak terbaca:</strong> <code>php artisan optimize:clear</code>.</li>
                         <li><strong>Tampilan rusak atau Vite manifest not found:</strong> <code>npm ci &amp;&amp; npm run build</code>.</li>
                         <li><strong>Berkas /storage 404:</strong> <code>php artisan storage:link</code>.</li>
-                        <li><strong>Notifikasi atau export tidak jalan:</strong> pastikan Redis dan <code>php artisan horizon</code> aktif.</li>
+                        <li><strong>Notifikasi, export, atau Impor Data Sumo tidak jalan:</strong> pastikan Redis dan <code>php artisan horizon</code> aktif. Setelah deploy, jalankan <code>php artisan horizon:terminate</code> supaya supervisor baru ikut jalan.</li>
                         <li><strong>WhatsApp tidak terkirim:</strong> cek <code>WAG_URL</code> dan <code>WAG_TOKEN</code>, format nomor 62..., lalu <code>storage/logs/laravel.log</code>.</li>
                         <li><strong>User tidak bisa login:</strong> pastikan punya minimal satu role. Untuk OTP, pastikan Nomor WhatsApp login terisi.</li>
                         <li><strong>Menu tidak muncul:</strong> role belum punya permission. Setelah mengubah permission lewat kode: <code>php artisan permission:cache-reset</code>.</li>
