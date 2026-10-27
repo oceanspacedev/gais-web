@@ -204,6 +204,48 @@ class Asset extends Model
     }
 
     /**
+     * Aset yang salah satu atribut kustom teksnya (identitas, plat nomor, BPKB, ...)
+     * mengandung $search. Spasi, tanda hubung, titik, dan garis miring diabaikan,
+     * jadi "B1234XYZ" menemukan "B 1234 XYZ". Atribut dokumen (JSON) tidak dicari.
+     */
+    public function scopeWhereAnyAttribute(Builder $query, string $search, string $boolean = 'and'): Builder
+    {
+        $search = trim($search);
+        $normalized = self::normalizeIdentifier($search);
+
+        return $query->has('attributes', '>=', 1, $boolean, fn (Builder $attributes): Builder => $attributes
+            ->whereIn('asset_attributes.custom_attribute_id', CustomAssetAttribute::query()
+                ->select('id')
+                ->where('is_active', true)
+                ->where('type', '!=', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY))
+            ->where(fn (Builder $value): Builder => $value
+                ->where('asset_attributes.attribute_value', 'like', '%'.$search.'%')
+                ->when($normalized !== '', fn (Builder $loose): Builder => $loose
+                    ->orWhereRaw(self::normalizedSql('asset_attributes.attribute_value').' LIKE ?', ['%'.$normalized.'%']))));
+    }
+
+    public function scopeOrWhereAnyAttribute(Builder $query, string $search): Builder
+    {
+        return $this->scopeWhereAnyAttribute($query, $search, 'or');
+    }
+
+    /**
+     * Huruf kecil tanpa spasi, tanda hubung, titik, dan garis miring.
+     */
+    public static function normalizeIdentifier(string $value): string
+    {
+        return strtolower((string) preg_replace('/[\s\-.\/]+/', '', trim($value)));
+    }
+
+    /**
+     * Padanan SQL normalizeIdentifier() untuk sebuah kolom.
+     */
+    public static function normalizedSql(string $column): string
+    {
+        return "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(TRIM(COALESCE({$column}, '')), ' ', ''), '-', ''), '.', ''), '/', ''))";
+    }
+
+    /**
      * Subquery nilai identitas, untuk orderBy / select.
      */
     public static function identitySubquery(string $key): \Illuminate\Database\Query\Builder

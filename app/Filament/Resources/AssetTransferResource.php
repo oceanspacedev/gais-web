@@ -8,7 +8,6 @@ use App\Filament\Resources\AssetTransferResource\Pages;
 use App\Models\Asset;
 use App\Models\AssetTransfer;
 use App\Models\BusinessEntity;
-use App\Models\CustomAssetAttribute;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Support\StoredFile;
@@ -628,7 +627,7 @@ class AssetTransferResource extends Resource
             ->when($selectedAssetIds !== [], fn (Builder $query) => $query->whereNotIn('id', $selectedAssetIds))
             ->when(filled($search), fn (Builder $query) => $query->where(fn (Builder $match) => $match
                 ->where('name', 'like', "%{$search}%")
-                ->orWhereIdentity(CustomAssetAttribute::KEY_SERIAL_NUMBER, $search)))
+                ->orWhereAnyAttribute($search)))
             ->orderBy('name')
             ->limit(static::OPTIONS_LIMIT)
             ->pluck('name', 'id')
