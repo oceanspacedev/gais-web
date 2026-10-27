@@ -13,6 +13,12 @@ class AssetAttribute extends Model
 {
     use HasFactory;
 
+    /**
+     * Ekspresi kolom tersimpan search_value (lihat migrasi 2026_10_27_200000)
+     * dan Asset::normalizeIdentifier().
+     */
+    public const SEARCH_VALUE_SQL = "LOWER(REPLACE(REPLACE(REPLACE(REPLACE(TRIM(COALESCE(attribute_value, '')), ' ', ''), '-', ''), '.', ''), '/', ''))";
+
     public const STATUS_SAFE = 'aman';
 
     public const STATUS_DUE_SOON = 'perlu_diperbarui';

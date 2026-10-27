@@ -48,6 +48,9 @@ class CustomAssetAttribute extends Model
     /** @var array<string, string>|null */
     private static ?array $keyLabels = null;
 
+    /** @var list<int>|null */
+    private static ?array $searchableIds = null;
+
     protected static function booted(): void
     {
         static::saved(fn () => self::forgetKeyIds());
@@ -112,10 +115,26 @@ class CustomAssetAttribute extends Model
         return self::$keyLabels[$key] ?? self::IDENTITY_KEYS[$key][0] ?? $key;
     }
 
+    /**
+     * Atribut yang ikut pencarian aset: aktif dan bukan dokumen (nilainya JSON).
+     *
+     * @return list<int>
+     */
+    public static function searchableIds(): array
+    {
+        return self::$searchableIds ??= static::query()
+            ->where('is_active', true)
+            ->where('type', '!=', self::TYPE_DOCUMENT_EXPIRY)
+            ->pluck('id')
+            ->map(fn ($id): int => (int) $id)
+            ->all();
+    }
+
     public static function forgetKeyIds(): void
     {
         self::$keyIds = null;
         self::$keyLabels = null;
+        self::$searchableIds = null;
     }
 
     public function isIdentity(): bool

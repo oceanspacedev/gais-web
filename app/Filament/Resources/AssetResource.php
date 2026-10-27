@@ -919,8 +919,9 @@ class AssetResource extends Resource
     }
 
     /**
-     * Kolom tabel untuk atribut identitas (serial number, IMEI, tipe): dicari dan
-     * diurutkan lewat asset_attributes, judulnya mengikuti nama atribut.
+     * Kolom tabel untuk atribut identitas (serial number, IMEI, tipe): diurutkan
+     * lewat asset_attributes, judulnya mengikuti nama atribut. Pencariannya lewat
+     * pencarian atribut di level tabel.
      */
     private static function identityColumn(string $key): TextColumn
     {
@@ -928,7 +929,6 @@ class AssetResource extends Resource
             ->label(fn (): string => CustomAssetAttribute::labelForKey($key))
             ->state(fn (Asset $record): ?string => $record->{$key})
             ->placeholder('-')
-            ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIdentity($key, $search))
             ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(Asset::identitySubquery($key), $direction));
     }
 
@@ -936,6 +936,9 @@ class AssetResource extends Resource
     {
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->withIdentity())
+            // Cari juga di semua atribut kustom teks (serial, IMEI, plat nomor, BPKB, ...),
+            // termasuk yang kolomnya sedang disembunyikan.
+            ->searchable([fn (Builder $query, string $search): Builder => $query->whereAnyAttribute($search)])
             ->columns([
                 TextColumn::make('purchase_date')->translateLabel()->date()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('businessEntity.name') // Mengambil nama dari relasi businessEntity

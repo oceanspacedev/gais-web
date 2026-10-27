@@ -7,7 +7,6 @@ use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource\Pages;
 use App\Models\Asset;
 use App\Models\AssetService;
-use App\Models\CustomAssetAttribute;
 use App\Support\StoredFile;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -86,7 +85,7 @@ class AssetServiceResource extends Resource
                                     ->with('businessEntity')
                                     ->where(function ($q) use ($search) {
                                         $q->where('name', 'like', "%{$search}%")
-                                            ->orWhereIdentity([CustomAssetAttribute::KEY_SERIAL_NUMBER, CustomAssetAttribute::KEY_TYPE], $search);
+                                            ->orWhereAnyAttribute($search);
                                     })
                                     ->limit(50)
                                     ->get()
