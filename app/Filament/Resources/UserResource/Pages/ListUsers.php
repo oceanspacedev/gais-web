@@ -64,9 +64,20 @@ class ListUsers extends ListRecords
                     $result = (new TalentaUserImportService)->importFromContent($content);
                     $notification = Notification::make()->title($result['message']);
 
-                    if (! ($result['success'] ?? false) || ($result['error_count'] ?? 0) > 0) {
+                    $errors = $result['errors'] ?? [];
+
+                    if (! ($result['success'] ?? false) || $errors !== []) {
+                        $lines = array_slice($errors, 0, 8);
+                        if (count($errors) > count($lines)) {
+                            $lines[] = '... dan '.(count($errors) - count($lines)).' baris lainnya.';
+                        }
+
+                        if ($result['success'] ?? false) {
+                            $notification->title($result['message'].' Gagal: '.count($errors).' baris.');
+                        }
+
                         $notification
-                            ->body(implode("\n", array_slice($result['errors'] ?? [], 0, 8)))
+                            ->body(implode("\n", $lines))
                             ->warning()
                             ->persistent();
                     } else {

@@ -6,6 +6,7 @@ use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Support\PhoneNumber;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -147,7 +148,7 @@ class TalentaUserImportService
     {
         $employeeId = $this->firstScalarValue($row, self::EMPLOYEE_ID_KEYS);
         $fullName = $this->extractFullName($row);
-        $existing = $this->resolveExistingUser($employeeId, $fullName);
+        $existing = $this->resolveExistingUser($employeeId, $fullName, $row);
 
         $payload = [];
 
@@ -306,7 +307,10 @@ class TalentaUserImportService
         return false;
     }
 
-    private function resolveExistingUser(string $employeeId, string $fullName): ?User
+    /**
+     * @param  array<string, mixed>  $row
+     */
+    private function resolveExistingUser(string $employeeId, string $fullName, array $row): ?User
     {
         if ($employeeId !== '') {
             $matches = User::query()
@@ -341,7 +345,14 @@ class TalentaUserImportService
             ->values();
 
         if ($nameMatches->count() > 1) {
-            throw new RuntimeException('Nama cocok dengan lebih dari satu user tanpa Employee ID.');
+            $nameMatches = $this->narrowNameMatches($nameMatches, $row);
+        }
+
+        if ($nameMatches->count() > 1) {
+            throw new RuntimeException(sprintf(
+                'Nama cocok dengan lebih dari satu user tanpa Employee ID (%s). Isi Employee ID di akun yang benar atau gabungkan akun duplikatnya, lalu import ulang.',
+                $nameMatches->map(fn (User $user): string => '#'.$user->getKey())->join(', '),
+            ));
         }
 
         $match = $nameMatches->first();
@@ -350,6 +361,48 @@ class TalentaUserImportService
         }
 
         return $match;
+    }
+
+    /**
+     * Users can share a name (e.g. two "Kurniawan" in different entities), so
+     * ambiguous name matches are narrowed with the row's other Talenta data:
+     * phone and email first, then business entity and job title. A signal
+     * that matches none of the candidates is skipped instead of rejecting all.
+     *
+     * @param  Collection<int, User>  $candidates
+     * @param  array<string, mixed>  $row
+     * @return Collection<int, User>
+     */
+    private function narrowNameMatches(Collection $candidates, array $row): Collection
+    {
+        $candidates->loadMissing(['businessEntity', 'jobTitle']);
+
+        $phone = PhoneNumber::canonical($this->firstPhone($row));
+        $email = $this->normalizeEmail($this->firstScalarValue($row, self::EMAIL_KEYS));
+        $branch = $this->canonicalName($this->firstScalarValue($row, self::BRANCH_KEYS));
+        $job = $this->canonicalName($this->firstScalarValue($row, self::JOB_KEYS));
+
+        $signals = [
+            fn (User $user): bool => $phone !== null
+                && ($user->whatsapp_login_number === $phone || PhoneNumber::canonical($user->whatsapp_number) === $phone),
+            fn (User $user): bool => $email !== null && Str::lower((string) $user->email) === $email,
+            fn (User $user): bool => $branch !== '' && $this->canonicalName((string) $user->businessEntity?->name) === $branch,
+            fn (User $user): bool => $job !== '' && $this->canonicalName((string) $user->jobTitle?->title) === $job,
+        ];
+
+        foreach ($signals as $matches) {
+            $narrowed = $candidates->filter($matches)->values();
+
+            if ($narrowed->isNotEmpty()) {
+                $candidates = $narrowed;
+            }
+
+            if ($candidates->count() === 1) {
+                break;
+            }
+        }
+
+        return $candidates;
     }
 
     /**
