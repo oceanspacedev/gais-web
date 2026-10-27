@@ -103,6 +103,24 @@ class PhoneOtpLoginTest extends TestCase
             $table->id();
             $table->string('title');
         });
+        // Badge jumlah di tab relasi halaman edit user.
+        foreach ([
+            'assets' => ['recipient_id', 'business_entity_id', 'recipient_business_entity_id'],
+            'asset_transfers' => ['from_user_id', 'to_user_id', 'business_entity_id'],
+            'item_requests' => ['user_id', 'business_entity_id', 'item_request_type_id'],
+            'item_request_approvals' => ['item_request_id', 'approved_by_user_id'],
+            'problem_reports' => ['user_id', 'business_entity_id', 'problem_report_category_id'],
+        ] as $name => $columns) {
+            Schema::create($name, function (Blueprint $table) use ($columns): void {
+                $table->id();
+
+                foreach ($columns as $column) {
+                    $table->unsignedBigInteger($column)->nullable();
+                }
+
+                $table->softDeletes();
+            });
+        }
 
         $this->gateway = new RecordingLoginGateway;
         $this->app->instance(WhatsAppGateway::class, $this->gateway);
