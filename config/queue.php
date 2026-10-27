@@ -39,7 +39,7 @@ return [
             'table' => 'jobs',
             'queue' => 'default',
             'retry_after' => 600,
-            'after_commit' => false,
+            'after_commit' => true,
         ],
 
         'beanstalkd' => [
@@ -48,7 +48,7 @@ return [
             'queue' => 'default',
             'retry_after' => 90,
             'block_for' => 0,
-            'after_commit' => false,
+            'after_commit' => true,
         ],
 
         'sqs' => [
@@ -59,7 +59,7 @@ return [
             'queue' => env('SQS_QUEUE', 'default'),
             'suffix' => env('SQS_SUFFIX'),
             'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
-            'after_commit' => false,
+            'after_commit' => true,
         ],
 
         'redis' => [
@@ -68,7 +68,7 @@ return [
             'queue' => env('REDIS_QUEUE', 'default'),
             'retry_after' => (int) env('REDIS_QUEUE_RETRY_AFTER', 360),
             'block_for' => (int) env('REDIS_QUEUE_BLOCK_FOR', 5),
-            'after_commit' => false,
+            'after_commit' => true,
         ],
 
     ],
@@ -104,6 +104,24 @@ return [
         'driver' => env('QUEUE_FAILED_DRIVER', 'database-uuids'),
         'database' => env('DB_CONNECTION', 'mysql'),
         'table' => 'failed_jobs',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Missing Model Restoration
+    |--------------------------------------------------------------------------
+    |
+    | Filament export jobs are nested in a chained batch. The worker restores
+    | the Export row while unserializing that batch, before handle() runs, so
+    | a row that is not visible yet fails the whole export. Retry the lookup
+    | briefly to ride out commit and replica lag. A row that is really gone
+    | still raises ModelNotFoundException after the attempts are exhausted.
+    |
+    */
+
+    'missing_model_retry' => [
+        'attempts' => (int) env('QUEUE_MISSING_MODEL_RETRY_ATTEMPTS', 15),
+        'delay_ms' => (int) env('QUEUE_MISSING_MODEL_RETRY_DELAY_MS', 200),
     ],
 
 ];

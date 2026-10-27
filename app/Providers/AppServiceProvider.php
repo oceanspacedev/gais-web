@@ -4,6 +4,11 @@ namespace App\Providers;
 
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\PhoneLogin;
+use App\Jobs\Filament\CreateXlsxFile as RetryingCreateXlsxFile;
+use App\Jobs\Filament\ExportCompletion as RetryingExportCompletion;
+use App\Jobs\Filament\ExportCsv as RetryingExportCsv;
+use App\Jobs\Filament\ImportCsv as RetryingImportCsv;
+use App\Jobs\Filament\PrepareCsvExport as RetryingPrepareCsvExport;
 use App\Models\Area;
 use App\Models\AssetService;
 use App\Models\AssetTransfer;
@@ -64,6 +69,11 @@ use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ExportBulkAction;
+use Filament\Actions\Exports\Jobs\CreateXlsxFile;
+use Filament\Actions\Exports\Jobs\ExportCompletion;
+use Filament\Actions\Exports\Jobs\ExportCsv;
+use Filament\Actions\Exports\Jobs\PrepareCsvExport;
+use Filament\Actions\Imports\Jobs\ImportCsv;
 use Filament\Forms\Components\FileUpload;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Resources\Resource;
@@ -92,7 +102,20 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+        $this->registerQueuedFilamentJobs();
+    }
+
+    /**
+     * Filament resolves export and import jobs from the container. Swap in
+     * subclasses that can see a row committed slightly after the job is queued.
+     */
+    protected function registerQueuedFilamentJobs(): void
+    {
+        $this->app->bind(PrepareCsvExport::class, RetryingPrepareCsvExport::class);
+        $this->app->bind(ExportCsv::class, RetryingExportCsv::class);
+        $this->app->bind(CreateXlsxFile::class, RetryingCreateXlsxFile::class);
+        $this->app->bind(ExportCompletion::class, RetryingExportCompletion::class);
+        $this->app->bind(ImportCsv::class, RetryingImportCsv::class);
     }
 
     /**
