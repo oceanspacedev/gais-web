@@ -9,6 +9,11 @@
 @source '../../../../vendor/bezhansalleh/filament-language-switch/resources/views/**/*.blade.php';
 
 @layer components {
+    /* Tab bar yang sempit tidak boleh menyusutkan badge jumlah sampai digitnya terpotong. */
+    .fi-tabs-item .fi-badge {
+        flex-shrink: 0;
+    }
+
     /* Lock document scroll so only the Mekaya main pane scrolls. */
     html.fi,
     html.fi body.fi-body {

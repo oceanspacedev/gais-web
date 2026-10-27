@@ -231,6 +231,22 @@ class User extends Authenticatable implements FilamentUser, HasName
         return $this->hasMany(ProblemReport::class);
     }
 
+    /**
+     * Tahap approval pengajuan yang disetujui user ini.
+     */
+    public function itemRequestApprovals(): HasMany
+    {
+        return $this->hasMany(ItemRequestApproval::class, 'approved_by_user_id');
+    }
+
+    /**
+     * Aset yang saat ini dipegang user ini (penerima BA terakhir).
+     */
+    public function heldAssets(): HasMany
+    {
+        return $this->hasMany(Asset::class, 'recipient_id');
+    }
+
     public function getFilamentName(): string
     {
         return (string) ($this->name ?: $this->fullname ?: $this->username);

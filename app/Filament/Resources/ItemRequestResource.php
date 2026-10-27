@@ -84,8 +84,15 @@ class ItemRequestResource extends Resource
     public static function getEloquentQuery(): Builder
     {
         $query = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-        $viewer = auth()->user();
 
+        return static::scopeToViewer($query, auth()->user());
+    }
+
+    /**
+     * Aturan lihat yang sama dengan menu ini, juga dipakai tab di halaman user.
+     */
+    public static function scopeToViewer(Builder $query, mixed $viewer): Builder
+    {
         if (! $viewer instanceof User) {
             return $query->whereRaw('1 = 0');
         }

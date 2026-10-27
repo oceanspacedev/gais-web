@@ -2,8 +2,12 @@
 
 namespace App\Filament\Resources;
 
-use App\Filament\Resources\AssetResource\RelationManagers\AssetTransfersRelationManager;
 use App\Filament\Resources\UserResource\Pages;
+use App\Filament\Resources\UserResource\RelationManagers\AssetTransfersRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\HeldAssetsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\ItemRequestApprovalsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\ItemRequestsRelationManager;
+use App\Filament\Resources\UserResource\RelationManagers\ProblemReportsRelationManager;
 use App\Models\BusinessEntity;
 use App\Models\JobTitle;
 use App\Models\User;
@@ -247,7 +251,11 @@ class UserResource extends Resource
     public static function getRelations(): array
     {
         return [
+            HeldAssetsRelationManager::class,
             AssetTransfersRelationManager::class,
+            ItemRequestsRelationManager::class,
+            ItemRequestApprovalsRelationManager::class,
+            ProblemReportsRelationManager::class,
         ];
     }
 
