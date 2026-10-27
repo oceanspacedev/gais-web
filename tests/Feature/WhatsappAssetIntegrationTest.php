@@ -17,6 +17,7 @@ use Carbon\CarbonImmutable;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class WhatsappAssetIntegrationTest extends TestCase
@@ -88,29 +89,18 @@ class WhatsappAssetIntegrationTest extends TestCase
             ->assertJsonPath('items.0.history', []);
     }
 
-    public function test_it_returns_asset_by_custom_serial_number_for_ita(): void
+    public function test_it_finds_serial_number_after_the_attribute_is_renamed(): void
     {
         $asset = $this->createAssetFixture();
-        $asset->forceFill(['serial_number' => null])->save();
+        $asset->forceFill(['serial_number' => 'CUST-SERIAL-7788'])->save();
 
-        $serialAttribute = CustomAssetAttribute::create([
-            'name' => 'Serial Number',
-            'type' => CustomAssetAttribute::TYPE_TEXT,
-            'required' => false,
-            'is_active' => true,
-            'category_id' => [$asset->category_id],
-        ]);
-
-        AssetAttribute::create([
-            'asset_id' => $asset->id,
-            'custom_attribute_id' => $serialAttribute->id,
-            'attribute_value' => 'CUST-SERIAL-7788',
-        ]);
+        // Admin boleh mengganti nama atribut; kode mencarinya lewat key.
+        CustomAssetAttribute::query()->whereKey(CustomAssetAttribute::idForKey(CustomAssetAttribute::KEY_SERIAL_NUMBER))->update(['name' => 'No. Seri']);
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
             'route' => 'shelf.search_asset',
             'query' => [
-                'serial_number' => 'CUST-SERIAL-7788',
+                'serial_number' => 'cust serial 7788',
             ],
         ])->assertOk()
             ->assertJsonPath('result_status', 'confirmed')
@@ -153,27 +143,13 @@ class WhatsappAssetIntegrationTest extends TestCase
             ->assertJsonPath('items.0.plate_number', 'B 1234 XYZ');
     }
 
-    public function test_it_returns_asset_by_custom_imei_for_ita(): void
+    public function test_it_returns_asset_by_imei2_for_ita(): void
     {
         $asset = $this->createAssetFixture();
         $asset->forceFill([
             'imei1' => null,
-            'imei2' => null,
+            'imei2' => '359876543210123',
         ])->save();
-
-        $imeiAttribute = CustomAssetAttribute::create([
-            'name' => 'IMEI1',
-            'type' => CustomAssetAttribute::TYPE_NUMBER,
-            'required' => false,
-            'is_active' => true,
-            'category_id' => [$asset->category_id],
-        ]);
-
-        AssetAttribute::create([
-            'asset_id' => $asset->id,
-            'custom_attribute_id' => $imeiAttribute->id,
-            'attribute_value' => '359876543210123',
-        ]);
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
             'route' => 'shelf.search_asset',
@@ -183,7 +159,8 @@ class WhatsappAssetIntegrationTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('result_status', 'confirmed')
             ->assertJsonPath('items.0.asset_id', $asset->id)
-            ->assertJsonPath('items.0.imei1', '359876543210123');
+            ->assertJsonPath('items.0.imei1', null)
+            ->assertJsonPath('items.0.imei2', '359876543210123');
     }
 
     public function test_it_includes_asset_history_for_history_route(): void
@@ -389,10 +366,6 @@ class WhatsappAssetIntegrationTest extends TestCase
             $table->string('name');
             $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
-            $table->string('type')->nullable();
-            $table->string('serial_number')->nullable();
-            $table->string('imei1')->nullable();
-            $table->string('imei2')->nullable();
             $table->bigInteger('item_price')->nullable();
             $table->unsignedBigInteger('asset_location_id')->nullable();
             $table->string('condition_status')->default('available');
@@ -459,5 +432,7 @@ class WhatsappAssetIntegrationTest extends TestCase
             $table->text('attribute_value')->nullable();
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
     }
 }

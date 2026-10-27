@@ -7,6 +7,7 @@ use App\Enums\NbhStatus;
 use App\Services\AssetQrService;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -29,6 +30,8 @@ class Asset extends Model
                 $asset->recipient_id = null;
             }
         });
+
+        static::saved(fn (Asset $asset) => $asset->persistIdentity());
 
         static::created(function (Asset $asset): void {
             // Test fixtures may build the asset schema without the QR tables.
@@ -90,6 +93,127 @@ class Asset extends Model
     public function attributes(): HasMany
     {
         return $this->hasMany(AssetAttribute::class);
+    }
+
+    /**
+     * Identitas aset (serial number, IMEI, tipe) disimpan sebagai atribut kustom
+     * ber-key (lihat CustomAssetAttribute::IDENTITY_KEYS), bukan kolom. Properti
+     * virtual ini tetap bisa dibaca dan ditulis seperti kolom; nilai yang ditulis
+     * disimpan ke asset_attributes saat aset disimpan. Muat relasi `attributes`
+     * (withIdentity) saat membaca banyak aset supaya tidak N+1.
+     *
+     * @var array<string, string|null>
+     */
+    private array $pendingIdentity = [];
+
+    protected function serialNumber(): Attribute
+    {
+        return $this->identityAttribute(CustomAssetAttribute::KEY_SERIAL_NUMBER);
+    }
+
+    protected function imei1(): Attribute
+    {
+        return $this->identityAttribute(CustomAssetAttribute::KEY_IMEI1);
+    }
+
+    protected function imei2(): Attribute
+    {
+        return $this->identityAttribute(CustomAssetAttribute::KEY_IMEI2);
+    }
+
+    protected function type(): Attribute
+    {
+        return $this->identityAttribute(CustomAssetAttribute::KEY_TYPE);
+    }
+
+    /**
+     * Sengaja tanpa tipe kembalian: Laravel memanggil setiap method bertipe
+     * Attribute tanpa argumen untuk mendeteksi accessor.
+     *
+     * @return Attribute
+     */
+    private function identityAttribute(string $key)
+    {
+        return Attribute::make(
+            get: fn (): ?string => array_key_exists($key, $this->pendingIdentity)
+                ? $this->pendingIdentity[$key]
+                : self::cleanIdentity($this->getRelationValue('attributes')?->firstWhere('custom_attribute_id', CustomAssetAttribute::idForKey($key))?->attribute_value),
+            set: function (mixed $value) use ($key): array {
+                $this->pendingIdentity[$key] = self::cleanIdentity($value);
+
+                return [];
+            },
+        );
+    }
+
+    private static function cleanIdentity(mixed $value): ?string
+    {
+        $value = is_scalar($value) ? trim((string) $value) : '';
+
+        return $value === '' ? null : $value;
+    }
+
+    /**
+     * Tulis identitas yang diubah lewat properti virtual; nilai kosong menghapus barisnya.
+     */
+    protected function persistIdentity(): void
+    {
+        if ($this->pendingIdentity === []) {
+            return;
+        }
+
+        foreach ($this->pendingIdentity as $key => $value) {
+            $match = ['asset_id' => $this->getKey(), 'custom_attribute_id' => CustomAssetAttribute::idForKey($key)];
+
+            if ($value === null) {
+                AssetAttribute::query()->where($match)->delete();
+            } else {
+                AssetAttribute::query()->updateOrCreate($match, ['attribute_value' => $value]);
+            }
+        }
+
+        $this->pendingIdentity = [];
+        $this->unsetRelation('attributes');
+    }
+
+    public function scopeWithIdentity(Builder $query): Builder
+    {
+        return $query->with('attributes');
+    }
+
+    /**
+     * Aset yang salah satu identitasnya (key) mengandung / sama dengan $value.
+     *
+     * @param  string|list<string>  $keys
+     */
+    public function scopeWhereIdentity(Builder $query, string|array $keys, string $value, bool $exact = false, string $boolean = 'and'): Builder
+    {
+        $ids = array_map(CustomAssetAttribute::idForKey(...), (array) $keys);
+
+        return $query->has('attributes', '>=', 1, $boolean, fn (Builder $attributes): Builder => $attributes
+            ->whereIn('asset_attributes.custom_attribute_id', $ids)
+            ->where('asset_attributes.attribute_value', $exact ? '=' : 'like', $exact ? $value : '%'.$value.'%'));
+    }
+
+    /**
+     * @param  string|list<string>  $keys
+     */
+    public function scopeOrWhereIdentity(Builder $query, string|array $keys, string $value, bool $exact = false): Builder
+    {
+        return $this->scopeWhereIdentity($query, $keys, $value, $exact, 'or');
+    }
+
+    /**
+     * Subquery nilai identitas, untuk orderBy / select.
+     */
+    public static function identitySubquery(string $key): \Illuminate\Database\Query\Builder
+    {
+        return AssetAttribute::query()
+            ->select('attribute_value')
+            ->whereColumn('asset_attributes.asset_id', 'assets.id')
+            ->where('asset_attributes.custom_attribute_id', CustomAssetAttribute::idForKey($key))
+            ->limit(1)
+            ->toBase();
     }
 
     public function qr(): HasOne

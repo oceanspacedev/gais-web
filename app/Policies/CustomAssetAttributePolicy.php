@@ -47,7 +47,7 @@ class CustomAssetAttributePolicy
      */
     public function delete(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('delete_custom::asset::attribute');
+        return $user->can('delete_custom::asset::attribute') && ! $customAssetAttribute->isIdentity();
     }
 
     /**

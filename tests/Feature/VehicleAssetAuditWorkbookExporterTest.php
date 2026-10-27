@@ -15,6 +15,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class VehicleAssetAuditWorkbookExporterTest extends TestCase
@@ -70,8 +71,6 @@ class VehicleAssetAuditWorkbookExporterTest extends TestCase
             $table->string('name');
             $table->unsignedBigInteger('category_id')->nullable();
             $table->unsignedBigInteger('brand_id')->nullable();
-            $table->string('type')->nullable();
-            $table->string('serial_number')->nullable();
             $table->unsignedBigInteger('asset_location_id')->nullable();
             $table->integer('qty')->default(1);
             $table->string('condition_status')->default(AssetCondition::Available->value);
@@ -90,6 +89,8 @@ class VehicleAssetAuditWorkbookExporterTest extends TestCase
             $table->boolean('is_available')->default(true);
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
 
         $entity = BusinessEntity::create(['name' => 'PT MEDIA SELULAR INDONESIA']);
         $category = Category::create(['name' => 'MOBIL']);

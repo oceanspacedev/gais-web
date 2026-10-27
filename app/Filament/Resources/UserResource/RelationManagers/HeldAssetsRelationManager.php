@@ -4,6 +4,7 @@ namespace App\Filament\Resources\UserResource\RelationManagers;
 
 use App\Filament\Resources\AssetResource;
 use App\Models\Asset;
+use App\Models\CustomAssetAttribute;
 use App\Models\User;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Columns\TextColumn;
@@ -50,7 +51,7 @@ class HeldAssetsRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn (): Builder => static::visibleQuery($this->getOwnerRecord())->with(['businessEntity', 'category', 'assetLocation']))
+            ->query(fn (): Builder => static::visibleQuery($this->getOwnerRecord())->with(['businessEntity', 'category', 'assetLocation', 'attributes']))
             ->columns([
                 TextColumn::make('name')->label('Nama Aset')->searchable()->wrap(),
                 TextColumn::make('businessEntity.name')
@@ -59,7 +60,10 @@ class HeldAssetsRelationManager extends RelationManager
                     ->color(fn (Asset $record): ?string => $record->businessEntity?->color)
                     ->placeholder('-'),
                 TextColumn::make('category.name')->label('Kategori')->placeholder('-'),
-                TextColumn::make('serial_number')->label('Serial Number')->searchable()->placeholder('-'),
+                TextColumn::make('serial_number')
+                    ->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_SERIAL_NUMBER))
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIdentity(CustomAssetAttribute::KEY_SERIAL_NUMBER, $search))
+                    ->placeholder('-'),
                 TextColumn::make('assetLocation.name')->label('Lokasi')->placeholder('-'),
                 TextColumn::make('condition_status_label')
                     ->label('Status Aset')

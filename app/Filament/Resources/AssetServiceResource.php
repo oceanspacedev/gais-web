@@ -7,7 +7,7 @@ use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource\Pages;
 use App\Models\Asset;
 use App\Models\AssetService;
-use App\Models\Vendor;
+use App\Models\CustomAssetAttribute;
 use App\Support\StoredFile;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
@@ -82,18 +82,19 @@ class AssetServiceResource extends Resource
                             ->preload()
                             ->getSearchResultsUsing(function (string $search): array {
                                 return Asset::query()
+                                    ->withIdentity()
+                                    ->with('businessEntity')
                                     ->where(function ($q) use ($search) {
                                         $q->where('name', 'like', "%{$search}%")
-                                            ->orWhere('serial_number', 'like', "%{$search}%")
-                                            ->orWhere('type', 'like', "%{$search}%");
+                                            ->orWhereIdentity([CustomAssetAttribute::KEY_SERIAL_NUMBER, CustomAssetAttribute::KEY_TYPE], $search);
                                     })
                                     ->limit(50)
                                     ->get()
                                     ->mapWithKeys(function (Asset $asset) {
                                         $detail = array_filter([$asset->serial_number, $asset->businessEntity?->name]);
-                                        $suffix = ! empty($detail) ? ' (' . implode(' - ', $detail) . ')' : '';
+                                        $suffix = ! empty($detail) ? ' ('.implode(' - ', $detail).')' : '';
 
-                                        return [$asset->id => $asset->name . $suffix];
+                                        return [$asset->id => $asset->name.$suffix];
                                     })
                                     ->toArray();
                             })
@@ -103,9 +104,9 @@ class AssetServiceResource extends Resource
                                     return null;
                                 }
                                 $detail = array_filter([$asset->serial_number, $asset->businessEntity?->name]);
-                                $suffix = ! empty($detail) ? ' (' . implode(' - ', $detail) . ')' : '';
+                                $suffix = ! empty($detail) ? ' ('.implode(' - ', $detail).')' : '';
 
-                                return $asset->name . $suffix;
+                                return $asset->name.$suffix;
                             })
                             ->required(),
 
@@ -365,7 +366,7 @@ class AssetServiceResource extends Resource
                     ->button()
                     ->size('sm')
                     ->modalWidth('3xl')
-                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: ' . ($record->asset?->name ?? $record->service_number))
+                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: '.($record->asset?->name ?? $record->service_number))
                     ->modalSubmitActionLabel('Simpan & Selesaikan')
                     ->visible(function (AssetService $record) {
                         $user = auth()->user();
@@ -582,7 +583,7 @@ class AssetServiceResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery();
+        $query = parent::getEloquentQuery()->with('asset.attributes');
         $user = auth()->user();
 
         if (! $user) {

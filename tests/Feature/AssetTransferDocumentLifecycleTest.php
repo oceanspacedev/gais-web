@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class AssetTransferDocumentLifecycleTest extends TestCase
@@ -518,6 +519,8 @@ class AssetTransferDocumentLifecycleTest extends TestCase
             $table->unsignedBigInteger('recipient_business_entity_id')->nullable();
             $table->timestamps();
         });
+
+        AssetIdentitySchema::ensure();
 
         Schema::create('asset_transfers', function (Blueprint $table): void {
             $table->id();

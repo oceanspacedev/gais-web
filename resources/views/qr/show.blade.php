@@ -203,30 +203,6 @@
                     <div class="detail-value">{{ $asset->brand->name }}</div>
                 </div>
             @endif
-            @if ($asset->type)
-                <div class="detail-row">
-                    <div class="detail-label">Tipe</div>
-                    <div class="detail-value">{{ $asset->type }}</div>
-                </div>
-            @endif
-            @if ($asset->serial_number)
-                <div class="detail-row">
-                    <div class="detail-label">Serial</div>
-                    <div class="detail-value">{{ $asset->serial_number }}</div>
-                </div>
-            @endif
-            @if ($asset->imei1)
-                <div class="detail-row">
-                    <div class="detail-label">IMEI 1</div>
-                    <div class="detail-value">{{ $asset->imei1 }}</div>
-                </div>
-            @endif
-            @if ($asset->imei2)
-                <div class="detail-row">
-                    <div class="detail-label">IMEI 2</div>
-                    <div class="detail-value">{{ $asset->imei2 }}</div>
-                </div>
-            @endif
             @if ($asset->recipient?->name)
                 <div class="detail-row">
                     <div class="detail-label">Penerima</div>

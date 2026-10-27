@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Tests\Support\AssetIdentitySchema;
 use Tests\TestCase;
 
 class AssetTransferDocumentTypeMigrationTest extends TestCase
@@ -46,6 +47,8 @@ class AssetTransferDocumentTypeMigrationTest extends TestCase
             $table->string('condition_status');
             $table->unsignedBigInteger('recipient_id')->nullable();
         });
+
+        AssetIdentitySchema::ensure();
         Schema::create('asset_transfer_details', function (Blueprint $table): void {
             $table->id();
             $table->unsignedBigInteger('asset_transfer_id');

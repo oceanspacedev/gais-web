@@ -4,25 +4,25 @@ namespace App\Imports;
 
 use App\Enums\AssetCondition;
 use App\Enums\NbhStatus;
-use App\Models\Asset;
+use App\Models\AssetAttribute;
 use App\Models\AssetLocation;
 use App\Models\Brand;
 use App\Models\BusinessEntity;
 use App\Models\Category;
+use App\Models\CustomAssetAttribute;
 use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Maatwebsite\Excel\Concerns\ToCollection;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
-use Maatwebsite\Excel\Concerns\WithHeadingRow;
-
 use Maatwebsite\Excel\Concerns\WithCustomValueBinder;
+use Maatwebsite\Excel\Concerns\WithHeadingRow;
 use Maatwebsite\Excel\DefaultValueBinder;
 use PhpOffice\PhpSpreadsheet\Cell\Cell;
 use PhpOffice\PhpSpreadsheet\Cell\DataType;
 
-class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkReading, WithHeadingRow, WithCustomValueBinder
+class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkReading, WithCustomValueBinder, WithHeadingRow
 {
     private array $businessEntityCache = [];
 
@@ -92,10 +92,12 @@ class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkR
                     'name' => $row['nama_aset'] ?? null,
                     'category_id' => $categoryId,
                     'brand_id' => $brandId,
-                    'type' => $row['tipe'] ?? null,
-                    'serial_number' => $row['serial_number'] ?? null,
-                    'imei1' => $row['imei_1'] ?? null,
-                    'imei2' => $row['imei_2'] ?? null,
+                    'identity' => [
+                        CustomAssetAttribute::KEY_TYPE => $row['tipe'] ?? null,
+                        CustomAssetAttribute::KEY_SERIAL_NUMBER => $row['serial_number'] ?? null,
+                        CustomAssetAttribute::KEY_IMEI1 => $row['imei_1'] ?? null,
+                        CustomAssetAttribute::KEY_IMEI2 => $row['imei_2'] ?? null,
+                    ],
                     'item_price' => $this->parsePrice($row['harga_aset'] ?? null),
                     'qty' => $row['qty'] ?? 1,
                     'asset_location_id' => $assetLocationId,
@@ -113,7 +115,7 @@ class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkR
             }
 
             if (! empty($assetsToInsert)) {
-                Asset::insert($assetsToInsert);
+                $this->insertAssets($assetsToInsert, $now);
             }
 
             DB::commit();
@@ -129,6 +131,42 @@ class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkR
     public function chunkSize(): int
     {
         return 500;
+    }
+
+    /**
+     * Insert tanpa event model (seperti sebelumnya), lalu identitas (serial number,
+     * IMEI, tipe) sebagai atribut kustom aset yang baru dibuat.
+     *
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function insertAssets(array $rows, mixed $now): void
+    {
+        $attributes = [];
+
+        foreach ($rows as $row) {
+            $identity = $row['identity'];
+            unset($row['identity']);
+
+            $assetId = DB::table('assets')->insertGetId($row);
+
+            foreach ($identity as $key => $value) {
+                $value = trim((string) $value);
+
+                if ($value !== '') {
+                    $attributes[] = [
+                        'asset_id' => $assetId,
+                        'custom_attribute_id' => CustomAssetAttribute::idForKey($key),
+                        'attribute_value' => $value,
+                        'created_at' => $now,
+                        'updated_at' => $now,
+                    ];
+                }
+            }
+        }
+
+        foreach (array_chunk($attributes, 500) as $chunk) {
+            AssetAttribute::insert($chunk);
+        }
     }
 
     private function parseDate($value): ?string

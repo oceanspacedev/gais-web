@@ -3,21 +3,22 @@
 namespace App\Filament\Resources;
 
 use App\Enums\AssetCondition;
+use App\Enums\AssetServiceStatus;
 use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource\Pages;
 use App\Filament\Resources\AssetResource\RelationManagers\AssetTransfersRelationManager;
 use App\Filament\Resources\AssetResource\RelationManagers\QrScansRelationManager;
-use App\Services\AssetQrLabelHistoryService;
-use App\Services\AssetQrService;
 use App\Models\Asset;
-use App\Models\AssetQrLabelHistory;
 use App\Models\AssetAttribute;
 use App\Models\AssetLocation;
+use App\Models\AssetQrLabelHistory;
 use App\Models\Brand;
 use App\Models\BusinessEntity;
 use App\Models\Category;
 use App\Models\CustomAssetAttribute;
 use App\Models\User;
+use App\Services\AssetQrLabelHistoryService;
+use App\Services\AssetQrService;
 use App\Support\StoredFile;
 use Carbon\Carbon;
 use Filament\Actions\Action;
@@ -37,6 +38,7 @@ use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\ImageEntry;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -536,12 +538,6 @@ class AssetResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpan(2),
-                                TextInput::make('type')
-                                    ->label('Model / Tipe Barang')
-                                    ->placeholder('Contoh: ThinkPad T14, iPhone 15, Rak Gudang A')
-                                    ->helperText('Isi model, varian, atau tipe barang dari vendor. Ini berbeda dari kategori aset.')
-                                    ->maxLength(255)
-                                    ->columnSpan(2),
                             ])
                             ->columns(2),
 
@@ -922,9 +918,24 @@ class AssetResource extends Resource
             ])->columns(3);
     }
 
+    /**
+     * Kolom tabel untuk atribut identitas (serial number, IMEI, tipe): dicari dan
+     * diurutkan lewat asset_attributes, judulnya mengikuti nama atribut.
+     */
+    private static function identityColumn(string $key): TextColumn
+    {
+        return TextColumn::make($key)
+            ->label(fn (): string => CustomAssetAttribute::labelForKey($key))
+            ->state(fn (Asset $record): ?string => $record->{$key})
+            ->placeholder('-')
+            ->searchable(query: fn (Builder $query, string $search): Builder => $query->whereIdentity($key, $search))
+            ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderBy(Asset::identitySubquery($key), $direction));
+    }
+
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->withIdentity())
             ->columns([
                 TextColumn::make('purchase_date')->translateLabel()->date()->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('businessEntity.name') // Mengambil nama dari relasi businessEntity
@@ -940,10 +951,10 @@ class AssetResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('category.name')->translateLabel()->sortable()->toggleable(),
                 TextColumn::make('brand.name')->translateLabel()->sortable()->searchable()->toggleable(),
-                TextColumn::make('type')->label('Model / Tipe')->sortable()->searchable()->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('serial_number')->translateLabel()->sortable()->searchable()->toggleable(),
-                TextColumn::make('imei1')->translateLabel()->sortable()->searchable()->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('imei2')->translateLabel()->sortable()->searchable()->toggleable(isToggledHiddenByDefault: true),
+                self::identityColumn(CustomAssetAttribute::KEY_TYPE)->toggleable(isToggledHiddenByDefault: true),
+                self::identityColumn(CustomAssetAttribute::KEY_SERIAL_NUMBER)->toggleable(),
+                self::identityColumn(CustomAssetAttribute::KEY_IMEI1)->toggleable(isToggledHiddenByDefault: true),
+                self::identityColumn(CustomAssetAttribute::KEY_IMEI2)->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('item_price')->translateLabel()->sortable()->money('IDR', true)->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('item_age')
                     ->translateLabel()
@@ -1037,16 +1048,8 @@ class AssetResource extends Resource
                     ])
                     ->query(function (Builder $query, array $data): Builder {
                         return $query
-                            ->when(filled($data['serial_number'] ?? null), fn (Builder $q) => $q->where('serial_number', 'like', '%'.trim($data['serial_number']).'%'))
-                            ->when(filled($data['imei'] ?? null), function (Builder $q) use ($data) {
-                                $imei = trim($data['imei']);
-
-                                $q->where(function (Builder $imeiQuery) use ($imei) {
-                                    $imeiQuery
-                                        ->where('imei1', 'like', '%'.$imei.'%')
-                                        ->orWhere('imei2', 'like', '%'.$imei.'%');
-                                });
-                            })
+                            ->when(filled($data['serial_number'] ?? null), fn (Builder $q) => $q->whereIdentity(CustomAssetAttribute::KEY_SERIAL_NUMBER, trim($data['serial_number'])))
+                            ->when(filled($data['imei'] ?? null), fn (Builder $q) => $q->whereIdentity([CustomAssetAttribute::KEY_IMEI1, CustomAssetAttribute::KEY_IMEI2], trim($data['imei'])))
                             ->when(filled($data['item_price_min'] ?? null), fn (Builder $q) => $q->where('item_price', '>=', (float) $data['item_price_min']))
                             ->when(filled($data['item_price_max'] ?? null), fn (Builder $q) => $q->where('item_price', '<=', (float) $data['item_price_max']));
                     }),
@@ -1087,7 +1090,7 @@ class AssetResource extends Resource
                         ->color('warning')
                         ->visible(fn (Asset $record): bool => self::hasDocumentExpiryAttributes($record))
                         ->modalWidth('lg')
-                        ->modalHeading(fn (Asset $record): string => 'Perbarui Dokumen: ' . $record->name)
+                        ->modalHeading(fn (Asset $record): string => 'Perbarui Dokumen: '.$record->name)
                         ->modalSubmitActionLabel('Simpan Pembaruan')
                         ->form(fn (Asset $record): array => self::attributeDocumentUpdateFormSchema($record))
                         ->action(function (Asset $record, array $data): void {
@@ -1123,12 +1126,6 @@ class AssetResource extends Resource
 
                             return app(AssetQrLabelHistoryService::class)->download($history);
                         }),
-                    BulkAction::make('pindahkanKeAtribut')
-                        ->label('Pindahkan ke Atribut')
-                        ->action(fn (Collection $records) => self::pindahkanKeAssetAttributeBulk($records))
-                        ->requiresConfirmation()
-                        ->color('primary')
-                        ->icon('heroicon-o-arrow-right'),
                     DeleteBulkAction::make(),
                 ]),
             ]);
@@ -1192,7 +1189,8 @@ class AssetResource extends Resource
                                         TextEntry::make('brand.name')
                                             ->label(__('Merek')),
                                         TextEntry::make('type')
-                                            ->label('Model / Tipe'),
+                                            ->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_TYPE))
+                                            ->placeholder('-'),
                                         ImageEntry::make('image')
                                             ->label('Foto Aset')
                                             ->width('100px')
@@ -1290,34 +1288,34 @@ class AssetResource extends Resource
                                                     : '-')),
                                     ]),
 
-                        ComponentsSection::make('QR Code')
-                            ->schema([
-                                TextEntry::make('qr.id')
-                                    ->label('ID QR')
-                                    ->copyable()
-                                    ->placeholder('Belum ada QR'),
-                                TextEntry::make('qr_public_url')
-                                    ->label('URL Scan')
-                                    ->state(fn (Asset $record): string => $record->qr
-                                        ? app(AssetQrService::class)->publicUrl($record->qr)
-                                        : '-')
-                                    ->url(fn (Asset $record): ?string => $record->qr
-                                        ? app(AssetQrService::class)->publicUrl($record->qr)
-                                        : null, true)
-                                    ->placeholder('-'),
-                                ImageEntry::make('qr_preview')
-                                    ->label('Preview')
-                                    ->state(function (Asset $record): ?string {
-                                        if (! $record->qr) {
-                                            return null;
-                                        }
+                                ComponentsSection::make('QR Code')
+                                    ->schema([
+                                        TextEntry::make('qr.id')
+                                            ->label('ID QR')
+                                            ->copyable()
+                                            ->placeholder('Belum ada QR'),
+                                        TextEntry::make('qr_public_url')
+                                            ->label('URL Scan')
+                                            ->state(fn (Asset $record): string => $record->qr
+                                                ? app(AssetQrService::class)->publicUrl($record->qr)
+                                                : '-')
+                                            ->url(fn (Asset $record): ?string => $record->qr
+                                                ? app(AssetQrService::class)->publicUrl($record->qr)
+                                                : null, true)
+                                            ->placeholder('-'),
+                                        ImageEntry::make('qr_preview')
+                                            ->label('Preview')
+                                            ->state(function (Asset $record): ?string {
+                                                if (! $record->qr) {
+                                                    return null;
+                                                }
 
-                                        $png = app(AssetQrService::class)->png($record->qr, 200);
+                                                $png = app(AssetQrService::class)->png($record->qr, 200);
 
-                                        return 'data:image/png;base64,'.base64_encode($png);
-                                    })
-                                    ->visible(fn (Asset $record): bool => (bool) $record->qr),
-                            ]),
+                                                return 'data:image/png;base64,'.base64_encode($png);
+                                            })
+                                            ->visible(fn (Asset $record): bool => (bool) $record->qr),
+                                    ]),
                                 ComponentsGrid::make(1)
                                     ->schema([
                                         TextEntry::make('nbh_reported_at_display')
@@ -1384,14 +1382,14 @@ class AssetResource extends Resource
 
                         ComponentsSection::make('Riwayat Servis Aset')
                             ->schema([
-                                \Filament\Infolists\Components\RepeatableEntry::make('services')
+                                RepeatableEntry::make('services')
                                     ->label('')
                                     ->schema([
                                         TextEntry::make('service_number')->label(__('No. Servis'))->weight('bold'),
                                         TextEntry::make('service_date')->label(__('Tgl Servis'))->state(fn ($record) => $record->service_date?->format('d M Y')),
                                         TextEntry::make('provider_label')->label(__('Pelaksana')),
-                                        TextEntry::make('total_cost')->label(__('Biaya'))->state(fn ($record) => 'Rp ' . number_format($record->total_cost ?: 0, 0, ',', '.')),
-                                        TextEntry::make('status')->label(__('Status'))->badge()->color(fn ($state) => $state instanceof \App\Enums\AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof \App\Enums\AssetServiceStatus ? $state->label() : (string) $state),
+                                        TextEntry::make('total_cost')->label(__('Biaya'))->state(fn ($record) => 'Rp '.number_format($record->total_cost ?: 0, 0, ',', '.')),
+                                        TextEntry::make('status')->label(__('Status'))->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
                                     ])
                                     ->columns(5),
                             ])
@@ -1406,39 +1404,5 @@ class AssetResource extends Resource
                 'default' => 1,
                 'lg' => 3,
             ]);
-    }
-
-    // In your AssetAttribute model
-    protected static function pindahkanKeAssetAttributeBulk($records)
-    {
-        foreach ($records as $record) {
-            // Daftar kolom yang akan dipindahkan sebagai `attribute_key` dan `attribute_value`
-            $attributes = [
-                '3' => $record->serial_number,
-                '1' => $record->imei1,
-                '2' => $record->imei2,
-            ];
-
-            foreach ($attributes as $key => $value) {
-                // Pastikan hanya memindahkan jika $value tidak null atau kosong
-                if (! is_null($value) && $value !== '') {
-                    AssetAttribute::updateOrCreate(
-                        [
-                            'asset_id' => $record->id,
-                            'custom_attribute_id' => $key,
-                        ],
-                        [
-                            'attribute_value' => $value,
-                        ]
-                    );
-                }
-            }
-        }
-
-        Notification::make()
-            ->title('Sukses')
-            ->body('Atribut berhasil dipindahkan ke AssetAttribute untuk aset yang dipilih.')
-            ->success()
-            ->send();
     }
 }
