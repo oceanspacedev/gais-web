@@ -217,6 +217,22 @@ class SumoImportPanelTest extends TestCase
         $this->assertFalse($run->canImport());
     }
 
+    public function test_upload_accepts_a_gzip_dump_named_only_gz(): void
+    {
+        $this->configureMapping(BusinessEntity::create(['name' => 'PT Uji Panel Sumo', 'format' => 'UPS']));
+        $this->actingAsImporter();
+
+        Livewire::test(CreateSumoImportRun::class)
+            ->fillForm(['file_path' => UploadedFile::fake()->createWithContent('sumo-27-okt.gz', gzencode(SumoLegacyFixture::mysqlDump($this->legacyRows())))])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $run = SumoImportRun::latest('id')->firstOrFail();
+
+        $this->assertSame('sumo-27-okt.gz', $run->original_name);
+        $this->assertSame(SumoImportRun::STATUS_READY, $run->status, (string) $run->error);
+    }
+
     public function test_upload_rejects_files_that_are_not_sql_dumps(): void
     {
         $this->actingAsImporter();
@@ -228,6 +244,10 @@ class SumoImportPanelTest extends TestCase
 
         Livewire::test(CreateSumoImportRun::class)
             ->fillForm(['file_path' => UploadedFile::fake()->createWithContent('palsu.sql.gz', 'CREATE TABLE x (id int);')])
+            ->call('create');
+
+        Livewire::test(CreateSumoImportRun::class)
+            ->fillForm(['file_path' => UploadedFile::fake()->createWithContent('palsu.gz', 'CREATE TABLE x (id int);')])
             ->call('create');
 
         $this->assertSame($before, SumoImportRun::count());

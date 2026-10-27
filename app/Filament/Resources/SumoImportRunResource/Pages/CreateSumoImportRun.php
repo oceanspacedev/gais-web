@@ -30,7 +30,7 @@ class CreateSumoImportRun extends CreateRecord
         $name = is_array($name) ? reset($name) : $name;
 
         $problem = SumoImportRun::anyBusy() ? 'Masih ada impor yang antre atau berjalan. Tunggu sampai selesai.' : null;
-        $problem ??= preg_match('/\.sql(\.gz)?$/i', $name) ? null : 'File harus berakhiran .sql atau .sql.gz.';
+        $problem ??= preg_match('/\.(sql|gz)$/i', $name) ? null : 'File harus berakhiran .sql atau .gz.';
 
         [$size, $checksum, $contentProblem] = StoredFile::withLocalPath($disk, $path, fn (string $local): array => [
             (int) filesize($local),
@@ -94,7 +94,7 @@ class CreateSumoImportRun extends CreateRecord
         fclose($handle);
 
         if ($gzip !== ($magic === "\x1f\x8b")) {
-            return $gzip ? 'File .gz ini bukan arsip gzip.' : 'File ini terkompresi gzip; ganti namanya menjadi .sql.gz.';
+            return $gzip ? 'File .gz ini bukan arsip gzip.' : 'File ini terkompresi gzip; ganti akhiran namanya menjadi .gz.';
         }
 
         $gz = gzopen($path, 'rb');

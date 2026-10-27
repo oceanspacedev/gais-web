@@ -6,7 +6,7 @@ use Generator;
 use RuntimeException;
 
 /**
- * Membaca file dump MySQL (.sql atau .sql.gz) per pernyataan tanpa memuat
+ * Membaca file dump MySQL (.sql atau .gz) per pernyataan tanpa memuat
  * seluruh file ke memori. Pemisah `;` di dalam string, identifier, dan komentar
  * diabaikan; `DELIMITER` ala klien mysql didukung. Komentar biasa dibuang,
  * komentar eksekusi `/*! ... *\/` dipertahankan karena dijalankan MySQL.

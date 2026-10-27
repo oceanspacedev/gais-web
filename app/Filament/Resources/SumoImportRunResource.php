@@ -22,7 +22,7 @@ use Filament\Tables\Table;
 use Illuminate\Support\Number;
 
 /**
- * Impor data sumo dari panel: unggah dump (.sql / .sql.gz) → dimuat ke database
+ * Impor data sumo dari panel: unggah dump (.sql / .gz) → dimuat ke database
  * staging sumo → uji coba otomatis → impor sungguhan setelah laporannya diperiksa.
  * Setiap run menyimpan file, tabel yang dimuat, laporan, dan log-nya.
  */
@@ -94,7 +94,7 @@ class SumoImportRunResource extends Resource
                         ->visibility('private')
                         ->storeFileNamesIn('original_name')
                         ->maxSize(fn (): int => (int) config('sumo-import.panel.max_upload_kb'))
-                        ->helperText(fn (): string => 'Hasil mysqldump database sumo, .sql atau .sql.gz (disarankan, jauh lebih kecil). Maksimal '
+                        ->helperText(fn (): string => 'Hasil mysqldump database sumo, .sql atau .gz (disarankan, jauh lebih kecil). Maksimal '
                             .Number::fileSize((int) config('sumo-import.panel.max_upload_kb') * 1024).'.')
                         ->required()
                         ->columnSpanFull(),
