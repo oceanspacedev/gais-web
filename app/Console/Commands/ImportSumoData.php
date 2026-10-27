@@ -4,9 +4,6 @@ namespace App\Console\Commands;
 
 use App\Services\Sumo\SumoImporter;
 use Illuminate\Console\Command;
-use Illuminate\Support\Facades\DB;
-use Spatie\Permission\PermissionRegistrar;
-use Throwable;
 
 class ImportSumoData extends Command
 {
@@ -32,23 +29,7 @@ class ImportSumoData extends Command
 
         $this->info($dryRun ? 'Mode uji coba: perubahan akan dibatalkan di akhir.' : 'Mengimpor data sumo...');
 
-        DB::beginTransaction();
-
-        try {
-            $report = $importer->run($only === [] ? null : $only, fn (string $line) => $this->line("  {$line}"));
-
-            if ($dryRun) {
-                DB::rollBack();
-            } else {
-                DB::commit();
-            }
-        } catch (Throwable $exception) {
-            DB::rollBack();
-
-            throw $exception;
-        } finally {
-            app(PermissionRegistrar::class)->forgetCachedPermissions();
-        }
+        $report = $importer->runInTransaction($only === [] ? null : $only, $dryRun, fn (string $line) => $this->line("  {$line}"));
 
         $this->newLine();
         $this->table(['Langkah', 'Jumlah'], collect($report->counts())->map(fn (int $count, string $key): array => [$key, $count])->values()->all());

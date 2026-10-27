@@ -15,6 +15,20 @@ return [
     'connection' => env('SUMO_DB_CONNECTION', 'sumo'),
 
     /*
+     * Menu Pengaturan > Impor Data Sumo. File dump disimpan di `disk` (privat), lalu
+     * job di antrean panjang memuatnya ke database koneksi di atas (staging) dan
+     * menjalankan uji coba. Tanpa Redis (mis. tes), job memakai koneksi antrean default.
+     */
+    'panel' => [
+        'disk' => env('SUMO_IMPORT_DISK', env('FILESYSTEM_DISK', 'local')),
+        'directory' => 'sumo-imports',
+        'queue_connection' => env('SUMO_IMPORT_QUEUE_CONNECTION', env('QUEUE_CONNECTION') === 'redis' ? 'redis-long' : null),
+        'queue' => 'long-running',
+        // KB. Batas unggah PHP (upload_max_filesize, post_max_size) dan Livewire (12 MB) juga berlaku.
+        'max_upload_kb' => (int) env('SUMO_IMPORT_MAX_UPLOAD_KB', 12288),
+    ],
+
+    /*
      * badan_usahas.id (sumo) => business_entities.id (shelf). null = tidak dipetakan.
      * Nama sumo ditulis di komentar supaya mudah dicek; ubah bila pemetaannya keliru.
      */

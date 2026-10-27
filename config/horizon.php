@@ -67,6 +67,19 @@ return [
             'timeout' => 300,
             'nice' => 0,
         ],
+        // Impor sumo dari panel: satu per satu, tanpa retry, boleh sampai 1 jam.
+        'supervisor-long' => [
+            'connection' => 'redis-long',
+            'queue' => ['long-running'],
+            'balance' => false,
+            'maxProcesses' => 1,
+            'maxTime' => 0,
+            'maxJobs' => 0,
+            'memory' => 512,
+            'tries' => 1,
+            'timeout' => 3600,
+            'nice' => 0,
+        ],
     ],
 
     'environments' => [

@@ -9,6 +9,28 @@ php artisan sumo:import --dry-run   # laporan jumlah dan pemetaan, tanpa menulis
 php artisan sumo:import             # impor sungguhan, bisa diulang (idempoten)
 ```
 
+### Lewat panel: Pengaturan > Impor Data Sumo
+
+Cara yang disarankan, karena setiap langkah tercatat (file, tabel yang dimuat, laporan, log):
+
+1. **Unggah dump** hasil `mysqldump db_sumo | gzip > sumo.sql.gz` (.sql atau .sql.gz).
+   File disimpan privat di disk `SUMO_IMPORT_DISK` (default `FILESYSTEM_DISK`).
+2. Job antrean `long-running` (supervisor Horizon `supervisor-long`) **mengosongkan database
+   staging** (`SUMO_DB_DATABASE`) lalu menjalankan dump ke sana, kemudian **uji coba** otomatis.
+   Loader menolak target yang sama dengan database shelf, database yang berisi tabel shelf, dan
+   pernyataan yang menulis ke database lain (`USE`, `db.tabel`, `GRANT`, `DROP DATABASE`, ...).
+3. Periksa **Hasil uji coba**: jumlah per langkah, pemetaan badan usaha, peringatan penggabungan user.
+   Ubah `config/sumo-import.php` bila perlu, lalu **Uji coba ulang**.
+4. **Impor sungguhan** (ketik `IMPOR`) memakai dump yang sama dengan uji coba terakhir, dalam satu
+   transaksi. Backup database shelf dulu.
+
+Izin: `Manage:SumoImport` (awalnya hanya `super_admin`). Batas unggah default 12 MB
+(`SUMO_IMPORT_MAX_UPLOAD_KB`); `upload_max_filesize`/`post_max_size` PHP dan `client_max_body_size`
+nginx juga berlaku, jadi pakai .sql.gz. Setelah deploy, restart Horizon (`php artisan horizon:terminate`)
+supaya supervisor baru jalan. Dump yang lebih besar tetap bisa lewat CLI di bawah.
+
+### Lewat CLI
+
 Impor tidak menggandakan data yang sudah ada di shelf:
 
 - **Badan usaha** tidak pernah dibuat baru. Semuanya dipetakan ke badan usaha shelf lewat
