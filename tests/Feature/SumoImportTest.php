@@ -35,6 +35,11 @@ class SumoImportTest extends TestCase
         app(PermissionRegistrar::class)->forgetCachedPermissions();
         SumoLegacyFixture::install();
 
+        // Database pengembangan bisa sudah berisi impor sumo sungguhan. Tanda legacy
+        // dilepas di dalam transaksi supaya fixture tetap dihitung sebagai impor pertama
+        // (cakupan pengajuan hanya diisi pada impor pertama).
+        DB::table('users')->whereNotNull('legacy_sumo_user_id')->update(['legacy_sumo_user_id' => null]);
+
         $this->entity = BusinessEntity::create(['name' => 'PT Uji Sumo', 'format' => 'UJI']);
 
         config([
