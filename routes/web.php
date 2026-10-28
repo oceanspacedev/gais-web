@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Auth\Pages\EmailLogin;
 use App\Filament\Auth\Pages\PhoneLogin;
 use App\Http\Controllers\AssetQrLabelPrintController;
 use App\Http\Controllers\CameraUploadController;
@@ -30,6 +31,22 @@ Route::get('phone-login', PhoneLogin::class)
         DispatchServingFilamentEvent::class,
     ])
     ->name('phone-login');
+
+Route::get('email-login', EmailLogin::class)
+    ->middleware([
+        DisableBladeIconComponents::class,
+        DispatchServingFilamentEvent::class,
+    ])
+    ->name('email-login');
+
+// Magic link dari email. Membuka URL saja tidak memakai token; lihat EmailLogin::$magicToken.
+Route::get('email-login/link/{token}', EmailLogin::class)
+    ->where('token', '[A-Za-z0-9]{64}')
+    ->middleware([
+        DisableBladeIconComponents::class,
+        DispatchServingFilamentEvent::class,
+    ])
+    ->name('email-login.link');
 
 Route::get('asset-transfer/{id}/download', [PdfController::class, 'downloadAssetTransfer'])->middleware(['auth'])->name('asset-transfer.download');
 Route::get('task-completion/{id}/download', [PdfController::class, 'downloadTaskCompletion'])->middleware(['auth'])->name('task-completion.download');

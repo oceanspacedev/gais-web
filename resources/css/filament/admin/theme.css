@@ -34,6 +34,15 @@
         padding: 1.5rem 1rem;
     }
 
+    /* Ikon tombol "Atau masuk dengan" di halaman login, sama seperti dnd-web. */
+    .whatsapp-login-icon {
+        fill: #25d366;
+    }
+
+    .email-login-icon {
+        color: var(--primary-500);
+    }
+
     #overlook-widget > div {
         display: grid;
         grid-template-columns: var(--cols-default, repeat(1, minmax(0, 1fr)));

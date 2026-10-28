@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\PermissionRegistrar;
@@ -81,6 +82,21 @@ class User extends Authenticatable implements FilamentUser, HasName
         'password' => 'hashed',
         'access_all_business_entities' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        // Kode dan magic link login email hanya berlaku untuk alamat saat kode diminta.
+        static::updated(function (User $user): void {
+            if (! $user->wasChanged('email') || ! Schema::hasTable('email_otps')) {
+                return;
+            }
+
+            EmailOtp::query()
+                ->where('user_id', $user->getKey())
+                ->whereNull('verified_at')
+                ->update(['expires_at' => now()]);
+        });
+    }
 
     public function setEmailAttribute($value): void
     {

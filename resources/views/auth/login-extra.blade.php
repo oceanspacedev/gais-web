@@ -1,4 +1,15 @@
-@if (filled(config('services.whatsapp_gateway.url')) && filled(config('services.whatsapp_gateway.token')))
+@php
+    use App\Services\EmailOtpService;
+    use Filament\Support\Icons\Heroicon;
+    use Illuminate\View\ComponentAttributeBag;
+
+    use function Filament\Support\generate_icon_html;
+
+    $hasWhatsAppLogin = filled(config('services.whatsapp_gateway.url')) && filled(config('services.whatsapp_gateway.token'));
+    $hasEmailLogin = EmailOtpService::isConfigured();
+@endphp
+
+@if ($hasWhatsAppLogin || $hasEmailLogin)
     <div class="space-y-6">
         <div class="relative flex items-center justify-center">
             <div class="flex-grow border-t border-gray-200 dark:border-gray-700/80"></div>
@@ -9,21 +20,42 @@
         </div>
 
         <div class="flex gap-3">
-            <x-filament::button
-                tag="a"
-                href="{{ route('phone-login') }}"
-                color="gray"
-                :outlined="true"
-                class="flex-1"
-            >
-                <span class="flex items-center justify-center gap-3">
-                    <svg class="size-5 shrink-0 fill-current" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
-                        <path d="m4.836 12.33 0.483 0.282C6.126 13.082 7.043 13.333 8.001 13.333c2.946 0 5.333 -2.388 5.333 -5.333 0 -2.946 -2.388 -5.333 -5.333 -5.333s-5.333 2.388 -5.333 5.333c0 0.958 0.251 1.875 0.722 2.683l0.282 0.483 -0.436 1.601 1.6 -0.437ZM1.337 14.667l0.901 -3.312C1.663 10.369 1.334 9.223 1.334 8c0 -3.682 2.985 -6.667 6.667 -6.667 3.682 0 6.667 2.985 6.667 6.667 0 3.682 -2.985 6.667 -6.667 6.667 -1.223 0 -2.368 -0.329 -3.353 -0.904L1.337 14.667ZM5.595 4.872c0.089 -0.006 0.179 -0.007 0.268 -0.003 0.036 0.002 0.072 0.007 0.108 0.011 0.106 0.012 0.223 0.077 0.262 0.166 0.199 0.451 0.392 0.904 0.579 1.36 0.041 0.101 0.016 0.231 -0.062 0.357 -0.04 0.065 -0.102 0.156 -0.175 0.248 -0.075 0.096 -0.238 0.274 -0.238 0.274s-0.066 0.079 -0.041 0.177c0.01 0.037 0.04 0.091 0.068 0.136 0.015 0.025 0.03 0.048 0.039 0.063 0.171 0.285 0.4 0.574 0.68 0.845 0.08 0.078 0.158 0.157 0.242 0.231 0.312 0.275 0.665 0.5 1.047 0.667l0.003 0.002c0.056 0.024 0.085 0.038 0.168 0.073 0.042 0.018 0.084 0.033 0.128 0.044 0.016 0.004 0.032 0.006 0.048 0.008 0.108 0.006 0.17 -0.063 0.197 -0.094 0.482 -0.584 0.526 -0.622 0.53 -0.622v0.001c0.063 -0.067 0.163 -0.09 0.252 -0.085 0.041 0.002 0.081 0.01 0.118 0.027 0.355 0.162 0.934 0.414 0.934 0.414l0.388 0.174c0.065 0.031 0.124 0.105 0.127 0.177 0.002 0.045 0.007 0.117 -0.009 0.248 -0.021 0.172 -0.073 0.38 -0.125 0.489 -0.037 0.076 -0.084 0.144 -0.139 0.201 -0.075 0.078 -0.13 0.125 -0.22 0.192 -0.055 0.041 -0.083 0.06 -0.083 0.06 -0.093 0.058 -0.145 0.088 -0.255 0.146 -0.172 0.091 -0.361 0.144 -0.555 0.154 -0.124 0.006 -0.247 0.015 -0.371 0.009 -0.005 -0 -0.379 -0.058 -0.379 -0.058 -0.948 -0.249 -1.825 -0.716 -2.56 -1.364 -0.15 -0.132 -0.29 -0.276 -0.432 -0.417 -0.593 -0.59 -1.041 -1.226 -1.313 -1.828 -0.134 -0.297 -0.219 -0.615 -0.22 -0.942 -0.002 -0.405 0.13 -0.799 0.376 -1.119 0.049 -0.063 0.095 -0.129 0.174 -0.204 0.084 -0.08 0.138 -0.122 0.196 -0.152 0.077 -0.039 0.162 -0.06 0.248 -0.067Z"/>
-                    </svg>
-                    <span class="font-semibold text-gray-900 dark:text-white">WhatsApp</span>
-                </span>
-            </x-filament::button>
+            @if ($hasWhatsAppLogin)
+                <x-filament::button
+                    tag="a"
+                    href="{{ route('phone-login') }}"
+                    color="gray"
+                    :outlined="true"
+                    class="flex-1"
+                >
+                    <span class="flex items-center justify-center gap-3">
+                        <svg class="whatsapp-login-icon size-5 shrink-0" viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <path d="M13.601 2.326A7.85 7.85 0 0 0 7.994 0C3.627 0 .068 3.558.064 7.926c0 1.399.366 2.76 1.043 3.963L0 16l4.204-1.102a7.9 7.9 0 0 0 3.79.965h.004c4.368 0 7.926-3.558 7.93-7.93A7.9 7.9 0 0 0 13.6 2.326zM7.994 14.521a6.6 6.6 0 0 1-3.356-.92l-.24-.144-2.494.654.666-2.433-.156-.251a6.56 6.56 0 0 1-1.007-3.505c0-3.626 2.957-6.584 6.591-6.584a6.56 6.56 0 0 1 4.66 1.931 6.56 6.56 0 0 1 1.928 4.66c-.004 3.639-2.961 6.592-6.592 6.592m3.615-4.934c-.197-.099-1.17-.578-1.353-.646-.182-.065-.315-.099-.445.099-.133.197-.513.646-.627.78-.114.133-.232.148-.43.05-.197-.1-.836-.308-1.592-.985-.59-.525-.99-1.174-1.105-1.372-.114-.198-.011-.304.088-.403.087-.088.197-.232.296-.346.1-.114.133-.198.198-.33.065-.134.034-.248-.015-.347-.05-.099-.445-1.076-.612-1.47-.16-.389-.323-.335-.445-.34-.114-.007-.247-.007-.38-.007a.73.73 0 0 0-.529.247c-.182.198-.691.677-.691 1.654s.71 1.916.81 2.049c.098.133 1.394 2.132 3.383 2.992.47.205.84.326 1.129.418.475.152.906.13 1.25.08.381-.058 1.171-.48 1.338-.941.164-.464.164-.86.114-.941-.049-.084-.182-.133-.38-.232" />
+                        </svg>
+                        <span class="font-semibold text-gray-900 dark:text-white">WhatsApp</span>
+                    </span>
+                </x-filament::button>
+            @endif
 
+            @if ($hasEmailLogin)
+                <x-filament::button
+                    tag="a"
+                    href="{{ route('email-login') }}"
+                    color="gray"
+                    :outlined="true"
+                    class="flex-1"
+                >
+                    <span class="flex items-center justify-center gap-3">
+                        {{
+                            generate_icon_html(
+                                Heroicon::Envelope,
+                                attributes: (new ComponentAttributeBag)->class(['email-login-icon size-5 shrink-0']),
+                            )
+                        }}
+                        <span class="font-semibold text-gray-900 dark:text-white">Email</span>
+                    </span>
+                </x-filament::button>
+            @endif
         </div>
     </div>
 @endif
