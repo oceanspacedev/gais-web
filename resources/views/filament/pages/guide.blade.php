@@ -143,8 +143,8 @@
             {{-- ============ MULAI ============ --}}
             <section x-show="tab === 'mulai'" class="pg-body" style="padding-top: 0">
                 <div class="pg-block">
-                    <h2>Shelf dalam satu halaman</h2>
-                    <p class="pg-lead">Shelf adalah aplikasi internal berbasis web untuk mencatat aset dan menangani pekerjaan kantor sehari-hari: pengajuan barang, laporan gangguan, kebersihan (OB), kendaraan, pekerjaan vendor, asuransi dan sewa. Aplikasi ini menggabungkan Shelf yang lama dengan sumo-web, dan semuanya ada di satu panel: <code>/admin</code>.</p>
+                    <h2>GAIS dalam satu halaman</h2>
+                    <p class="pg-lead">GAIS (General Affair Information System) adalah aplikasi internal berbasis web untuk mencatat aset dan menangani pekerjaan kantor sehari-hari: pengajuan barang, laporan gangguan, kebersihan (OB), kendaraan, pekerjaan vendor, asuransi dan sewa. Aplikasi ini menggabungkan GAIS yang lama dengan sumo-web, dan semuanya ada di satu panel: <code>/admin</code>.</p>
                 </div>
 
                 <div class="pg-block">
@@ -492,14 +492,14 @@
                         <li>Tanpa role, pengguna tidak bisa masuk. Role menentukan menu yang tampil (lihat tab <strong>Role dan akses</strong>).</li>
                         <li>Untuk pengajuan barang, isi juga <strong>Divisi</strong> dan <strong>Atasan (approver pengajuan barang)</strong>. Untuk login WhatsApp, isi <strong>Nomor WhatsApp</strong>.</li>
                         <li>Data karyawan sebaiknya masuk lewat tombol <strong>Import JSON (Talenta)</strong>, satu-satunya import pengguna. Baris dicocokkan lewat Employee ID, lalu nama; bila ada beberapa pengguna bernama sama, dipersempit dengan nomor HP, email, badan usaha, dan jabatan.</li>
-                        <li>Pengguna yang punya <strong>Employee ID</strong> mengikuti Talenta: Nama, Employee ID, Nomor WhatsApp, Email, Badan Usaha, dan Jabatan terkunci di form. Ubah di Talenta lalu import ulang JSON-nya. Divisi, atasan, username, kata sandi, dan role tetap diatur di Shelf.</li>
+                        <li>Pengguna yang punya <strong>Employee ID</strong> mengikuti Talenta: Nama, Employee ID, Nomor WhatsApp, Email, Badan Usaha, dan Jabatan terkunci di form. Ubah di Talenta lalu import ulang JSON-nya. Divisi, atasan, username, kata sandi, dan role tetap diatur di GAIS.</li>
                         <li>Halaman pengguna punya tab <strong>Aset Dipegang</strong>, <strong>Berita Acara (BA)</strong>, <strong>Pengajuan Barang</strong>, <strong>Approval Pengajuan</strong>, dan <strong>Laporan Gangguan</strong> untuk melihat riwayatnya.</li>
                     </ul>
                 </div>
 
                 <div class="pg-block" id="bab-12">
                     <h2>12. Import &amp; Laporan Audit (contoh: kendaraan)</h2>
-                    <p>Hasil audit lapangan dicocokkan dengan data Shelf lewat file Excel. Shelf baru berubah setelah koreksi diterapkan, jadi laporan bisa ditinjau dulu dengan aman. Contoh: auditor menemukan satu mobil yang belum tercatat.</p>
+                    <p>Hasil audit lapangan dicocokkan dengan data GAIS lewat file Excel. GAIS baru berubah setelah koreksi diterapkan, jadi laporan bisa ditinjau dulu dengan aman. Contoh: auditor menemukan satu mobil yang belum tercatat.</p>
                     <x-guide.demo name="audit-kendaraan" caption="Animasi: impor file audit kendaraan, meninjau laporan hasil banding, lalu menerapkan koreksi sehingga mobil baru tercatat." :shots="[
                         'audit-kendaraan-01-daftar-audit.png' => 'Daftar batch audit',
                         'audit-kendaraan-02-tombol-export-format.png' => 'Export format',
@@ -511,7 +511,7 @@
                         'audit-kendaraan-08-aset-baru-dari-audit.png' => 'Aset baru dari audit',
                     ]" />
                     <ul class="pg-list">
-                        <li><strong>0. Export Format</strong>: di halaman <strong>1. Import Audit</strong>, unduh format <em>Audit Kendaraan</em> (atau <em>CSA</em> untuk stok ritel). File sudah berisi aset yang tercatat di Shelf.</li>
+                        <li><strong>0. Export Format</strong>: di halaman <strong>1. Import Audit</strong>, unduh format <em>Audit Kendaraan</em> (atau <em>CSA</em> untuk stok ritel). File sudah berisi aset yang tercatat di GAIS.</li>
                         <li><strong>Isi di Excel</strong>: lengkapi hasil cek lapangan (keberadaan, BPKB, tanggal STNK/KIR/pajak), tambahkan baris unit yang belum tercatat, dan tulis <em>TERJUAL</em> di kolom ACCOUNTING untuk unit yang sudah dijual. Jangan ubah kolom NOMOR POLISI kecuali koreksi plat.</li>
                         <li><strong>1. Import Audit</strong>: pilih <em>Jenis Audit</em>, <em>Badan Usaha Default</em>, unggah file. Nyalakan <em>Buat aset/lokasi baru dari audit</em> bila unit baru boleh dibuat otomatis.</li>
                         <li><strong>2. Laporan Hasil Banding</strong>: tiap baris berstatus <em>Inline</em> (sudah sama), <em>Gap</em> (akan dikoreksi), atau <em>Terblokir</em> (perlu dicek manual, misalnya plat tidak valid atau muncul dua kali).</li>
@@ -585,7 +585,7 @@
 
                 <div class="pg-block" id="bab-15">
                     <h2>15. Import &amp; Laporan Audit stok (CSA)</h2>
-                    <p>Sama seperti bab 12, tetapi untuk stok inventori per gudang yang dihitung dalam jumlah (qty). Contoh: hasil stock opname menemukan kertas thermal tinggal 8 rol (Shelf mencatat 10) dan 6 tinta printer yang belum tercatat.</p>
+                    <p>Sama seperti bab 12, tetapi untuk stok inventori per gudang yang dihitung dalam jumlah (qty). Contoh: hasil stock opname menemukan kertas thermal tinggal 8 rol (GAIS mencatat 10) dan 6 tinta printer yang belum tercatat.</p>
                     <x-guide.demo name="audit-csa" caption="Animasi: impor file CSA hasil stock opname, meninjau laporan per barang, lalu menerapkan koreksi qty dan barang baru." :shots="[
                         'audit-csa-01-tombol-export-format.png' => 'Export format CSA',
                         'audit-csa-02-form-import.png' => 'Form import',
@@ -595,7 +595,7 @@
                         'audit-csa-06-koreksi-diterapkan.png' => 'Koreksi diterapkan',
                     ]" />
                     <ul class="pg-list">
-                        <li><strong>0. Export Format CSA</strong>: berisi sheet <em>ASET</em>, satu blok per gudang, dengan aset inventori aktif yang punya lokasi. Kolom <em>Qty Akhir</em> adalah saldo Shelf saat export. Jangan ubah nama sheet dan header.</li>
+                        <li><strong>0. Export Format CSA</strong>: berisi sheet <em>ASET</em>, satu blok per gudang, dengan aset inventori aktif yang punya lokasi. Kolom <em>Qty Akhir</em> adalah saldo GAIS saat export. Jangan ubah nama sheet dan header.</li>
                         <li><strong>Isi di Excel</strong>: tulis hasil hitung di <em>Fisik</em>. <em>Selisih</em> boleh dikosongkan (dihitung Fisik dikurangi Qty Akhir); bila diisi, harus cocok. Barang yang belum tercatat ditambahkan sebagai baris baru di blok gudangnya.</li>
                         <li><strong>1. Import Audit</strong>: Jenis Audit <em>CSA (stok ritel / inventori)</em>, pilih Badan Usaha Default, unggah file. Judul blok bertanda <em>(CSA CSN)</em> mengarahkan baris ke badan usaha dengan alias itu. Opsi <em>Buat lokasi baru</em> menyala secara default untuk kode gudang yang belum dikenal.</li>
                         <li><strong>2. Laporan</strong>: barang dicocokkan lewat S/N, lalu kode item + gudang, lalu nama + gudang. Qty berbeda atau barang baru menjadi <em>Gap</em>; kode gudang kosong, data duplikat, atau qty tidak konsisten menjadi <em>Terblokir</em>.</li>
@@ -724,7 +724,7 @@
                 <div class="pg-block">
                     <h3>Lainnya di grup Aset</h3>
                     <ul class="pg-list">
-                        <li><strong>Rekonsiliasi:</strong> unggah workbook CSA atau audit kendaraan untuk dibandingkan dengan data Shelf. Data baru berubah hanya setelah menekan Terapkan Koreksi.</li>
+                        <li><strong>Rekonsiliasi:</strong> unggah workbook CSA atau audit kendaraan untuk dibandingkan dengan data GAIS. Data baru berubah hanya setelah menekan Terapkan Koreksi.</li>
                         <li><strong>Label QR:</strong> tiap aset punya QR. Pemindaian publik membuka halaman info aset.</li>
                         <li><strong>Atribut kustom:</strong> dokumen bermasa berlaku (STNK, KIR). Dokumen yang hampir kedaluwarsa dikirim sebagai pengingat.</li>
                     </ul>
@@ -756,7 +756,7 @@
             <section x-show="tab === 'kontrak'" x-cloak class="pg-body" style="padding-top: 0">
                 <div class="pg-block">
                     <h2>Asuransi, Sewa, dan Pengingat WhatsApp</h2>
-                    <p class="pg-lead">Polis asuransi dan kontrak sewa punya tanggal berakhir. Shelf mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
+                    <p class="pg-lead">Polis asuransi dan kontrak sewa punya tanggal berakhir. GAIS mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Data kontrak</h3>
@@ -798,7 +798,7 @@
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>
                             <tr><td><code>office_boy</code></td><td>OB</td><td>Melihat dan membuat OB checksheet.</td></tr>
-                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama Shelf</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
+                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -878,7 +878,7 @@ php artisan schedule:work   # bila menguji pengingat</pre>
                         <li><code>problem-reports:auto-confirm</code>: tiap 10 menit.</li>
                         <li><code>notifications:send-scheduled</code>: tiap hari 13:20 (pengingat dokumen atribut kustom).</li>
                         <li><code>model:prune</code>: harian.</li>
-                        <li>Worker antrean: <code>php artisan horizon</code>, contoh unit systemd di <code>deploy/web-shelf-queue.service</code>.</li>
+                        <li>Worker antrean: <code>php artisan horizon</code>, contoh unit systemd di <code>deploy/web-gais-queue.service</code>.</li>
                     </ul>
                 </div>
 
@@ -900,7 +900,7 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                             <thead><tr><th>Variabel</th><th>Fungsi</th></tr></thead>
                             <tbody>
                                 <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_shelf)</td></tr>
-                                <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database shelf.</td></tr>
+                                <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database GAIS.</td></tr>
                                 <tr><td><code>SUMO_IMPORT_MAX_UPLOAD_KB</code></td><td>Batas unggah dump di menu Impor Data Sumo (default 12288)</td></tr>
                                 <tr><td><code>QUEUE_CONNECTION</code>, <code>REDIS_*</code></td><td>Antrean (default redis, butuh Horizon)</td></tr>
                                 <tr><td><code>WAG_URL</code>, <code>WAG_TOKEN</code></td><td>Gateway WhatsApp untuk OTP dan pengingat</td></tr>

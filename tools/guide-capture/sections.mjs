@@ -697,7 +697,7 @@ async function rowAction(page, r, label) {
   await r.click(item);
 }
 
-// File audit CSA contoh: hasil "Export Format CSA" dengan fisik kertas thermal 8 (Shelf 10) dan satu barang
+// File audit CSA contoh: hasil "Export Format CSA" dengan fisik kertas thermal 8 (GAIS 10) dan satu barang
 // yang ditemukan di gudang tapi belum tercatat.
 function csaAuditWorkbook() {
   const file = join(mkdtempSync(join(tmpdir(), 'audit-')), 'audit-csa-contoh.xlsx').replace(/\\/g, '/');
@@ -708,14 +708,14 @@ function csaAuditWorkbook() {
     + ` (new PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx($s))->save('${file}');`;
   execFileSync(PHP, ['artisan', 'tinker', '--execute', code], {
     cwd: ROOT,
-    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_shelf_capture' },
+    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_gais_capture' },
     stdio: 'pipe',
   });
   return file;
 }
 
 // File audit kendaraan contoh: hasil "Export Format Audit Kendaraan" ditambah satu mobil yang ditemukan auditor
-// tapi belum tercatat di Shelf (seperti yang diisi orang di Excel sebelum diimpor).
+// tapi belum tercatat di GAIS (seperti yang diisi orang di Excel sebelum diimpor).
 function vehicleAuditWorkbook() {
   const file = join(mkdtempSync(join(tmpdir(), 'audit-')), 'audit-kendaraan-contoh.xlsx').replace(/\\/g, '/');
   const code = String.raw`$s = app(App\Services\VehicleAssetAuditWorkbookExporter::class)->build();`
@@ -724,7 +724,7 @@ function vehicleAuditWorkbook() {
     + ` (new PhpOffice\\PhpSpreadsheet\\Writer\\Xlsx($s))->save('${file}');`;
   execFileSync(PHP, ['artisan', 'tinker', '--execute', code], {
     cwd: ROOT,
-    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_shelf_capture' },
+    env: { ...process.env, DB_DATABASE: process.env.CAPTURE_DB || 'db_gais_capture' },
     stdio: 'pipe',
   });
   return file;

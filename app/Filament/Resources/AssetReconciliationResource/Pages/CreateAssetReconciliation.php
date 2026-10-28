@@ -25,7 +25,7 @@ class CreateAssetReconciliation extends CreateRecord
 
     public function getSubheading(): ?string
     {
-        return 'Pilih CSA atau Kendaraan, unggah workbook audit. Setelah simpan, sistem langsung membuat Laporan (tanpa mengubah Shelf).';
+        return 'Pilih CSA atau Kendaraan, unggah workbook audit. Setelah simpan, sistem langsung membuat Laporan (tanpa mengubah GAIS).';
     }
 
     protected function getHeaderActions(): array
@@ -78,7 +78,7 @@ class CreateAssetReconciliation extends CreateRecord
 
             Notification::make()
                 ->title('Import selesai — laporan siap')
-                ->body('Gap Shelf dengan hasil audit sudah dihitung. Tinjau laporan, lalu Apply hanya jika aman.')
+                ->body('Gap GAIS dengan hasil audit sudah dihitung. Tinjau laporan, lalu Apply hanya jika aman.')
                 ->success()
                 ->send();
         } catch (Throwable $exception) {

@@ -160,6 +160,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
             '2026_09_24_000002_batch_asset_qr_label_histories',
             '2026_09_24_000003_add_file_to_asset_qr_label_histories',
             '2026_09_24_000004_add_storage_disks_to_asset_files',
+            '2026_10_28_200000_rebrand_shelf_to_gais',
         ] as $fileMigration) {
             (require database_path('migrations/'.$fileMigration.'.php'))->up();
         }
@@ -367,7 +368,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         $service->apply($batch->fresh());
     }
 
-    public function test_tc_va_012_orphan_shelf_plates_are_counted(): void
+    public function test_tc_va_012_orphan_gais_plates_are_counted(): void
     {
         $this->vehicle('H 9527 EA', 'CARRY', AssetCondition::Available);
         $this->vehicle('Z 0000 OR', 'ORPHAN', AssetCondition::Available);
@@ -376,7 +377,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         app(VehicleAssetReconciliationService::class)->compare($batch);
         $batch->refresh();
 
-        $this->assertSame(1, $batch->summary['orphan_shelf_plates'] ?? null);
+        $this->assertSame(1, $batch->summary['orphan_gais_plates'] ?? null);
     }
 
     public function test_tc_va_013_location_alias_sync_on_apply(): void

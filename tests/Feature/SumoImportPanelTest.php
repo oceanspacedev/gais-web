@@ -26,7 +26,7 @@ use Tests\TestCase;
 
 /**
  * Unggah dump sumo dari panel. Database staging adalah database MySQL tersendiri
- * (dibuat dan dihapus oleh tes ini), terpisah dari database shelf yang dipakai tes.
+ * (dibuat dan dihapus oleh tes ini), terpisah dari database GAIS yang dipakai tes.
  */
 class SumoImportPanelTest extends TestCase
 {
@@ -34,7 +34,7 @@ class SumoImportPanelTest extends TestCase
 
     private const B = 9100000;
 
-    private const STAGING = 'shelf_sumo_panel_test';
+    private const STAGING = 'gais_sumo_panel_test';
 
     private string $scratch;
 
@@ -67,7 +67,7 @@ class SumoImportPanelTest extends TestCase
 
         parent::tearDown();
 
-        // Koneksi sendiri: DROP DATABASE di koneksi shelf akan meng-commit transaksi tes.
+        // Koneksi sendiri: DROP DATABASE di koneksi GAIS akan meng-commit transaksi tes.
         (new \PDO("mysql:host={$this->server['host']};port={$this->server['port']}", $this->server['username'], $this->server['password']))
             ->exec('DROP DATABASE IF EXISTS `'.self::STAGING.'`');
     }
@@ -112,9 +112,9 @@ class SumoImportPanelTest extends TestCase
     public function test_loader_skips_server_statements_and_rejects_writes_outside_staging(): void
     {
         $loader = new SumoDumpLoader('sumo');
-        $shelf = (string) config('database.connections.'.config('database.default').'.database');
+        $gais = (string) config('database.connections.'.config('database.default').'.database');
 
-        $this->assertNull($loader->prepare("USE `{$shelf}`", self::STAGING));
+        $this->assertNull($loader->prepare("USE `{$gais}`", self::STAGING));
         $this->assertNull($loader->prepare('CREATE DATABASE /*!32312 IF NOT EXISTS*/ `db_sumo`', self::STAGING));
         $this->assertNull($loader->prepare("/*!80000 SET @@GLOBAL.GTID_PURGED=/*!80000 '+'*/ 'abc:1-9' */", self::STAGING));
         $this->assertSame('INSERT INTO `'.self::STAGING.'`.`users` VALUES (1)', $loader->prepare('INSERT INTO `'.self::STAGING.'`.`users` VALUES (1)', self::STAGING));
@@ -125,8 +125,8 @@ class SumoImportPanelTest extends TestCase
         );
 
         foreach ([
-            "INSERT INTO `{$shelf}`.`users` VALUES (1)",
-            "DROP TABLE IF EXISTS {$shelf}.roles",
+            "INSERT INTO `{$gais}`.`users` VALUES (1)",
+            "DROP TABLE IF EXISTS {$gais}.roles",
             'DROP DATABASE `db_sumo`',
             "GRANT ALL ON *.* TO 'x'@'%'",
             "SELECT * FROM users INTO OUTFILE '/tmp/x'",
@@ -140,11 +140,11 @@ class SumoImportPanelTest extends TestCase
         }
     }
 
-    public function test_loader_refuses_the_shelf_database_as_staging(): void
+    public function test_loader_refuses_the_gais_database_as_staging(): void
     {
         config(['database.connections.sumo.database' => config('database.connections.'.config('database.default').'.database')]);
 
-        $this->expectExceptionMessage('tidak boleh kosong atau sama dengan database shelf');
+        $this->expectExceptionMessage('tidak boleh kosong atau sama dengan database GAIS');
 
         (new SumoDumpLoader('sumo'))->load($this->write('dump.sql', SumoLegacyFixture::mysqlDump()));
     }
@@ -173,7 +173,7 @@ class SumoImportPanelTest extends TestCase
         $this->assertSame(2, $run->dry_run_report['counts']['users.created']);
         $this->assertStringContainsString('Membuat tabel users', $run->log);
         $this->assertStringContainsString('Uji coba selesai', $run->log);
-        // Uji coba dibatalkan: belum ada user sumo di shelf.
+        // Uji coba dibatalkan: belum ada user sumo di GAIS.
         $this->assertSame(0, User::where('legacy_sumo_user_id', self::B + 3)->count());
 
         Livewire::test(ViewSumoImportRun::class, ['record' => $run->getRouteKey()])
@@ -195,14 +195,14 @@ class SumoImportPanelTest extends TestCase
         $this->assertTrue(Hash::check('rahasia', $requester->password));
     }
 
-    public function test_dump_writing_into_the_shelf_database_fails_without_touching_shelf(): void
+    public function test_dump_writing_into_the_gais_database_fails_without_touching_gais(): void
     {
         $this->configureMapping(BusinessEntity::create(['name' => 'PT Uji Panel Sumo', 'format' => 'UPS']));
         $this->actingAsImporter();
-        $shelf = (string) config('database.connections.'.config('database.default').'.database');
+        $gais = (string) config('database.connections.'.config('database.default').'.database');
         $users = User::count();
 
-        $dump = SumoLegacyFixture::mysqlDump($this->legacyRows())."DROP TABLE IF EXISTS `{$shelf}`.`users`;\n";
+        $dump = SumoLegacyFixture::mysqlDump($this->legacyRows())."DROP TABLE IF EXISTS `{$gais}`.`users`;\n";
 
         Livewire::test(CreateSumoImportRun::class)
             ->fillForm(['file_path' => UploadedFile::fake()->createWithContent('jahat.sql', $dump)])
@@ -212,7 +212,7 @@ class SumoImportPanelTest extends TestCase
 
         $this->assertSame(SumoImportRun::STATUS_FAILED, $run->status);
         $this->assertFalse($run->staged);
-        $this->assertStringContainsString("database lain (`{$shelf}`)", $run->error);
+        $this->assertStringContainsString("database lain (`{$gais}`)", $run->error);
         $this->assertSame($users, User::count());
         $this->assertFalse($run->canImport());
     }

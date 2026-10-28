@@ -10,4 +10,4 @@ Pipeline navigasi sinkronisasi eksternal: Export → Import → Laporan → Appl
 - PAGE-004 — Detail Laporan: subheading kontekstual (Blocked/Gap/Applied), ringkasan, tabel item (Blocked/Gap di atas), Apply disabled saat Blocked, dan `Compare Ulang`.
 - PAGE-005 — Master Lokasi: field `Kode Gudang CSA` untuk mapping eksplisit.
 
-Navigasi berada pada grup Asset. Import reguler Shelf dan jalur rekonsiliasi eksternal dipisah secara eksplisit; sync eksternal tidak punya pintasan Apply tanpa melewati Import dan Laporan.
+Navigasi berada pada grup Asset. Import reguler GAIS dan jalur rekonsiliasi eksternal dipisah secara eksplisit; sync eksternal tidak punya pintasan Apply tanpa melewati Import dan Laporan.

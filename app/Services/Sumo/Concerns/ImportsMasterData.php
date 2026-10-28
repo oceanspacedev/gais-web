@@ -30,9 +30,9 @@ trait ImportsMasterData
             $id = (int) $division->id;
             $name = $this->str($division->division) ?? "Divisi {$id}";
 
-            // Nama divisi unik di shelf; nama yang sudah dipakai record lain diberi penanda.
+            // Nama divisi unik di GAIS; nama yang sudah dipakai record lain diberi penanda.
             if (isset($taken[$name]) && $taken[$name] !== $id) {
-                $this->report->warn("Divisi sumo #{$id} \"{$name}\" bentrok dengan divisi shelf #{$taken[$name]}; disimpan sebagai \"{$name} (sumo)\".");
+                $this->report->warn("Divisi sumo #{$id} \"{$name}\" bentrok dengan divisi GAIS #{$taken[$name]}; disimpan sebagai \"{$name} (sumo)\".");
                 $name .= ' (sumo)';
             }
 

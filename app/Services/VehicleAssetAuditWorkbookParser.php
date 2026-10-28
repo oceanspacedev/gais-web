@@ -21,7 +21,7 @@ class VehicleAssetAuditWorkbookParser
     private const HEADER_ALIASES = [
         'license_plate' => ['nomor polisi', 'no polisi', 'no. polisi', 'plat nomor'],
         'stnk_name' => ['nama stnk'],
-        'shelf_marker' => ['shelf'],
+        'gais_marker' => ['gais', 'shelf'], // 'shelf': workbook yang diekspor sebelum rebranding
         'accounting' => ['accounting'],
         'csa_marker' => ['csa'],
         'presence' => ['cek keberadaan unit', 'keberadaan'],

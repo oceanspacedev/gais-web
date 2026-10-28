@@ -42,7 +42,7 @@ class ViewAssetReconciliation extends ViewRecord
         }
 
         if ($record->status === AssetReconciliation::STATUS_ALIGNED) {
-            return 'Semua baris sudah Inline dengan Shelf.';
+            return 'Semua baris sudah Inline dengan GAIS.';
         }
 
         if ($record->status === AssetReconciliation::STATUS_FAILED) {
@@ -60,7 +60,7 @@ class ViewAssetReconciliation extends ViewRecord
                 ->icon('heroicon-o-check-circle')
                 ->color('danger')
                 ->requiresConfirmation()
-                ->modalHeading('Apply: terapkan hasil laporan ke data Shelf?')
+                ->modalHeading('Apply: terapkan hasil laporan ke data GAIS?')
                 ->modalDescription(fn (): string => $this->isVehicleAudit()
                     ? 'Langkah terakhir. Sold/duplikat/create/enrich diterapkan secara atomik. Aset tidak dihapus; duplikat dinonaktifkan dari inventori.'
                     : 'Langkah terakhir setelah Import dan Laporan. Kuantitas, lokasi, dan identitas item diselaraskan secara atomik. Aset target 0 tidak dihapus, tetapi dinonaktifkan dari inventori.')

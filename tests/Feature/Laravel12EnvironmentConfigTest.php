@@ -30,8 +30,8 @@ class Laravel12EnvironmentConfigTest extends TestCase
             'LOG_STACK' => 'daily,stderr',
             'REDIS_CLIENT' => 'predis',
             'SESSION_ENCRYPT' => 'true',
-            'SESSION_PATH' => '/shelf',
-            'SESSION_DOMAIN' => 'shelf.test',
+            'SESSION_PATH' => '/gais',
+            'SESSION_DOMAIN' => 'gais.test',
             'AWS_ACCESS_KEY_ID' => 'aws-key',
             'MINIO_ACCESS_KEY_ID' => 'minio-key',
             'AWS_SECRET_ACCESS_KEY' => 'aws-secret',
@@ -66,8 +66,8 @@ class Laravel12EnvironmentConfigTest extends TestCase
             $this->assertSame(['daily', 'stderr'], config('logging.channels.stack.channels'));
             $this->assertSame('predis', config('database.redis.client'));
             $this->assertTrue(config('session.encrypt'));
-            $this->assertSame('/shelf', config('session.path'));
-            $this->assertSame('shelf.test', config('session.domain'));
+            $this->assertSame('/gais', config('session.path'));
+            $this->assertSame('gais.test', config('session.domain'));
             $this->assertSame('aws-key', config('filesystems.disks.s3.key'));
             $this->assertSame('aws-secret', config('filesystems.disks.s3.secret'));
             $this->assertSame('ap-southeast-1', config('filesystems.disks.s3.region'));

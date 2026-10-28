@@ -11,7 +11,7 @@ Main path:
 1. Sistem menampilkan default badan usaha serta daftar Gudang, marker CSA, dan override opsional.
 2. Pengguna memilih default dan mengisi override hanya untuk Gudang yang berbeda.
 3. Sistem membuat batch anak dengan workbook, hash, default, dan mapping Gudang tersebut.
-4. Sistem menjalankan kembali UC-001 terhadap keadaan Shelf terbaru.
+4. Sistem menjalankan kembali UC-001 terhadap keadaan GAIS terbaru.
 5. Pengguna melihat Inline/Gap/Blokir baru tanpa mengubah bukti batch induk atau Asset.
 
 Postcondition: batch induk tetap immutable; verifikasi memiliki identitas dan timestamp sendiri.

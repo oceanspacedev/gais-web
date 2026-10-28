@@ -15,6 +15,6 @@ Status: Reviewed
 | TC-VA-009 | UC-VA-001 | Unknown ACC marker → Blocked (FR-VA-007) |
 | TC-VA-010 | UC-VA-001 | Create flag off → plat missing Blocked (FR-VA-011) |
 | TC-VA-011 | UC-VA-002 | Apply kedua ditolak / idempotent (FR-VA-008) |
-| TC-VA-012 | UC-VA-001 | orphan_shelf_plates terhitung (FR-VA-013) |
+| TC-VA-012 | UC-VA-001 | orphan_gais_plates terhitung (FR-VA-013) |
 | TC-VA-013 | UC-VA-002 | Location alias sync / create-on-apply (FR-VA-018) |
 | TC-VA-014 | UC-VA-002 | Holder exact unik → recipient_id (FR-VA-018) |

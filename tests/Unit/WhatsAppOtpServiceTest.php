@@ -315,21 +315,21 @@ class WhatsAppOtpServiceTest extends TestCase
         $tenant = 'tenant-gateway';
         $cases = [
             [
-                'key' => 'shelf:phone-otp:lock:principal:'.hash('sha256', $principal),
+                'key' => 'gais:phone-otp:lock:principal:'.hash('sha256', $principal),
                 'subject' => 'intake-principal-lock',
                 'principal' => $principal,
                 'phone' => $phone,
                 'tenant' => $tenant,
             ],
             [
-                'key' => 'shelf:phone-otp:lock:target:'.hash('sha256', $phone),
+                'key' => 'gais:phone-otp:lock:target:'.hash('sha256', $phone),
                 'subject' => 'intake-target-lock',
                 'principal' => 'reporter:user-b',
                 'phone' => $phone,
                 'tenant' => $tenant,
             ],
             [
-                'key' => 'shelf:phone-otp:lock:tenant-quota:'.hash('sha256', $tenant),
+                'key' => 'gais:phone-otp:lock:tenant-quota:'.hash('sha256', $tenant),
                 'subject' => 'intake-tenant-lock',
                 'principal' => 'reporter:user-c',
                 'phone' => $this->phone(2),

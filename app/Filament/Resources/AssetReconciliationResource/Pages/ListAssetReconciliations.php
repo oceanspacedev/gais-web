@@ -13,7 +13,7 @@ class ListAssetReconciliations extends ListRecords
 
     public function getSubheading(): ?string
     {
-        return 'Alur sync CSA: 0 Export Format → isi Fisik/Selisih → 1 Import → 2 Laporan → 3 Apply. Data Shelf baru berubah setelah Apply.';
+        return 'Alur sync CSA: 0 Export Format → isi Fisik/Selisih → 1 Import → 2 Laporan → 3 Apply. Data GAIS baru berubah setelah Apply.';
     }
 
     protected function getHeaderActions(): array

@@ -38,7 +38,7 @@ class WhatsAppGatewayTest extends TestCase
         $this->assertSame('6281234567890', $payload['recipient']['value']);
         $this->assertSame('text', $payload['message']['type']);
         $this->assertSame('Halo', $payload['message']['text']);
-        $this->assertSame('shelf', $payload['client_reference']);
+        $this->assertSame('gais', $payload['client_reference']);
     }
 
     public function test_it_fails_without_wag_token(): void

@@ -50,7 +50,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         $asset = $this->createAssetFixture();
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.search_asset',
+            'route' => 'gais.search_asset',
             'query' => [
                 'serial_number' => 'SN-ASSET-001',
             ],
@@ -65,7 +65,7 @@ class WhatsappAssetIntegrationTest extends TestCase
 
         $response = $this->postJson(route('integrations.whatsapp.assets.query'), [
             'request_id' => 'trace-search-001',
-            'route' => 'shelf.search_asset',
+            'route' => 'gais.search_asset',
             'intent' => 'search_asset',
             'sender_phone' => '628123456789',
             'query' => [
@@ -98,7 +98,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         CustomAssetAttribute::query()->whereKey(CustomAssetAttribute::idForKey(CustomAssetAttribute::KEY_SERIAL_NUMBER))->update(['name' => 'No. Seri']);
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.search_asset',
+            'route' => 'gais.search_asset',
             'query' => [
                 'serial_number' => 'cust serial 7788',
             ],
@@ -133,7 +133,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         ]);
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.search_asset',
+            'route' => 'gais.search_asset',
             'query' => [
                 'plate_number' => 'B 1234 XYZ',
             ],
@@ -152,7 +152,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         ])->save();
 
         $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.search_asset',
+            'route' => 'gais.search_asset',
             'query' => [
                 'imei' => '359876543210123',
             ],
@@ -184,7 +184,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         ]);
 
         $response = $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.asset_history',
+            'route' => 'gais.asset_history',
             'query' => [
                 'asset_tag' => (string) $asset->id,
             ],
@@ -244,7 +244,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         ]);
 
         $response = $this->postJson(route('integrations.whatsapp.assets.query'), [
-            'route' => 'shelf.expiring_documents',
+            'route' => 'gais.expiring_documents',
             'intent' => 'expiring_documents',
             'query' => [
                 'document_name' => 'STNK',

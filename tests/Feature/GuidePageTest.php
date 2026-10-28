@@ -20,7 +20,7 @@ class GuidePageTest extends TestCase
         $this->actingAs($user)
             ->get('/admin/panduan')
             ->assertOk()
-            ->assertSee('Panduan Shelf')
+            ->assertSee('Panduan GAIS')
             ->assertSee('Pengajuan Barang')
             ->assertSee('pg-flow', false)
             ->assertSee('@keyframes pg-dot-6-5', false)

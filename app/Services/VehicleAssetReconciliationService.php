@@ -132,7 +132,7 @@ class VehicleAssetReconciliationService
                     'summary' => [
                         'actions' => $actionCounts,
                         'source_sheet' => $reconciliation->source_sheet,
-                        'orphan_shelf_plates' => $orphanCount,
+                        'orphan_gais_plates' => $orphanCount,
                         'default_business_entity_id' => $reconciliation->business_entity_id,
                     ],
                     'failure_message' => null,
@@ -273,7 +273,7 @@ class VehicleAssetReconciliationService
 
         if ($errors !== [] || $businessEntityId === null) {
             return [
-                'shelf_qty' => $activeAssets->count() > 0 ? 1 : 0,
+                'gais_qty' => $activeAssets->count() > 0 ? 1 : 0,
                 'gap_qty' => null,
                 'matched_asset_id' => $activeAssets->first()?->id ?? $assets->first()?->id,
                 'candidate_asset_ids' => $candidateIds,
@@ -286,7 +286,7 @@ class VehicleAssetReconciliationService
 
         if ($duplicateInWorkbook) {
             return [
-                'shelf_qty' => $activeAssets->count() > 0 ? 1 : 0,
+                'gais_qty' => $activeAssets->count() > 0 ? 1 : 0,
                 'gap_qty' => null,
                 'matched_asset_id' => $activeAssets->first()?->id ?? $assets->first()?->id,
                 'candidate_asset_ids' => $candidateIds,
@@ -303,7 +303,7 @@ class VehicleAssetReconciliationService
             $retireIds = $ranked->skip(1)->pluck('id')->all();
 
             return [
-                'shelf_qty' => 1,
+                'gais_qty' => 1,
                 'gap_qty' => count($retireIds),
                 'matched_asset_id' => $keep->id,
                 'candidate_asset_ids' => $retireIds,
@@ -317,14 +317,14 @@ class VehicleAssetReconciliationService
         if ($disposition === 'sold') {
             if ($assets->isEmpty()) {
                 return [
-                    'shelf_qty' => 0,
+                    'gais_qty' => 0,
                     'gap_qty' => 0,
                     'matched_asset_id' => null,
                     'candidate_asset_ids' => [],
                     'match_strategy' => 'plate',
                     'comparison_status' => AssetReconciliationItem::STATUS_INLINE,
                     'action' => 'none',
-                    'message' => 'Terjual di audit dan tidak ada di Shelf.',
+                    'message' => 'Terjual di audit dan tidak ada di GAIS.',
                 ];
             }
 
@@ -332,14 +332,14 @@ class VehicleAssetReconciliationService
 
             if ($unsold->isEmpty()) {
                 return [
-                    'shelf_qty' => 0,
+                    'gais_qty' => 0,
                     'gap_qty' => 0,
                     'matched_asset_id' => $assets->first()->id,
                     'candidate_asset_ids' => $assets->pluck('id')->all(),
                     'match_strategy' => 'plate',
                     'comparison_status' => AssetReconciliationItem::STATUS_INLINE,
                     'action' => 'none',
-                    'message' => 'Sudah berstatus Dijual di Shelf.',
+                    'message' => 'Sudah berstatus Dijual di GAIS.',
                 ];
             }
 
@@ -347,40 +347,40 @@ class VehicleAssetReconciliationService
             $keep = $ranked->first();
 
             return [
-                'shelf_qty' => 1,
+                'gais_qty' => 1,
                 'gap_qty' => -1,
                 'matched_asset_id' => $keep->id,
                 'candidate_asset_ids' => $unsold->pluck('id')->all(),
                 'match_strategy' => $unsold->count() > 1 ? 'plate_duplicate' : 'plate',
                 'comparison_status' => AssetReconciliationItem::STATUS_GAP,
                 'action' => 'mark_sold',
-                'message' => 'Audit menandai terjual; Shelf masih aktif.',
+                'message' => 'Audit menandai terjual; GAIS masih aktif.',
             ];
         }
 
         if ($activeAssets->isEmpty()) {
             if (! $autoCreateAssets) {
                 return [
-                    'shelf_qty' => 0,
+                    'gais_qty' => 0,
                     'gap_qty' => 1,
                     'matched_asset_id' => null,
                     'candidate_asset_ids' => [],
                     'match_strategy' => 'plate',
                     'comparison_status' => AssetReconciliationItem::STATUS_BLOCKED,
                     'action' => 'review',
-                    'message' => 'Plat belum ada di Shelf. Aktifkan opsi buat aset baru atau input manual.',
+                    'message' => 'Plat belum ada di GAIS. Aktifkan opsi buat aset baru atau input manual.',
                 ];
             }
 
             return [
-                'shelf_qty' => 0,
+                'gais_qty' => 0,
                 'gap_qty' => 1,
                 'matched_asset_id' => null,
                 'candidate_asset_ids' => [],
                 'match_strategy' => 'plate',
                 'comparison_status' => AssetReconciliationItem::STATUS_GAP,
                 'action' => 'create_missing',
-                'message' => 'Plat aktif di audit belum ada di Shelf; akan dibuat saat Apply.',
+                'message' => 'Plat aktif di audit belum ada di GAIS; akan dibuat saat Apply.',
             ];
         }
 
@@ -391,7 +391,7 @@ class VehicleAssetReconciliationService
 
         if ($needsEnrich || $entityMismatch) {
             return [
-                'shelf_qty' => 1,
+                'gais_qty' => 1,
                 'gap_qty' => 0,
                 'matched_asset_id' => $asset->id,
                 'candidate_asset_ids' => [$asset->id],
@@ -405,7 +405,7 @@ class VehicleAssetReconciliationService
         }
 
         return [
-            'shelf_qty' => 1,
+            'gais_qty' => 1,
             'gap_qty' => 0,
             'matched_asset_id' => $asset->id,
             'candidate_asset_ids' => [$asset->id],

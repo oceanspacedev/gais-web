@@ -1,9 +1,9 @@
 <?php
 
 /*
- * Pemetaan data legacy sumo-web (Web Gais) untuk `php artisan sumo:import`.
+ * Pemetaan data legacy sumo-web (Web Gais lama) untuk `php artisan sumo:import`.
  * Id sumo dipertahankan untuk area, divisi, master, dan transaksi; hanya user
- * dan badan usaha yang dipetakan ke record shelf.
+ * dan badan usaha yang dipetakan ke record GAIS.
  */
 
 $crud = fn (string $subject, string ...$extra): array => array_map(
@@ -29,7 +29,7 @@ return [
     ],
 
     /*
-     * badan_usahas.id (sumo) => business_entities.id (shelf). null = tidak dipetakan.
+     * badan_usahas.id (sumo) => business_entities.id (GAIS). null = tidak dipetakan.
      * Nama sumo ditulis di komentar supaya mudah dicek; ubah bila pemetaannya keliru.
      */
     'business_entities' => [
@@ -41,7 +41,7 @@ return [
         6 => 8,    // AMAZY
         7 => 10,   // TKANAN => TOKO MAS AN AN (format TKN/; nama lengkap user sumo "tkanan" = TOKO MAS AN AN)
         8 => 44,   // CMULIA => COMPLETE MULIA PURWAKARTA
-        9 => 5,    // PT. RISM => PT. RETAIL INDONESIA SELALU MAJU (shelf punya duplikat id 39)
+        9 => 5,    // PT. RISM => PT. RETAIL INDONESIA SELALU MAJU (GAIS punya duplikat id 39)
         10 => 1,   // CV MAJU TECNOLOGI
         11 => 18,  // MOMOYO
         12 => 23,  // KOPI ULON => ULON - OMEGA SQUARE
@@ -120,7 +120,7 @@ return [
     ],
 
     /*
-     * Penggabungan user manual: users.id (sumo) => users.id (shelf), atau false
+     * Penggabungan user manual: users.id (sumo) => users.id (GAIS), atau false
      * supaya selalu dibuat akun baru. Tanpa entri, impor menggabungkan otomatis bila
      * username sama, atau bila nama lengkap (minimal dua kata) hanya dipakai satu
      * user di masing-masing sisi. Akun sumo yang sudah dihapus hanya lewat sini.

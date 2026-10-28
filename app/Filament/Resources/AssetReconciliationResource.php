@@ -53,7 +53,7 @@ class AssetReconciliationResource extends Resource
     {
         return $schema->schema([
             Section::make('1. Import Workbook Audit')
-                ->description('Alur wajib: Export format → isi audit → Import → Laporan gap → Apply. File di-stage dan dibandingkan dulu; data Shelf baru berubah setelah Terapkan Koreksi dikonfirmasi.')
+                ->description('Alur wajib: Export format → isi audit → Import → Laporan gap → Apply. File di-stage dan dibandingkan dulu; data GAIS baru berubah setelah Terapkan Koreksi dikonfirmasi.')
                 ->schema([
                     Select::make('source_system')
                         ->label('Jenis Audit')
@@ -107,7 +107,7 @@ class AssetReconciliationResource extends Resource
                             ? 'Buat aset/lokasi baru dari audit (opt-in)'
                             : 'Buat lokasi baru untuk kode gudang yang belum dikenal')
                         ->helperText(fn (callable $get): string => $get('source_system') === 'VEHICLE_AUDIT'
-                            ? 'Off = plat hilang / keberadaan baru → Terblokir. On = saat Apply boleh buat aset MOBIL/MOTOR dan lokasi dari CEK KEBERADAAN. Tidak mengubah Shelf saat preview.'
+                            ? 'Off = plat hilang / keberadaan baru → Terblokir. On = saat Apply boleh buat aset MOBIL/MOTOR dan lokasi dari CEK KEBERADAAN. Tidak mengubah GAIS saat preview.'
                             : 'Lokasi baru hanya dibuat ketika koreksi diterapkan, tidak saat preview compare.')
                         ->default(true),
                 ])
@@ -173,7 +173,7 @@ class AssetReconciliationResource extends Resource
     {
         return $schema->schema([
             Section::make('2. Laporan Hasil Banding')
-                ->description('Tinjau Inline, Gap, dan Blocked sebelum Apply. Tidak ada mutasi Shelf pada tahap ini.')
+                ->description('Tinjau Inline, Gap, dan Blocked sebelum Apply. Tidak ada mutasi GAIS pada tahap ini.')
                 ->schema([
                     Grid::make(4)->schema([
                         TextEntry::make('status')
@@ -228,12 +228,12 @@ class AssetReconciliationResource extends Resource
                         })
                         ->columnSpanFull()
                         ->visible(fn (?AssetReconciliation $record): bool => filled($record?->summary['actions'] ?? null)),
-                    TextEntry::make('summary.orphan_shelf_plates')
-                        ->label('Plat Shelf tanpa pasangan audit')
+                    TextEntry::make('summary.orphan_gais_plates')
+                        ->label('Plat GAIS tanpa pasangan audit')
                         ->numeric()
                         ->helperText('Observasi saja — tidak dihapus otomatis (FR-VA-013).')
                         ->visible(fn (?AssetReconciliation $record): bool => ($record?->source_system ?? null) === 'VEHICLE_AUDIT'
-                            && array_key_exists('orphan_shelf_plates', $record?->summary ?? [])),
+                            && array_key_exists('orphan_gais_plates', $record?->summary ?? [])),
                     TextEntry::make('parent.uuid')
                         ->label('Batch Induk')
                         ->placeholder('-')

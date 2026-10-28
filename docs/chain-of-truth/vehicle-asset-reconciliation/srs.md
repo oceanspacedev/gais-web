@@ -1,14 +1,14 @@
-# SRS — Rekonsiliasi Audit Kendaraan ke Shelf
+# SRS — Rekonsiliasi Audit Kendaraan ke GAIS
 
 Status: Reviewed
 
 ## Tujuan dan aktor
 
-Pengguna berizin `import_asset` membandingkan workbook audit kendaraan (Monitoring Asset / LHP) dengan Shelf, meninjau gap, menerapkan koreksi fleet, lalu memverifikasi ulang tanpa menghapus riwayat aset.
+Pengguna berizin `import_asset` membandingkan workbook audit kendaraan (Monitoring Asset / LHP) dengan GAIS, meninjau gap, menerapkan koreksi fleet, lalu memverifikasi ulang tanpa menghapus riwayat aset.
 
 ## Prinsip sinkronisasi
 
-Setiap sinkronisasi eksternal ke Shelf wajib Export → Import → Laporan → Apply. Berbagi prinsip dengan rekonsiliasi CSA; sumber dan aksi berbeda.
+Setiap sinkronisasi eksternal ke GAIS wajib Export → Import → Laporan → Apply. Berbagi prinsip dengan rekonsiliasi CSA; sumber dan aksi berbeda.
 
 ## Functional requirements
 
@@ -24,7 +24,7 @@ Setiap sinkronisasi eksternal ke Shelf wajib Export → Import → Laporan → A
 - FR-VA-010 — `retire_duplicate` menulis `inventory_active=false` pada kandidat non-keep; tidak hard-delete.
 - FR-VA-011 — `create_missing` hanya saat opsi create aktif (`auto_create_locations` dipakai ulang sebagai flag create aset kendaraan); membuat Asset MOBIL/MOTOR + attribute Plat Nomor.
 - FR-VA-012 — `enrich` mengisi plat/serial/nama kosong pada aset keep yang cocok.
-- FR-VA-013 — Aset Shelf tanpa pasangan audit tidak dihapus otomatis; dicatat di summary observasi.
+- FR-VA-013 — Aset GAIS tanpa pasangan audit tidak dihapus otomatis; dicatat di summary observasi.
 - FR-VA-014 — Export menghasilkan sheet `Monitoring Asset` kanonik dari aset MOBIL/MOTOR aktif/fleet + sheet `PETUNJUK`.
 - FR-VA-015 — `source_system` batch = `VEHICLE_AUDIT`; terpisah dari CSA pada UI dan service.
 - FR-VA-016 — Master custom attribute `STNK` dan `KIR` bertipe `document_expiry` wajib tersedia untuk kategori MOBIL/MOTOR dengan pengingat relative (default H-30).

@@ -1,5 +1,5 @@
 {
-  "name": "shelf-guide-capture",
+  "name": "gais-guide-capture",
   "private": true,
   "type": "module",
   "description": "Membuat screenshot + gambar bergerak untuk panduan docs/ secara otomatis",

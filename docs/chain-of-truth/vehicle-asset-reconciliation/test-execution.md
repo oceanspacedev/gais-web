@@ -22,7 +22,7 @@ Coverage exercised:
 | TC-VA-009 | Unknown ACC → Blocked |
 | TC-VA-010 | Create flag off → missing plate Blocked |
 | TC-VA-011 | Second apply rejected |
-| TC-VA-012 | orphan_shelf_plates counted |
+| TC-VA-012 | orphan_gais_plates counted |
 | TC-VA-013 | Location alias sync on apply |
 | TC-VA-014 | Unique holder → recipient_id |
 | Round-trip | Export Monitoring Asset → parser preserves plate |

@@ -48,7 +48,7 @@ class WhatsAppGateway
                 'headers' => [
                     'Authorization' => 'Bearer '.ltrim($token, 'Bearer '),
                     'Accept' => 'application/json',
-                    'Idempotency-Key' => 'shelf-'.(string) str()->uuid(),
+                    'Idempotency-Key' => 'gais-'.(string) str()->uuid(),
                 ],
                 'json' => [
                     'recipient' => [
@@ -62,7 +62,7 @@ class WhatsAppGateway
                     'purpose' => 'notification',
                     'mode' => 'sync',
                     'route_key' => 'default',
-                    'client_reference' => 'shelf',
+                    'client_reference' => 'gais',
                 ],
             ]);
 

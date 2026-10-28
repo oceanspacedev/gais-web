@@ -11,13 +11,13 @@ Membuat **screenshot per langkah** dan **gambar bergerak (GIF animasi)** untuk p
 cd tools/guide-capture
 npm install
 npx playwright install chromium
-npm run setup-db     # sekali: buat DB db_shelf_capture (struktur dari DB utama + seed minimum)
+npm run setup-db     # sekali: buat DB db_gais_capture (struktur dari DB utama + seed minimum)
 npm run capture      # semua bagian, diawali reset data contoh
 node capture.mjs setup                                   # satu bagian
 node capture.mjs --reset pengajuan-buat,pengajuan-proses # beberapa bagian + reset data dulu
 ```
 
-Skrip menyalakan `php artisan serve` sementara di port 8099 dengan `DB_DATABASE=db_shelf_capture`, lalu menjalankan tiap bagian di `sections.mjs`. DB utama tidak disentuh; `lib.mjs` menolak nama DB yang tidak mengandung `capture`.
+Skrip menyalakan `php artisan serve` sementara di port 8099 dengan `DB_DATABASE=db_gais_capture`, lalu menjalankan tiap bagian di `sections.mjs`. DB utama tidak disentuh; `lib.mjs` menolak nama DB yang tidak mengandung `capture`.
 
 Akun contoh dari `GuideCaptureSeeder` (semua kata sandi `password`). Bagian memilih akun lewat `user: '...'`, default `admin`:
 

@@ -5,7 +5,7 @@ Status: Reviewed
 | Date | Artifact / Gate | Evidence | Result |
 |---|---|---|---|
 | 2026-08-01 | Workbook baseline | Render dua sheet dan ekstraksi sheet ASET | Reviewed |
-| 2026-08-01 | Requirements and flows | Stakeholder request + observed Shelf schema | Reviewed, stakeholder validation pending |
+| 2026-08-01 | Requirements and flows | Stakeholder request + observed GAIS schema | Reviewed, stakeholder validation pending |
 | 2026-08-01 | Data model and APIs | Migration, Eloquent models, service contracts | Reviewed |
 | 2026-08-01 | FR-015 initial business entity | Stakeholder awal menyatakan Retail | Superseded oleh klarifikasi bahwa workbook juga memuat CSN |
 | 2026-08-01 | FR-015..017 mixed entities | Stakeholder menyatakan sebagian data adalah CSN/Complete Solusi Nusantara; workbook menunjukkan marker `(CSA CSN)` | Validated untuk aturan mixed Retail + CSN dan no-guess |

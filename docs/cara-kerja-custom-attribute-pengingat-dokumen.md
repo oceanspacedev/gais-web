@@ -106,4 +106,4 @@ npx playwright install chromium
 npm run capture
 ```
 
-Skrip memakai database terpisah `db_shelf_capture` (tidak menyentuh data asli) dan server sementara di port 8099. Detail ada di [tools/guide-capture/README.md](../tools/guide-capture/README.md).
+Skrip memakai database terpisah `db_gais_capture` (tidak menyentuh data asli) dan server sementara di port 8099. Detail ada di [tools/guide-capture/README.md](../tools/guide-capture/README.md).

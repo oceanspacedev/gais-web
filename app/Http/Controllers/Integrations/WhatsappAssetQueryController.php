@@ -21,9 +21,9 @@ use Illuminate\Validation\Rule;
 class WhatsappAssetQueryController extends Controller
 {
     private const SUPPORTED_ROUTES = [
-        'shelf.search_asset',
-        'shelf.asset_history',
-        'shelf.expiring_documents',
+        'gais.search_asset',
+        'gais.asset_history',
+        'gais.expiring_documents',
     ];
 
     public function __invoke(Request $request): JsonResponse
@@ -67,7 +67,7 @@ class WhatsappAssetQueryController extends Controller
             return $this->envelope([
                 'ok' => false,
                 'result_status' => 'validation_error',
-                'next_question' => 'Format request Shelf belum sesuai kontrak integrasi.',
+                'next_question' => 'Format request GAIS belum sesuai kontrak integrasi.',
                 'errors' => $validator->errors()->toArray(),
             ], 422);
         }
@@ -76,14 +76,14 @@ class WhatsappAssetQueryController extends Controller
         $query = $this->normalizeQuery($data['query'] ?? []);
 
         return match ($data['route']) {
-            'shelf.expiring_documents' => $this->expiringDocuments($query),
+            'gais.expiring_documents' => $this->expiringDocuments($query),
             default => $this->assets($data['route'], $query),
         };
     }
 
     private function assets(string $route, array $query): JsonResponse
     {
-        $includeHistory = $route === 'shelf.asset_history' || $this->bool($query['include_history'] ?? false);
+        $includeHistory = $route === 'gais.asset_history' || $this->bool($query['include_history'] ?? false);
         $assetTag = $this->text($query['asset_tag'] ?? '');
         $serialNumber = $this->text($query['serial_number'] ?? '');
         $imei = preg_replace('/\D+/', '', $this->text($query['imei'] ?? '')) ?: '';

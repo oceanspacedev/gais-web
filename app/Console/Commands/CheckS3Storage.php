@@ -17,8 +17,8 @@ class CheckS3Storage extends Command
 
     public function handle(): int
     {
-        $path = 'shelf-storage-checks/'.Str::uuid().'.txt';
-        $content = 'Shelf S3 check '.Str::random(32);
+        $path = 'gais-storage-checks/'.Str::uuid().'.txt';
+        $content = 'GAIS S3 check '.Str::random(32);
         $created = false;
         $disk = Storage::disk('s3');
 
