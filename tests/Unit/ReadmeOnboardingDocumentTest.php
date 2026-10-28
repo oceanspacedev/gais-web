@@ -62,7 +62,7 @@ class ReadmeOnboardingDocumentTest extends TestCase
     public function test_readme_describes_this_gais_app_from_repo_facts(): void
     {
         foreach ([
-            'https://github.com/oceanspacedev/shelf-web.git',
+            'https://github.com/oceanspacedev/gais-web.git',
             '/admin',
             'Asia/Jakarta',
             'notifications:send-scheduled',
@@ -94,6 +94,7 @@ class ReadmeOnboardingDocumentTest extends TestCase
 
         $this->assertStringContainsString('Jangan menjalankan `composer update`', $this->readme);
         $this->assertStringNotContainsString('CS-BusinessDev/web-shelf', $this->readme);
+        $this->assertStringNotContainsString('oceanspacedev/shelf-web', $this->readme);
     }
 
     public function test_readme_does_not_present_helpdesk_or_dnd_product_identity(): void

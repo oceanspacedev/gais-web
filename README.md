@@ -17,7 +17,7 @@ GAIS menggabungkan dua aplikasi internal yang dulu berjalan terpisah:
 | **Shelf** (kode asli repo ini) | Inventaris aset, transfer dan berita acara, rekonsiliasi audit, checksheet kendaraan dan OB, pekerjaan vendor, pengingat dokumen, QR aset | Aset, Master Aset, OB / Kebersihan, Kendaraan, Pekerjaan Vendor, Organisasi |
 | **sumo-web** ("Web Gais lama") | Pengajuan barang, lapor gangguan, asuransi dan perjanjian sewa, master barang, QR pengajuan/barang, notifikasi WhatsApp | Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, serta Pengaturan > Notifikasi WA dan Impor Data Sumo |
 
-Modul sumo-web dibangun ulang sebagai resource Filament di repo ini, bukan ditempel sebagai aplikasi lain. Data lamanya dipindahkan sekali lewat **Pengaturan > Impor Data Sumo** (atau `php artisan sumo:import`); setelah itu sumo-web tidak perlu dijalankan lagi. Nama repo (`shelf-web`), database production (`db_shelf`), bucket S3, dan domain tidak ikut diganti.
+Modul sumo-web dibangun ulang sebagai resource Filament di repo ini, bukan ditempel sebagai aplikasi lain. Data lamanya dipindahkan sekali lewat **Pengaturan > Impor Data Sumo** (atau `php artisan sumo:import`); setelah itu sumo-web tidak perlu dijalankan lagi. Repo GitHub sudah di-rename menjadi `oceanspacedev/gais-web`; database production (`db_shelf`), bucket S3, folder server, dan domain tidak ikut diganti.
 
 Semua dipakai lewat satu jalur: **panel staf Filament di `/admin`**. Di luar panel hanya ada halaman QR aset publik, unduhan PDF/label untuk user terautentikasi, dan endpoint integrasi WhatsApp.
 
@@ -307,8 +307,8 @@ Gateway WhatsApp, SMTP, object storage S3/MinIO, dan database legacy sumo bersif
 ### Clone dan dependency
 
 ```bash
-git clone https://github.com/oceanspacedev/shelf-web.git
-cd shelf-web
+git clone https://github.com/oceanspacedev/gais-web.git
+cd gais-web
 
 composer install
 cp .env.example .env
@@ -465,7 +465,7 @@ Jadwal yang terdaftar:
 Production memanggil scheduler setiap menit:
 
 ```cron
-* * * * * cd /absolute/path/to/shelf-web && /absolute/path/to/php artisan schedule:run >> storage/logs/scheduler.log 2>&1
+* * * * * cd /absolute/path/to/gais-web && /absolute/path/to/php artisan schedule:run >> storage/logs/scheduler.log 2>&1
 ```
 
 Untuk frontend production-like:
@@ -574,7 +574,7 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 6. **Queue default `redis` + Horizon.** Notifikasi aset mengantri di `notifications`, export Filament di `exports`, Impor Data Sumo di `long-running`. Tanpa Redis dan `php artisan horizon`, job menumpuk diam-diam. Tes memakai `QUEUE_CONNECTION=sync`.
 7. **`phpunit.xml` tidak memaksa SQLite memory.** Full suite menyentuh database development.
 8. **File unggahan sumo lama tidak ikut diimpor.** Folder `Request_File`, `Problem_Report_File`, `Rent_File`, dan `product` harus disalin manual ke disk `public`; nama file di database hanya nama filenya (`App\Support\LegacyUpload`).
-9. **Nama infrastruktur masih Shelf.** Repo `shelf-web`, database `db_shelf`, bucket S3 `shelf`, folder server `/var/www/web-shelf`, dan domain tidak ikut rebranding. Ikon PWA di `public/images/icons/` dan `public/favicon.ico` masih logo lama.
+9. **Nama infrastruktur masih Shelf.** Database `db_shelf`, bucket S3 `shelf`, folder server `/var/www/web-shelf`, dan domain tidak ikut rebranding. Ikon PWA di `public/images/icons/` dan `public/favicon.ico` masih logo lama.
 10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
 11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
 12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.

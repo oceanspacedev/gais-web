@@ -872,7 +872,7 @@ php artisan schedule:work   # bila menguji pengingat</pre>
 
                 <div class="pg-block">
                     <h3>Scheduler di server</h3>
-<pre>* * * * * cd /path/ke/shelf-web &amp;&amp; php artisan schedule:run &gt;&gt; storage/logs/scheduler.log 2&gt;&amp;1</pre>
+<pre>* * * * * cd /path/ke/gais-web &amp;&amp; php artisan schedule:run &gt;&gt; storage/logs/scheduler.log 2&gt;&amp;1</pre>
                     <ul class="pg-list">
                         <li><code>reminder:whatsapp</code>: tiap jam.</li>
                         <li><code>problem-reports:auto-confirm</code>: tiap 10 menit.</li>
