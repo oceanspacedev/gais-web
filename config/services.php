@@ -46,4 +46,9 @@ return [
         'max_digits' => 15,
     ],
 
+    // Login email (kode OTP + magic link) memakai mailer default Laravel (MAIL_*).
+    'email_login' => [
+        'expires_in' => (int) env('EMAIL_LOGIN_EXPIRES_IN', 600),
+    ],
+
 ];

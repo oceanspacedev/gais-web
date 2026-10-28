@@ -69,7 +69,7 @@ Plugin panel lain: filament-pwa, filament-settings-hub, filament-language-switch
 ### Layanan eksternal
 
 - **WagHub** (`WAG_URL`, `WAG_TOKEN`): notifikasi, pengingat, dan OTP login WhatsApp.
-- **SMTP** (opsional): email notifikasi.
+- **SMTP** (opsional): email notifikasi dan login email (kode + magic link).
 - **S3 / MinIO** (opsional): lampiran di production.
 
 Versi diambil dari `composer.lock` dan `package.json` per 14 Oktober 2026.
@@ -132,7 +132,7 @@ Pola Laravel standar: panel Filament → model Eloquent, logika bisnis di `app/S
 | --- | --- |
 | `Resources` | 36 resource CRUD. Satu resource = `XxxResource.php` + `Pages/`, opsional `RelationManagers/` dan `Widgets/` |
 | `Pages` | Halaman custom: `Guide`, `TechnicalDocs`, `ScanItemRequestQr`, `ScanProductQr`, `WaNotificationSettings`, `Auth/Login` |
-| `Auth/Pages` | `PhoneLogin` (login OTP WhatsApp di `/phone-login`) |
+| `Auth/Pages` | `PhoneLogin` (login OTP WhatsApp di `/phone-login`), `EmailLogin` (kode + magic link di `/email-login`) |
 | `Widgets` | 10 widget dashboard modul sumo |
 | `Actions`, `Exports` | Export format audit, exporter aset, BA, servis, checksheet OB |
 
@@ -142,7 +142,7 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 
 | Folder | Isi |
 | --- | --- |
-| `Models` | 51 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
+| `Models` | 52 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
 | `Enums` | Enum status. Trait `Concerns/Utilities` untuk label dan opsi |
 | `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
 | `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
@@ -158,7 +158,7 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 | Folder | Isi |
 | --- | --- |
 | `config/` | Konfigurasi domain: `item-request.php`, `problem-report.php`, `asset-transfer.php`, `asset-reconciliation.php`, `sumo-import.php` |
-| `database/migrations` | 109 migration |
+| `database/migrations` | 110 migration |
 | `database/sumo` | README import dan pemulihan data sumo |
 | `tests/` | `Feature`, `Unit`, dan `Support/SumoLegacyFixture.php` |
 | `docs/` | Dokumen ini dan dokumen pendukung lain |
@@ -169,7 +169,7 @@ File paling besar: `AssetResource.php` (±1.450 baris), lalu `ObChecksheetResour
 
 | File | Rute |
 | --- | --- |
-| `routes/web.php` | `/` → `/admin`, unduh PDF, cetak label QR, `qr/{qr}` publik, `phone-login` |
+| `routes/web.php` | `/` → `/admin`, unduh PDF, cetak label QR, `qr/{qr}` publik, `phone-login`, `email-login` |
 | `routes/api.php` | `/api/user` (Sanctum), query aset WhatsApp (tanpa auth) |
 
 ### Jadwal command
@@ -253,7 +253,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ## Database
 <!-- desc: Peta tabel, kolom kunci, dan relasi Eloquent -->
 
-MySQL `db_shelf`, dibangun dari 109 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
+MySQL `db_shelf`, dibangun dari 110 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
 
 ### Peta tabel
 
@@ -266,6 +266,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | Tabel | Kolom yang perlu dipahami |
 | --- | --- |
 | `users` | `business_entity_id`, `access_all_business_entities`, `division_id`, `approver_user_id` (atasan), `whatsapp_number`, `whatsapp_login_number` (unik, OTP), `employee_id` (Talenta; terisi = field identitas dikunci di form), `legacy_sumo_user_id` |
+| `email_otps` | `user_id`, `email` (huruf kecil), `otp_hash`, `token_hash` (sha256 magic link, unik), `expires_at`, `verified_at`, `attempt_count`; satu baris per permintaan login email, kode dan link sekali pakai bersama |
 | `assets` | `condition_status` (Tersedia, Digunakan, Dijual, Hilang, Rusak), `recipient_id` (pemegang, kosong bila Tersedia), `recipient_business_entity_id`, `nbh_*`, `sold_*`, `qty`, `last_reconciliation_id`. Serial number, IMEI 1/2, dan tipe **bukan kolom**: lihat `custom_asset_attributes.key` |
 | `custom_asset_attributes` | `key` (`serial_number`, `imei1`, `imei2`, `type`): atribut identitas aset yang dibaca kode lewat key, jadi namanya boleh diganti admin tetapi tidak bisa dihapus. Di kode tetap `$asset->serial_number` (properti virtual di `Asset`, simpan ke `asset_attributes`); query memakai `whereIdentity()` / `identitySubquery()`, dan daftar aset memuat `withIdentity()` supaya tidak N+1 |
 | `asset_attributes` | `asset_id`, `custom_attribute_id`, `value`, `search_value` (nilai dinormalisasi tanpa spasi/strip/titik/garis miring, diisi otomatis saat simpan; dipakai pencarian daftar aset) |
@@ -316,7 +317,7 @@ Akses ditentukan **permission** Shield, bukan nama role. Setelah itu dipersempit
 
 ### Tiga lapis akses
 
-1. **Masuk panel.** `User::canAccessPanel()` hanya mengizinkan user yang punya minimal satu role. Login lewat username/email atau OTP WhatsApp (`PhoneLogin`). Registrasi, reset password, dan profil default dimatikan.
+1. **Masuk panel.** `User::canAccessPanel()` hanya mengizinkan user yang punya minimal satu role. Login lewat username/email, OTP WhatsApp (`PhoneLogin`), atau kode/magic link email (`EmailLogin`). Registrasi, reset password, dan profil default dimatikan.
 2. **Permission per aksi.** Policy di `app/Policies` hasil `shield:generate`, format `view_any_asset`, `create_item::request`, dst. Permission custom dibuat lewat migration, misalnya `manage_stock_asset::transfer`, `export_asset`, `view_all_item::request`.
 3. **Badan usaha.** `HasBusinessEntityAccess` + `scopeAccessibleBy`: `super_admin` dan user dengan `access_all_business_entities` melihat semua; user lain melihat badan usaha asal + yang dicentang di `business_entity_user`.
 

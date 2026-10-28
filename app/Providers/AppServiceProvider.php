@@ -3,6 +3,7 @@
 namespace App\Providers;
 
 use App\Enums\BadgeColor;
+use App\Filament\Auth\Pages\EmailLogin;
 use App\Filament\Auth\Pages\PhoneLogin;
 use App\Jobs\Filament\CreateXlsxFile as RetryingCreateXlsxFile;
 use App\Jobs\Filament\ExportCompletion as RetryingExportCompletion;
@@ -131,6 +132,7 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(PermissionRegistrar::class, IndexedPermissionRegistrar::class);
 
         Livewire::component('phone-login', PhoneLogin::class);
+        Livewire::component('email-login', EmailLogin::class);
         ObservabilityAccess::register();
         $this->registerAuthorization();
         $this->configureHttps();

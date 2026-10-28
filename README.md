@@ -149,6 +149,7 @@ Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiabl
 ### 4. Login staf
 
 - Username atau email plus kata sandi di `/admin/login`.
+- Tanpa kata sandi lewat **WhatsApp** (`/phone-login`) atau **Email** (`/email-login`, kode enam digit + magic link); lihat [Login email](#login-email).
 - Reset password dan profil default Filament dimatikan.
 - Tamu yang mengakses rute terlindungi diarahkan ke login panel; user yang sudah masuk diarahkan ke `/admin`.
 
@@ -175,7 +176,7 @@ flowchart TB
 |---|---|
 | `app/Filament/Resources` | CRUD aset, pengajuan, transfer, rekonsiliasi, checksheet, tugas, master, pengguna |
 | `app/Filament/Pages/Auth` | Login username/email Mekaya |
-| `app/Filament/Auth/Pages` | Login OTP WhatsApp untuk akun terdaftar |
+| `app/Filament/Auth/Pages` | Login OTP WhatsApp dan login email (kode + magic link) untuk akun terdaftar |
 | `app/Http/Controllers` | PDF, query WhatsApp, `GET /api/user` |
 | `app/Models` | Model dan lifecycle pengajuan/transfer |
 | `app/Policies` | Authorization panel dan unduhan PDF |
@@ -301,8 +302,9 @@ Blok inti `.env.example` mengikuti skeleton Laravel 12, termasuk `CACHE_STORE`, 
 | `LOG_VIEWER_ENABLED` / `LOG_VIEWER_PATH` | Tidak | UI [Log Viewer](https://github.com/opcodesio/log-viewer); default `/log-viewer` |
 | `BROADCAST_CONNECTION` | Tidak | Default Laravel 12 `log` |
 | `REDIS_CLIENT` / `REDIS_HOST` / `REDIS_PASSWORD` / `REDIS_PORT` | Ya | Koneksi Redis untuk Horizon |
-| `MAIL_*` | Untuk email | Default `.env.example` `MAIL_MAILER=log`. Override ke SMTP/Mailpit jika perlu |
+| `MAIL_*` | Untuk email | Default `.env.example` `MAIL_MAILER=log`. Override ke SMTP/Mailpit jika perlu. Tombol login **Email** hanya muncul bila `MAIL_MAILER` bukan `log`/`array` dan `MAIL_FROM_ADDRESS` terisi |
 | `MAIL_SCHEME` | Tidak | Skema SMTP Laravel 12; ganti `MAIL_ENCRYPTION` lama |
+| `EMAIL_LOGIN_EXPIRES_IN` | Tidak | Masa berlaku kode dan magic link login email; default `600` detik |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` / `AWS_BUCKET` | Untuk S3 | Disk `s3` di `config/filesystems.php` |
 | `AWS_ENDPOINT` / `AWS_URL` | Untuk MinIO/S3-compatible | Endpoint dan URL publik object storage |
 | `AWS_USE_PATH_STYLE_ENDPOINT` | Tidak | Path-style S3; default `false`. Set `true` plus `AWS_ENDPOINT` untuk MinIO |
@@ -510,6 +512,12 @@ Untuk mengaktifkan:
 Admin yang menyimpan nomor di panel, atau **Import Talenta** / impor Excel yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP baru membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
 
 OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun baru dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus Shelf.
+
+### Login email
+
+Pilih **Email** di `/admin/login`, masukkan alamat email di `/email-login`, lalu pakai salah satu isi email yang dikirim: kode enam digit atau tombol magic link (`/email-login/link/{token}`). Keduanya satu record di tabel `email_otps`, jadi memakai salah satu ikut menghanguskan yang lain. Seperti login WhatsApp, halaman tidak memberi tahu apakah email terdaftar: email hanya dikirim bila alamat itu milik tepat satu user (tanpa membedakan huruf besar/kecil) yang punya akses panel.
+
+Kode dan link berlaku `EMAIL_LOGIN_EXPIRES_IN` detik (default 600), hangus setelah lima kali salah kode, saat kode baru diminta, atau saat email user diganti. Permintaan dibatasi per email (3 per 5 menit, 10 per jam) dan per IP. Membuka magic link tidak langsung memakai token; token ditukar setelah halaman tampil, sehingga pemindai link di email tidak menghabiskannya. Email dikirim langsung tanpa queue; bila SMTP gagal, kode dibatalkan dan halaman menampilkan pesan umum.
 
 ### Penarikan tidak bisa di-fulfill
 
