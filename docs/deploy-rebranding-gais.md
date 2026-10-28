@@ -12,7 +12,7 @@ Langkah sekali jalan saat merilis perubahan nama aplikasi menjadi **GAIS (Genera
 
 ## Yang tidak berubah
 
-Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, folder server `/var/www/web-shelf`, dan repo `oceanspacedev/shelf-web`. Ikon aplikasi juga belum diganti.
+Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, folder server `/var/www/web-shelf`, dan repo `oceanspacedev/shelf-web`. Ikon panel dan favicon panel (`public/images/icon.svg`) sudah memakai logo GAIS, tetapi ikon PWA (PNG di `public/images/icons/` dan yang diunggah di Pengaturan PWA) serta `public/favicon.ico` masih logo lama.
 
 ## Urutan deploy
 
