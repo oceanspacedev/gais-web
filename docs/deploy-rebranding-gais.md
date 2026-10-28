@@ -12,7 +12,7 @@ Langkah sekali jalan saat merilis perubahan nama aplikasi menjadi **GAIS (Genera
 
 ## Yang tidak berubah
 
-Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, folder server `/var/www/web-shelf`, dan repo `oceanspacedev/shelf-web`. Ikon panel dan favicon panel (`public/images/icon.svg`) sudah memakai logo GAIS, tetapi ikon PWA (PNG di `public/images/icons/` dan yang diunggah di Pengaturan PWA) serta `public/favicon.ico` masih logo lama.
+Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, dan folder server `/var/www/web-shelf`. Repo GitHub belakangan di-rename menjadi `oceanspacedev/gais-web`; GitHub mengalihkan URL lama, tetapi perbarui `git remote set-url origin` di server dan mesin developer. Ikon panel dan favicon panel (`public/images/icon.svg`) sudah memakai logo GAIS, tetapi ikon PWA (PNG di `public/images/icons/` dan yang diunggah di Pengaturan PWA) serta `public/favicon.ico` masih logo lama.
 
 ## Urutan deploy
 
