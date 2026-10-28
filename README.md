@@ -6,21 +6,25 @@
 
 <p align="center">
   <strong>General Affair Information System</strong><br>
-  Sistem manajemen aset berbasis web untuk inventaris,
-  transfer dan berita acara, rekonsiliasi audit,
-  checksheet kendaraan, serta pengingat dokumen.
+  Satu panel untuk pekerjaan General Affair: inventaris aset, berita acara,
+  audit dan checksheet, pengajuan barang, lapor gangguan, serta asuransi dan sewa.
 </p>
 
-GAIS dipakai lewat satu jalur utama:
+GAIS menggabungkan dua aplikasi internal yang dulu berjalan terpisah:
 
-- **Panel staf Filament** di `/admin` untuk operasional aset, master data, transfer/BA, rekonsiliasi, checksheet kendaraan, tugas, dan pengguna.
+| Asal | Yang dibawa | Grup menu di GAIS |
+|---|---|---|
+| **Shelf** (kode asli repo ini) | Inventaris aset, transfer dan berita acara, rekonsiliasi audit, checksheet kendaraan dan OB, pekerjaan vendor, pengingat dokumen, QR aset | Aset, Master Aset, OB / Kebersihan, Kendaraan, Pekerjaan Vendor, Organisasi |
+| **sumo-web** ("Web Gais lama") | Pengajuan barang, lapor gangguan, asuransi dan perjanjian sewa, master barang, QR pengajuan/barang, notifikasi WhatsApp | Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, serta Pengaturan > Notifikasi WA dan Impor Data Sumo |
 
-Ada juga endpoint integrasi WhatsApp `POST /api/integrations/whatsapp/assets/query` (saat ini tanpa autentikasi; lihat peringatan di bawah).
+Modul sumo-web dibangun ulang sebagai resource Filament di repo ini, bukan ditempel sebagai aplikasi lain. Data lamanya dipindahkan sekali lewat **Pengaturan > Impor Data Sumo** (atau `php artisan sumo:import`); setelah itu sumo-web tidak perlu dijalankan lagi. Nama repo (`shelf-web`), database production (`db_shelf`), bucket S3, dan domain tidak ikut diganti.
 
-Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitungan waktu menggunakan zona waktu `Asia/Jakarta`.
+Semua dipakai lewat satu jalur: **panel staf Filament di `/admin`**. Di luar panel hanya ada halaman QR aset publik, unduhan PDF/label untuk user terautentikasi, dan endpoint integrasi WhatsApp.
+
+Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitungan waktu memakai zona waktu `Asia/Jakarta`.
 
 > [!IMPORTANT]
-> `POST /api/integrations/whatsapp/assets/query` juga tanpa middleware auth; tes saat ini memperlakukannya sebagai publik. Jangan membuka endpoint itu ke internet tanpa kontrol jaringan. Reset password panel Filament dimatikan (`passwordReset(null, null)`).
+> Dua rute berjalan tanpa autentikasi: `POST /api/integrations/whatsapp/assets/query` (query aset untuk bot WhatsApp) dan `GET /qr/{qr}` (halaman QR aset yang mencatat pemindaian dan lokasi). Jangan membuka keduanya ke internet tanpa kontrol jaringan dan jangan menambahkan data sensitif ke responsnya. Reset password dan halaman profil panel Filament dimatikan (`passwordReset(null, null)`, `profile(null)`).
 
 ## Daftar isi
 
@@ -40,68 +44,96 @@ Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitun
 
 ## Tujuan dan scope
 
-GAIS mencatat aset, transfer dan dokumen BA, rekonsiliasi, checksheet kendaraan, dan pengingat masa berlaku dokumen. Pengajuan barang ditangani modul Pengajuan Barang (dari sumo-web); modul Pengajuan Aset lama (pengadaan/penarikan/perbaikan, form publik, approval token) sudah dihapus.
+GAIS adalah sumber data tunggal tim General Affair: siapa memegang aset apa, dokumen BA mana yang menyertainya, apa hasil audit stok dan kendaraan, pengajuan barang apa yang sedang berjalan, gangguan apa yang dilaporkan, dan kontrak asuransi/sewa mana yang akan jatuh tempo.
 
 ### Termasuk dalam scope
 
 - `GET /` mengarah ke panel `/admin`.
-- Panel Filament di `/admin`: aset, transfer, rekonsiliasi (CSA dan audit kendaraan), checksheet kendaraan, atribut kustom, tugas, vendor, dan master data.
-- Role Shield `super_admin` plus role operasional `general_affair` (penerima penarikan, jenis dokumen BA, perbaikan).
-- Login panel dengan username atau email di `/admin/login`. Registrasi mandiri, reset password, dan halaman profil default Filament dimatikan.
-- Unduhan PDF berita acara / penyelesaian tugas (hanya user terautentikasi).
-- Pengingat dokumen terjadwal (`notifications:send-scheduled` setiap hari pukul 13:20) plus `model:prune` harian.
-- Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi dan pengingat.
-- Query aset dari integrasi WhatsApp: `gais.search_asset`, `gais.asset_history`, `gais.expiring_documents`.
-- Health check Laravel di `/up`.
+- Panel Filament dengan sepuluh grup menu (lihat [Fitur utama](#fitur-utama)), dashboard dengan widget statistik aset dan ringkasan modul sumo, halaman **Panduan** untuk semua user, dan halaman **Dokumentasi Teknis** (dirender dari [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md)) untuk developer.
+- Login panel dengan username atau email, OTP WhatsApp, atau kode/magic link email. Registrasi mandiri, reset password, dan profil default Filament dimatikan.
+- Unduhan PDF berita acara dan penyelesaian tugas, cetak label QR aset, QR pengajuan, dan QR barang (semua butuh login).
+- Halaman QR aset publik `GET /qr/{qr}` yang menampilkan aset dan mencatat pemindaian beserta lokasi.
+- Command terjadwal: pengingat dokumen aset, pengingat sewa/asuransi/cutoff pengajuan, konfirmasi otomatis laporan gangguan, snapshot Horizon, dan `model:prune`.
+- Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi, pengingat, dan OTP login.
+- Query aset dari bot WhatsApp: `gais.search_asset`, `gais.asset_history`, `gais.expiring_documents`.
+- Impor data legacy sumo-web dari panel atau CLI, idempoten.
+- Import user hanya dari JSON Talenta; import Excel untuk aset, produk, asuransi, sewa, dan checksheet kendaraan.
+- Health check Laravel di `/up`; Horizon, Pulse, dan Log Viewer untuk pemegang permission observability.
 
 ### Di luar scope implementasi saat ini
 
-- Aplikasi mobile terpisah; staf memakai panel Filament.
-- Produk REST API domain. `routes/api.php` hanya mengekspos `GET /api/user` (Sanctum) dan `POST /api/integrations/whatsapp/assets/query` (tanpa auth).
-- Role operasional `general_affair` dan `admin` **tidak** dibuat oleh seeder; hanya akun Shield `super_admin` yang di-seed.
+- Aplikasi mobile terpisah; staf memakai panel Filament (tersedia sebagai PWA).
+- Produk REST API domain. `routes/api.php` hanya mengekspos `GET /api/user` (Sanctum) dan query aset WhatsApp.
+- Form publik untuk pengajuan atau laporan. Modul Pengajuan Aset lama (pengadaan/penarikan/perbaikan dengan token approval) sudah dihapus; penggantinya adalah Pengajuan Barang di dalam panel.
+- Pembuatan role `general_affair` dan `admin`; keduanya dibuat manual oleh super admin.
 - Pipeline CI/CD, image container, atau orkestrasi Compose di repositori ini.
 
 ## Fitur utama
 
-Ketersediaan modul pada setiap surface saat ini:
+Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::navigationGroups()` dan dijaga `NavigationGroupsTest`.
 
-| Modul | Panel `/admin` | Integrasi WhatsApp | Keterangan |
-|---|:---:|:---:|---|
-| Inventaris aset | Ya | Query | Kondisi: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai |
-| Transfer aset dan BA | Ya | Tidak | BA / BAPAB / BAPEB dari peran `general_affair`; unduh PDF butuh auth |
-| Rekonsiliasi / audit | Ya | Tidak | CSA (stok) dan VEHICLE_AUDIT (plat); apply koreksi terpisah dari import |
-| Checksheet kendaraan | Ya | Tidak | Resource Filament plus import/export |
-| Atribut kustom dan pengingat dokumen | Ya | Query kedaluwarsa | Scheduler `notifications:send-scheduled` |
-| Tugas (task) | Ya | Tidak | PDF penyelesaian tugas butuh auth |
-| Master data | Ya | Tidak | Kategori, badan usaha, jabatan, merek, lokasi, divisi+approver, vendor, pengguna |
-| Pengguna dan role | Ya | Tidak | Permission Filament Shield; masuk panel hanya jika user punya role. Import Talenta/Excel mengisi `employee_id` dan nomor WhatsApp |
-| Query aset WhatsApp | Tidak | Ya | `POST /api/integrations/whatsapp/assets/query` tanpa auth |
+| Grup menu | Menu | Asal | Keterangan |
+|---|---|---|---|
+| Aset | Aset, BA (asset transfers), servis aset, Import & Laporan Audit Aset, History Label QR | Shelf | Kondisi aset: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai. Pencarian daftar aset ikut mencocokkan atribut kustom (plat, serial number, IMEI) |
+| Master Aset | Kategori, merek, vendor, atribut kustom, pintasan Lokasi | Shelf | Atribut kustom bertipe dokumen jadi sumber pengingat masa berlaku |
+| OB / Kebersihan | OB Checksheets, Ruangan OB, Shift OB, pintasan Lokasi | Shelf | Checklist kebersihan per shift dan ruangan, foto bisa diperbesar, export Excel |
+| Kendaraan | Checksheet kendaraan | Shelf | Import/export checksheet kendaraan per plat |
+| Pekerjaan Vendor | Tugas vendor | Shelf | PDF penyelesaian tugas vendor |
+| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log |
+| Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup |
+| Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp |
+| Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta |
+| Pengaturan (collapsed) | Roles (Shield), site/PWA settings, Notifikasi WA, Impor Data Sumo, Exceptions, tautan Horizon dan Log Viewer | campuran | Tiap item dijaga permission masing-masing |
+
+Di luar grup: **Dashboard** (widget statistik aset, Overlook, dan sepuluh widget modul sumo), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
+
+Surface di luar panel:
+
+| Surface | Rute | Auth |
+|---|---|---|
+| Unduh PDF BA / penyelesaian tugas | `GET /asset-transfer/{id}/download`, `GET /task-completion/{id}/download` | `auth` + policy `view` |
+| Cetak label QR aset | `GET /assets/{asset}/qr-label/print`, `GET /assets/qr-labels/print` | `auth` |
+| QR pengajuan dan QR barang | `GET /item-requests/{itemRequest}/qr-labels`, `GET /products/{product}/qr-label` | `auth` |
+| Unduhan file privat (S3) | `GET /stored-file/download` | `auth` + signed URL |
+| Upload foto dari kamera | `POST /admin/camera-upload` | `auth` |
+| Halaman QR aset publik | `GET /qr/{qr}`, `POST /qr/{qr}/location` | tanpa auth (lokasi di-throttle 60/menit) |
+| Query aset bot WhatsApp | `POST /api/integrations/whatsapp/assets/query` | tanpa auth |
+| Login tanpa kata sandi | `/phone-login`, `/email-login`, `/email-login/link/{token}` | tamu |
 
 > [!NOTE]
-> Detail operasional atribut kustom (STNK, KIR, dan sejenisnya) ada di [`docs/cara-kerja-custom-attribute-pengingat-dokumen.md`](docs/cara-kerja-custom-attribute-pengingat-dokumen.md). Jejak keputusan rekonsiliasi ada di `docs/chain-of-truth/`.
+> Detail atribut kustom (STNK, KIR, dan sejenisnya) ada di [`docs/cara-kerja-custom-attribute-pengingat-dokumen.md`](docs/cara-kerja-custom-attribute-pengingat-dokumen.md). Jejak keputusan rekonsiliasi ada di `docs/chain-of-truth/`. Aturan impor dan pemulihan data sumo ada di [`database/sumo/README.md`](database/sumo/README.md).
 
 ## Role dan hak akses
 
-Hak akses panel ditentukan permission Filament Shield pada masing-masing role, lalu dipersempit oleh policy di [`app/Policies`](app/Policies). Nama role saja tidak cukup.
+Hak akses ditentukan **permission Filament Shield** pada role, lalu dipersempit policy di [`app/Policies`](app/Policies). Nama role tidak pernah dicek di kode (`PermissionOnlyAuthorizationTest`); permission custom dibuat lewat migrasi dan diberikan ke role yang memang memakainya.
 
-`User::canAccessPanel()` mengizinkan masuk `/admin` hanya jika user memiliki minimal satu role. Login memakai field **Username or Email**.
+`User::canAccessPanel()` mengizinkan masuk `/admin` hanya jika user memiliki minimal satu role.
 
-Akses data dibatasi per badan usaha dengan tiga aturan: `super_admin` melihat semua; user dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah badan usaha yang dicentang di form user (tabel `business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin. Migrasi `2026_10_08_000007` menandai semua user panel yang sudah ada dengan flag tersebut agar alur lama tidak berubah; super admin mempersempitnya setelah itu. Pembatasan berlaku pada:
+### Batas badan usaha
 
-- **Users**, impersonasi, dan import user (baris di luar akses dilewati dan pengimpor diberi notifikasi).
-- **Aset**: terlihat bila badan usaha pemilik, badan usaha penerima (BA terakhir / penanda stok), atau badan usaha pemegangnya termasuk akses (`Asset::scopeAccessibleBy`). Widget statistik aset mengikuti aturan yang sama.
-- **BA (Asset Transfers)**: terlihat bila badan usaha BA termasuk akses; termasuk unduhan PDF. Saat membuat BA, badan usaha dan aset yang bisa dipilih dibatasi, dan `AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya.
-- **Pengajuan (Asset Requests)**: terlihat bila badan usaha pemohon atau aset yang diajukan termasuk akses; pengajuan sendiri dan yang menunggu persetujuan user selalu terlihat.
+`super_admin` melihat semua; user dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah yang dicentang di form user (`business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin.
 
-Pilihan badan usaha di form Aset, BA, dan pembuatan user cepat memakai `BusinessEntity::optionsFor()`. Policy Aset, BA, dan Pengajuan juga menolak record di luar akses, sehingga URL langsung dan unduhan ikut terlindungi.
+Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`Asset::scopeAccessibleBy`: badan usaha pemilik, penerima BA terakhir, atau pemegang), BA termasuk unduhan PDF (`AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya), serta modul sumo lewat trait `HasBusinessEntityAccess`. Impor sumo memetakan badan usaha lama ke badan usaha GAIS dan tidak pernah membuat yang baru.
 
-### Akses efektif
+### Visibilitas Pengajuan Barang dan Lapor Gangguan
 
-| Aktor | Akses utama |
-|---|---|
-| `super_admin` | Role Shield; seeder menugaskannya ke akun Super Admin. Bypass Gate Pulse (`viewPulse`) hanya untuk role ini. |
-| `general_affair` | Role operasional: penerima wajib pada fulfillment penarikan, penentu jenis dokumen BA, dan aksi perbaikan aset. **Tidak** di-seed. |
-| `admin` | Target permission `export_asset` bersama `general_affair` (`EnsureAssetExportPermissions`). **Tidak** di-seed. |
+Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). `ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`.
+
+### Role
+
+| Role | Dibuat oleh | Fungsi |
+|---|---|---|
+| `super_admin` | Seeder (`shield:super-admin`) | Akses penuh; satu-satunya yang boleh mengubah akses badan usaha user |
+| `general_affair` | Manual | Pihak GA pada BA/BAPEB, penentu jenis dokumen BA, aksi perbaikan aset |
+| `admin` | Manual | Target permission `export_asset` (bersama `general_affair`) dan `manage_stock_asset::transfer`; migrasi hanya memberi permission bila role sudah ada |
+| `pengajuan_admin` | Migrasi `2026_10_13_000007` | Semua permission modul sumo (dulu ADMIN) |
+| `accounting` | Migrasi `2026_10_13_000007` | Lihat dan setujui tahap Accounting pengajuan, export, widget biaya |
+| `executor` | Migrasi `2026_10_13_000007` | Proses pengajuan dan laporan gangguan, setujui sebagai manager, scan QR, semua widget |
+| `requester` | Migrasi `2026_10_13_000007` | Buat dan lihat pengajuan dan laporan sendiri (dulu USER) |
+
+Impor sumo memetakan role lama ke empat role terakhir dan menambahkan permission per divisi (HCM mengelola asuransi/sewa/master, AUDIT mengisi catatan audit, MIS-IT melihat semua pengajuan) sesuai `config/sumo-import.php`.
+
+Permission custom yang perlu diketahui: `manage_stock_asset::transfer`, `export_asset`, `import_asset`, `view_all_item::request`, `approve_accounting_item::request`, `approve_manager_item::request`, `process_item::request`, `audit_item::request`, `change_applicant_item::request`, `view_all_problem::report`, `process_problem::report`, `View:WaNotificationSettings`, `View:ScanItemRequestQr`, `View:ScanProductQr`, `View:TechnicalDocs`, `Manage:SumoImport`, `View:Horizon`, `View:LogViewer`, `Download:LogViewer`, `Delete:LogViewer`, `View:Pulse`, `impersonate_user`, dan `widget_*` untuk tiap widget dashboard. Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
 
 ### Akun uji development
 
@@ -111,46 +143,74 @@ Kredensial berikut hanya dibuat oleh `php artisan db:seed` / `migrate --seed` ke
 |---|---|---|---|---|
 | Super Admin | `admin` | `admin@dev.com` | `super_admin` | `password` |
 
-Override lewat `SEED_SUPER_ADMIN_USERNAME`, `SEED_SUPER_ADMIN_EMAIL`, `SEED_SUPER_ADMIN_NAME`, dan `SEED_SUPER_ADMIN_PASSWORD` (variabel ini tidak tercantum di `.env.example`). Seeder juga menjalankan `shield:generate` lalu Category, Business Entity, Job Title, dan Brand. `AssetLocationSeeder` dan `AssetSeeder` tidak dipanggil.
-
-Role `general_affair` harus dibuat dan ditugaskan manual sebelum alur penarikan/BA dapat berjalan utuh.
+Override lewat `SEED_SUPER_ADMIN_USERNAME`, `SEED_SUPER_ADMIN_EMAIL`, `SEED_SUPER_ADMIN_NAME`, dan `SEED_SUPER_ADMIN_PASSWORD` (dikomentari di `.env.example`). Seeder juga menjalankan `shield:generate` lalu Category, Business Entity, Job Title, dan Brand. `AssetLocationSeeder`, `AssetSeeder`, dan `GuideCaptureSeeder` (data contoh untuk `tools/guide-capture`) tidak dipanggil.
 
 ## Cara kerja aplikasi
 
 ```mermaid
 flowchart LR
-    A[Staf buka /admin] --> B[Aset / Transfer BA / Rekonsiliasi]
-    J["Scheduler 13:20"] --> K[notifications:send-scheduled]
+    Staf[Staf login /admin] --> Aset[Aset, BA, audit, checksheet]
+    Staf --> Req[Pengajuan Barang]
+    Staf --> PR[Lapor Gangguan]
+    Staf --> Kontrak[Asuransi & Sewa]
+    Req --> Acc[Accounting] --> Mgr[Manager] --> Exec[Executor] --> Konf[Konfirmasi pemohon]
+    PR --> Exec2[Executor tutup] --> Konf2[Konfirmasi pelapor / otomatis 24 jam]
+    Sched[Scheduler] --> Dok[notifications:send-scheduled 13:20]
+    Sched --> Rem[reminder:whatsapp tiap jam]
+    Sched --> Auto[problem-reports:auto-confirm tiap 10 menit]
+    Dok --> WA[WhatsApp WagHub]
+    Rem --> WA
 ```
 
-### 1. Transfer dan berita acara
+### 1. Transfer dan berita acara (Shelf)
 
-Resource Asset Transfers mencatat mutasi pemegang. Jenis dokumen dipilih eksplisit saat BA dibuat (kolom `document_type`); pemberi dan penerima selalu orang, dan stok adalah aset Tersedia tanpa pemegang:
+Resource BA mencatat mutasi pemegang. Jenis dokumen dipilih eksplisit saat BA dibuat (`document_type`); pemberi dan penerima selalu orang, dan stok adalah aset Tersedia tanpa pemegang:
 
-- **BA** serah terima: staf `general_affair` mengeluarkan aset dari stok ke pemegang baru (aset menjadi Digunakan)
-- **BAPAB** pengalihan barang: pemegang mengalihkan aset ke orang lain, termasuk ke staf GA secara pribadi (tetap Digunakan)
-- **BAPEB** pengembalian barang: pemegang mengembalikan aset ke staf `general_affair`; aset kembali ke stok tanpa pemegang (Tersedia)
+- **BA** serah terima: staf `general_affair` mengeluarkan aset dari stok ke pemegang baru (aset menjadi Digunakan).
+- **BAPAB** pengalihan barang: pemegang mengalihkan aset ke orang lain, termasuk ke staf GA secara pribadi (tetap Digunakan).
+- **BAPEB** pengembalian barang: pemegang mengembalikan aset ke staf `general_affair`; aset kembali ke stok tanpa pemegang (Tersedia).
 
-Pihak GA pada BA staf GA selalu akunnya sendiri: staf GA tidak bisa membuat BA atas nama staf GA lain. Super admin dan pemegang izin Shield **Kelola BA Stok** (`manage_stock_asset::transfer`, diberikan ke role `admin` oleh migrasi `2026_10_08_000008` karena role ini sudah membuat BA stok di alur lama) boleh membuat BA/BAPEB atas nama staf GA mana pun; user lain hanya bisa membuat BAPAB. Aturan ini dipaksa di server (`AssetTransfer::applyLifecycleToAssets` menerima aktor), bukan hanya di form. BA lama diisi jenisnya oleh migrasi `2026_10_08_000005`, dan stok lama (aset Tersedia, aset yang BA terakhirnya pengembalian, serta aset Rusak/Hilang yang dipegang staf GA) dilepas dari akun GA oleh `2026_10_08_000006`. Model `Asset` menjaga invarian stok: aset Tersedia selalu disimpan tanpa pemegang.
+Pihak GA pada BA staf GA selalu akunnya sendiri. Super admin dan pemegang izin **Kelola BA Stok** (`manage_stock_asset::transfer`) boleh membuat BA/BAPEB atas nama staf GA mana pun; user lain hanya bisa membuat BAPAB. Aturan dipaksa di server (`AssetTransfer::applyLifecycleToAssets` menerima aktor), bukan hanya di form. Model `Asset` menjaga invarian stok: aset Tersedia selalu disimpan tanpa pemegang.
 
-Membuat dan mengedit BA berjalan dalam satu transaksi database: bila aturan siklus hidup menolak, BA ikut dibatalkan dan form bisa dikirim ulang. Menyimpan BA tanpa mengubah jenis, pihak, badan usaha, atau daftar aset (mis. mengunggah scan BA yang sudah ditandatangani) tidak memindahkan aset lagi.
+Membuat dan mengedit BA berjalan dalam satu transaksi database. Menyimpan BA tanpa mengubah jenis, pihak, badan usaha, atau daftar aset (misalnya mengunggah scan BA bertanda tangan) tidak memindahkan aset lagi. Akun GA bersama (`GA_SHARED_ACCOUNT_USERNAMES`, default `adminga`) dikosongkan nama dan jabatannya di PDF supaya diisi tangan oleh staf GA yang menandatangani.
 
-Akun GA bersama yang mewakili departemen (default username `adminga`, diatur lewat `GA_SHARED_ACCOUNT_USERNAMES` di `config/asset-transfer.php`) dikosongkan nama dan jabatannya di PDF BA dan penyelesaian tugas supaya diisi tangan oleh staf GA yang menandatangani.
+### 2. Rekonsiliasi audit (Shelf)
 
-Unduhan: `GET /asset-transfer/{id}/download`, `GET /task-completion/{id}/download` — semua `auth` plus policy `view`.
+Resource **Import & Laporan Audit Aset** membandingkan workbook CSA (sheet `ASET`, qty) atau audit kendaraan (sheet `Monitoring Asset`, plat) terhadap data GAIS. File di-stage dulu; data aplikasi baru berubah setelah **Terapkan Koreksi**. Resource ini memakai permission `import_asset`. Export audit kendaraan menulis kolom `GAIS`; import tetap menerima workbook lama berkolom `SHELF`.
 
-### 2. Rekonsiliasi audit
+### 3. Pengingat dokumen aset (Shelf)
 
-Resource **Import & Laporan Audit** membandingkan workbook CSA (sheet `ASET`, qty) atau audit kendaraan (sheet `Monitoring Asset`, plat) terhadap data GAIS. File di-stage dulu; data aplikasi baru berubah setelah **Terapkan Koreksi**. Resource ini memakai permission `import` pada `Asset`.
+Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiable`. Command `notifications:send-scheduled` (harian 13:20) mengirim WhatsApp/email ke penerima yang dikonfigurasi lewat queue `notifications`. Bot WhatsApp juga bisa menanyakan dokumen yang akan kedaluwarsa lewat rute `gais.expiring_documents`.
 
-### 3. Pengingat dokumen
+### 4. Pengajuan Barang (sumo-web)
 
-Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiable`. Command `notifications:send-scheduled` (jadwal harian 13:20) mengirim WhatsApp/email ke penerima yang dikonfigurasi. Integrasi WhatsApp juga dapat menanyakan dokumen yang akan kedaluwarsa lewat rute `gais.expiring_documents`.
+Logikanya ada di `app/Services/ItemRequestWorkflow.php`:
 
-### 4. Login staf
+1. Pemohon memilih tipe pengajuan, mengisi barang dan jumlah, dan mengunggah lampiran bila tipenya mewajibkan. Kode otomatis `REQ{id}`. Maksimal dua pengajuan terbuka per tipe per pemohon (`ITEM_REQUEST_MAX_OPEN_PER_TYPE`).
+2. Empat baris approval dibuat otomatis: Accounting, Manager, Executor, Pemohon. Status awal **Menunggu**.
+3. **Accounting** (bila tipe mensyaratkannya) mengisi status dan nomor PO lalu menyetujui.
+4. **Manager** (atasan di `users.approver_user_id`) menyetujui; jumlah disetujui bisa diubah per barang.
+5. **Executor** memutuskan: Diproses, Selesai, Dibatalkan, atau kembali ke antrean.
+6. **Pemohon** mengonfirmasi penerimaan; status menjadi Diterima dan pengajuan tertutup.
+
+Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan mengatur tanggal buka/tutup per bulan; cutoff-nya ikut diingatkan lewat WhatsApp. QR pengajuan dan QR barang dicetak dari resource dan dipindai lewat halaman **Scan QR Pengajuan** / **Scan QR Barang**.
+
+### 5. Lapor Gangguan (sumo-web)
+
+`app/Services/ProblemReportWorkflow.php`: pelapor membuat laporan dengan jenis gangguan dan foto sebelum (kode `PR{id}`, satu laporan belum terkonfirmasi per pelapor); executor mengisi status, jadwal, foto sesudah, dan hasil; pelapor mengonfirmasi dan memberi ulasan. Bila pelapor diam, `problem-reports:auto-confirm` (tiap 10 menit) mengonfirmasi laporan yang sudah ditutup lebih dari 24 jam. Laporan yang dibatalkan langsung dianggap terkonfirmasi.
+
+### 6. Asuransi, sewa, dan pengingat WhatsApp (sumo-web)
+
+Asuransi dan sewa menyimpan kontrak per badan usaha beserta riwayat perubahannya (tab Updates). Menu **Pengaturan > Notifikasi WA** mengatur nomor tujuan global, jam kirim, hari-hari pengingat sebelum jatuh tempo, saklar per jenis (sewa, asuransi, cutoff pengajuan), uji kirim, dan ganti nomor massal. `reminder:whatsapp` dijadwalkan tiap jam tetapi mengirim sekali sehari setelah jam kirim terlewati; `wa_notification_logs` mencegah satu nomor menerima pengingat ganda untuk referensi yang sama di hari yang sama. Opsi `--dry-run` menampilkan tanpa mengirim, `--force` mengabaikan jam kirim.
+
+### 7. QR aset (Shelf)
+
+Setiap aset dapat punya satu QR (`assets:generate-missing-qrs` untuk yang belum punya). Label dicetak per aset atau massal dan riwayatnya ada di **History Label QR**. Memindai QR membuka `GET /qr/{qr}` tanpa login: halaman menampilkan ringkasan aset, mencatat pemindaian, dan bila pengguna mengizinkan, menyimpan lokasi GPS lewat `POST /qr/{qr}/location`.
+
+### 8. Login staf
 
 - Username atau email plus kata sandi di `/admin/login`.
-- Tanpa kata sandi lewat **WhatsApp** (`/phone-login`) atau **Email** (`/email-login`, kode enam digit + magic link); lihat [Login email](#login-email).
+- Tanpa kata sandi lewat **WhatsApp** (`/phone-login`; tombol muncul bila `WAG_URL` dan `WAG_TOKEN` terisi) atau **Email** (`/email-login`, kode enam digit + magic link; tombol muncul bila `MAIL_MAILER` bukan `log`/`array`). Detail di [Troubleshooting](#login-whatsapp).
 - Reset password dan profil default Filament dimatikan.
 - Tamu yang mengakses rute terlindungi diarahkan ke login panel; user yang sudah masuk diarahkan ke `/admin`.
 
@@ -158,58 +218,75 @@ Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiabl
 
 ```mermaid
 flowchart TB
-    Staf[Browser staf] --> Filament[Filament Livewire /admin]
-    Filament --> Policies[Policies dan Shield]
-    Scheduler[Laravel Scheduler] --> Notif[notifications:send-scheduled]
-    WAClient[Klien WhatsApp] --> Query["POST /api/integrations/whatsapp/assets/query"]
-    Filament --> Models
+    Staf[Browser staf / PWA] --> Filament[Filament Livewire /admin]
+    Filament --> Policies[Policies + Shield + batas badan usaha]
+    Policies --> Services[app/Services: workflow, rekonsiliasi, QR, notifikasi]
+    Services --> Models[Eloquent] --> DB[(MySQL database GAIS)]
+    Filament --> Files[(Disk public / s3)]
+    Scheduler[Laravel Scheduler] --> Cmd[notifications:send-scheduled, reminder:whatsapp, problem-reports:auto-confirm]
+    Cmd --> Queue
+    Filament --> Queue[Redis: notifications, default, exports, long-running]
+    Queue --> Horizon[php artisan horizon]
+    Horizon --> WA[WhatsAppGateway WagHub]
+    Horizon --> Mail[SMTP]
+    Horizon --> Sumo[(MySQL db_sumo staging)]
+    Sumo -. sumo:import .-> DB
+    Bot[Bot WhatsApp] --> Query["POST /api/integrations/whatsapp/assets/query"]
+    Publik[Pemindai QR] --> QR["GET /qr/{qr}"]
     Query --> Models
-    Notif --> WA[WhatsAppGateway WagHub]
-    Models --> DB[(MySQL)]
-    Filament --> Files[(Filesystem disk)]
-    Worker["php artisan horizon"] --> Redis[(Redis)]
-    Worker --> Files
+    QR --> Models
 ```
 
 ### Peta source code
 
 | Lokasi | Tanggung jawab |
 |---|---|
-| `app/Filament/Resources` | CRUD aset, pengajuan, transfer, rekonsiliasi, checksheet, tugas, master, pengguna |
-| `app/Filament/Pages/Auth` | Login username/email Mekaya |
-| `app/Filament/Auth/Pages` | Login OTP WhatsApp dan login email (kode + magic link) untuk akun terdaftar |
-| `app/Http/Controllers` | PDF, query WhatsApp, `GET /api/user` |
-| `app/Models` | Model dan lifecycle pengajuan/transfer |
-| `app/Policies` | Authorization panel dan unduhan PDF |
-| `app/Services` | Notifikasi, rekonsiliasi CSA/kendaraan, gateway WhatsApp |
-| `app/Console/Commands` | `notifications:send-scheduled`, `vehicle-audit:validate-masters` |
-| `app/Support` | Normalizer rekonsiliasi, grant `export_asset` |
-| `database/migrations` | Evolusi schema |
-| `database/seeders` | Super Admin Shield plus master kategori/badan usaha/jabatan/merek |
-| `routes/web.php` | Redirect `/`, PDF |
+| `app/Filament/Resources` | Resource CRUD untuk semua grup menu (satu resource = `XxxResource.php` + `Pages/`, opsional `RelationManagers/` dan `Widgets/`) |
+| `app/Filament/Pages` | `Guide` (Panduan), `TechnicalDocs`, `ScanItemRequestQr`, `ScanProductQr`, `WaNotificationSettings`, `Auth/Login` |
+| `app/Filament/Auth/Pages` | `PhoneLogin` (OTP WhatsApp) dan `EmailLogin` (kode + magic link) |
+| `app/Filament/Widgets` | Widget dashboard modul sumo |
+| `app/Filament/Actions`, `Exports` | Export format audit CSA/kendaraan; exporter aset, BA, servis, checksheet OB |
+| `app/Http/Controllers` | PDF, label QR aset dan sumo, QR publik, upload kamera, unduhan bertanda tangan, `Integrations/WhatsappAssetQueryController`, `GET /api/user` |
+| `app/Models` | Model Eloquent; `Concerns/HasBusinessEntityAccess` untuk scope badan usaha |
+| `app/Enums` | Status aset, BA, servis, kontrak, pengajuan, laporan gangguan, notifikasi WA |
+| `app/Policies` | Authorization panel dan unduhan PDF (hasil `shield:generate`) |
+| `app/Services` | Workflow pengajuan/gangguan, rekonsiliasi CSA/kendaraan, QR, notifikasi, pengingat kontrak, gateway WhatsApp, `TalentaUserImportService`, `Sumo/` (importer dan loader dump) |
+| `app/Support` | Normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `ObservabilityAccess`, `EnsureAssetExportPermissions` |
+| `app/Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan |
+| `app/Jobs`, `app/Mail` | Job notifikasi aset, `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`), job export Filament yang ditimpa |
+| `app/Console/Commands` | `notifications:send-scheduled`, `reminder:whatsapp`, `problem-reports:auto-confirm`, `sumo:import`, `assets:generate-missing-qrs`, `storage:migrate-to-s3`, `storage:check-s3`, `vehicle-audit:validate-masters` |
+| `config/` | Konfigurasi domain: `asset-transfer.php`, `asset-reconciliation.php`, `vehicle-asset-reconciliation.php`, `item-request.php`, `problem-report.php`, `sumo-import.php` |
+| `database/migrations` | Evolusi schema, termasuk permission dan role custom |
+| `database/seeders` | Super Admin Shield plus master kategori/badan usaha/jabatan/merek; `GuideCaptureSeeder` untuk screenshot panduan |
+| `database/sumo` | Aturan impor dan pemulihan data legacy sumo-web |
+| `routes/web.php` | Redirect `/`, login tanpa kata sandi, PDF, label QR, QR publik |
 | `routes/api.php` | Sanctum `/api/user` dan query WhatsApp |
-| `bootstrap/app.php` | Health `/up`, jadwal 13:20, trust proxies |
+| `routes/console.php` | Jadwal `horizon:snapshot`, `problem-reports:auto-confirm`, `reminder:whatsapp` |
+| `bootstrap/app.php` | Health `/up`, jadwal `notifications:send-scheduled` dan `model:prune`, trust proxies |
+| `resources/views` | Blade untuk PDF, email, halaman QR, login, dan halaman Filament custom |
 | `deploy/web-gais-queue.service` | Unit systemd `php artisan horizon` |
-| `resources/views/public` | Blade form/status/approval |
-| `tests` | Unit dan feature test |
-| `docs/` | Panduan atribut kustom dan chain-of-truth rekonsiliasi |
+| `tools/guide-capture` | Perekam screenshot untuk halaman Panduan |
+| `tests` | Unit, feature, dan fixture di `tests/Support` (termasuk `SumoLegacyFixture`) |
+| `docs/` | Dokumentasi teknis, panduan atribut kustom, S3 production, deploy rebranding, chain-of-truth rekonsiliasi |
 
 ## Tech stack
 
 | Komponen | Teknologi |
 |---|---|
-| Backend | PHP `^8.2`, Laravel 12 |
-| Admin UI | Filament 4, Livewire, Mekaya Theme |
+| Backend | PHP 8.4 (`composer.json` menulis `^8.2`, tetapi `composer.lock` mengunci paket yang butuh `>=8.4.1`), Laravel 12 |
+| Admin UI | Filament 4, Livewire 3, Mekaya Theme (`kungfufafa/mekaya-theme` dari repo Git) |
+| Plugin panel | Filament Shield, Settings Hub, PWA, Exceptions, Language Switch, Impersonate, Overlook, Resized Column |
 | Frontend build | Vite 8, Tailwind CSS 4, Axios |
-| Database | MySQL (default `.env.example`) |
+| Database | MySQL 8 (default `.env.example`); koneksi kedua `sumo` untuk staging impor |
 | Filesystem | Disk Laravel `local` / `public`; disk `s3` via `AWS_*` (MinIO/S3-compatible) |
-| Auth panel | Filament login (username atau email); reset password dan profil default dimatikan |
+| Auth panel | Filament login (username atau email), OTP WhatsApp, kode/magic link email; reset password dan profil dimatikan |
 | Authorization | Filament Shield / Spatie Permission |
 | PDF | barryvdh/laravel-dompdf |
+| QR code | endroid/qr-code |
 | Import/export | pxlrbt/filament-excel, eightynine/filament-excel-import |
 | Notifikasi | Mail + WhatsApp (WagHub `WAG_URL` / `WAG_TOKEN`) |
 | Queue | Laravel Horizon 5 (`php artisan horizon`, `QUEUE_CONNECTION=redis`) |
-| Logs | [opcodesio/log-viewer](https://github.com/opcodesio/log-viewer) di `/log-viewer` |
+| Observability | Horizon di `/horizon`, Laravel Pulse di `/pulse`, [opcodesio/log-viewer](https://github.com/opcodesio/log-viewer) di `/log-viewer`; semuanya dijaga permission Shield |
 | Test | PHPUnit 11 / `php artisan test` |
 | Formatter | Laravel Pint |
 
@@ -218,13 +295,14 @@ flowchart TB
 ### Prasyarat
 
 - Git.
-- PHP 8.2 atau lebih baru.
+- PHP 8.4 (`composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini mengunci paket yang butuh 8.4).
 - Composer 2.
 - Node.js 20.19+ atau 22.12+ (Vite 8).
 - MySQL 8+ (atau MariaDB yang kompatibel) untuk development sesuai `.env.example`.
+- Redis bila menyentuh queue (notifikasi, export, Impor Data Sumo).
 - Extension PHP yang biasa dipakai Laravel/Filament, termasuk `curl`, `fileinfo`, `gd`, `intl`, `mbstring`, `openssl`, `pdo_mysql`, `xml`, dan `zip`.
 
-Gateway WhatsApp dan object storage S3/MinIO bersifat opsional untuk menjalankan panel dasar. Notifikasi WhatsApp membutuhkan `WAG_URL` dan `WAG_TOKEN`. Composer memasang `kungfufafa/mekaya-theme` dari repositori Git yang tercantum di `composer.json`.
+Gateway WhatsApp, SMTP, object storage S3/MinIO, dan database legacy sumo bersifat opsional untuk menjalankan panel dasar. Composer memasang `kungfufafa/mekaya-theme` dari repositori Git yang tercantum di `composer.json`.
 
 ### Clone dan dependency
 
@@ -254,7 +332,7 @@ APP_LOCALE=id
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=shelf
+DB_DATABASE=db_shelf
 DB_USERNAME=root
 DB_PASSWORD=
 ```
@@ -277,52 +355,61 @@ php artisan storage:link
 ```
 
 > [!WARNING]
-> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data. Perintah tersebut menghapus tabel/data. Jangan menjalankan seeder development di production.
+> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data; feature test juga berjalan di database `.env`. Jangan menjalankan seeder development di production. Dan jangan pernah memuat dump sumo-web ke database GAIS: delapan tabel bernama sama (`users`, `roles`, `categories`, `divisions`, `migrations`, dan lainnya) akan tertimpa. Dump sumo hanya boleh masuk ke database terpisah (`SUMO_DB_DATABASE`).
 
-Seeder membuat Super Admin lokal (tabel di atas) plus master kategori, badan usaha, jabatan, dan merek. Seeder tidak membuat role `general_affair`, divisi, atau aset contoh.
+Seeder membuat Super Admin lokal (tabel di atas) plus master kategori, badan usaha, jabatan, dan merek. Migrasi membuat empat role modul sumo. Seeder tidak membuat role `general_affair`/`admin`, divisi, atau aset contoh.
+
+### Data legacy sumo (opsional)
+
+Hanya dibutuhkan untuk memindahkan data dari sumo-web. Buat database kosong `db_sumo`, isi `SUMO_DB_DATABASE`, lalu pakai menu **Pengaturan > Impor Data Sumo** (unggah dump `.sql`/`.sql.gz`, uji coba, impor) atau CLI:
+
+```bash
+php artisan sumo:import --dry-run
+php artisan sumo:import
+```
+
+Langkah lengkap, pemetaan badan usaha/user, dan tindakan setelah impor (salin folder upload lama, cron) ada di [`database/sumo/README.md`](database/sumo/README.md).
 
 ## Konfigurasi environment
 
-Jangan commit `.env` atau credential apa pun ke Git. Daftar berikut mengikuti [`.env.example`](.env.example), plus default seeder Super Admin yang dibaca `DatabaseSeeder`.
+Jangan commit `.env` atau credential apa pun ke Git. Daftar berikut mengikuti [`.env.example`](.env.example); contoh nilai production ada di [`.env.production.example`](.env.production.example).
 
-Blok inti `.env.example` mengikuti skeleton Laravel 12, termasuk `CACHE_STORE`, `MAIL_SCHEME`, `BROADCAST_CONNECTION`, `REDIS_CLIENT`, dan `AWS_*`. Zona waktu aplikasi di-hardcode `Asia/Jakarta` di `config/app.php`, bukan lewat `APP_TIMEZONE`. Nama lama `CACHE_DRIVER`, `MAIL_ENCRYPTION`, `BROADCAST_DRIVER`, `MINIO_*`, dan `PUSHER_*` tidak dipakai.
+Blok inti mengikuti skeleton Laravel 12 (`CACHE_STORE`, `MAIL_SCHEME`, `BROADCAST_CONNECTION`, `REDIS_CLIENT`, `AWS_*`). Zona waktu aplikasi di-hardcode `Asia/Jakarta` di `config/app.php`, bukan lewat `APP_TIMEZONE`. Nama cookie sesi, prefix cache, prefix Redis, dan prefix Horizon diturunkan dari `APP_NAME`; mengganti nilainya membuat semua user logout dan antrean lama tidak terbaca (lihat [`docs/deploy-rebranding-gais.md`](docs/deploy-rebranding-gais.md)).
 
 | Variabel | Wajib | Fungsi |
 |---|:---:|---|
 | `APP_KEY` | Ya | Kunci enkripsi Laravel; dibuat dengan `php artisan key:generate` |
-| `APP_URL` | Ya | Base URL, tautan token, dan asset |
-| `APP_NAME` | Tidak | Nama tampilan; default `.env.example` `GAIS` |
+| `APP_URL` | Ya | Base URL, tautan magic link, dan asset |
+| `APP_NAME` | Tidak | Nama tampilan dan prefix cache/sesi/queue; default `GAIS` |
 | `APP_ENV` / `APP_DEBUG` | Ya | Environment dan debug |
-| `APP_LOCALE` / `APP_FALLBACK_LOCALE` | Ya | Default `.env.example` `id` |
+| `APP_LOCALE` / `APP_FALLBACK_LOCALE` | Ya | Default `id` |
 | `DB_CONNECTION` / `DB_*` | Ya | Driver dan koneksi; default proyek `mysql` |
-| `CACHE_STORE` | Ya | Cache default; `.env.example` memakai `file` |
+| `SUMO_DB_DATABASE` | Untuk impor sumo | Database staging dump sumo; default `db_sumo`. `SUMO_DB_HOST/PORT/USERNAME/PASSWORD/PREFIX` mengikuti `DB_*` bila kosong |
+| `SUMO_IMPORT_DISK` / `SUMO_IMPORT_MAX_UPLOAD_KB` | Tidak | Disk privat penyimpanan dump unggahan (default `FILESYSTEM_DISK`) dan batas unggah (default 12288 KB); tidak tercantum di `.env.example` |
+| `CACHE_STORE` / `CACHE_PREFIX` | Ya / Tidak | Cache default `file`; isi prefix khusus bila beberapa aplikasi berbagi Redis |
 | `FILESYSTEM_DISK` | Ya | Disk default; `local`, `public`, atau `s3` |
-| `SESSION_DRIVER` | Ya | Penyimpanan session; default `file` |
+| `PUBLIC_FILESYSTEM_DRIVER` | Untuk S3 | `s3` mengarahkan upload aplikasi ke bucket privat; `local` untuk development |
+| `SESSION_DRIVER` / `SESSION_SECURE_COOKIE` | Ya | Penyimpanan session (default `file`); `true` di production HTTPS |
 | `QUEUE_CONNECTION` | Ya | Backend queue; default `redis`. Worker: `php artisan horizon` |
-| `HORIZON_PATH` | Tidak | UI Horizon; default `horizon` |
-| `LOG_VIEWER_ENABLED` / `LOG_VIEWER_PATH` | Tidak | UI [Log Viewer](https://github.com/opcodesio/log-viewer); default `/log-viewer` |
-| `BROADCAST_CONNECTION` | Tidak | Default Laravel 12 `log` |
 | `REDIS_CLIENT` / `REDIS_HOST` / `REDIS_PASSWORD` / `REDIS_PORT` | Ya | Koneksi Redis untuk Horizon |
-| `MAIL_*` | Untuk email | Default `.env.example` `MAIL_MAILER=log`. Override ke SMTP/Mailpit jika perlu. Tombol login **Email** hanya muncul bila `MAIL_MAILER` bukan `log`/`array` dan `MAIL_FROM_ADDRESS` terisi |
-| `MAIL_SCHEME` | Tidak | Skema SMTP Laravel 12; ganti `MAIL_ENCRYPTION` lama |
+| `REDIS_QUEUE_RETRY_AFTER` / `REDIS_QUEUE_BLOCK_FOR` | Tidak | Parameter koneksi queue Redis |
+| `HORIZON_PATH` | Tidak | UI Horizon; default `horizon` |
+| `LOG_VIEWER_ENABLED` / `LOG_VIEWER_PATH` / `LOG_VIEWER_API_STATEFUL_DOMAINS` | Tidak | UI Log Viewer (default `/log-viewer`); isi domain stateful bila app dibuka dari host lain |
+| `BROADCAST_CONNECTION` | Tidak | Default Laravel 12 `log` |
+| `MAIL_*` | Untuk email | Default `MAIL_MAILER=log`. Tombol login **Email** hanya muncul bila `MAIL_MAILER` bukan `log`/`array` dan `MAIL_FROM_ADDRESS` terisi |
 | `EMAIL_LOGIN_EXPIRES_IN` | Tidak | Masa berlaku kode dan magic link login email; default `600` detik |
 | `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` / `AWS_DEFAULT_REGION` / `AWS_BUCKET` | Untuk S3 | Disk `s3` di `config/filesystems.php` |
-| `AWS_ENDPOINT` / `AWS_URL` | Untuk MinIO/S3-compatible | Endpoint dan URL publik object storage |
-| `AWS_USE_PATH_STYLE_ENDPOINT` | Tidak | Path-style S3; default `false`. Set `true` plus `AWS_ENDPOINT` untuk MinIO |
-| `PUBLIC_FILESYSTEM_DRIVER` | Untuk S3 | `s3` mengarahkan upload aplikasi ke S3 privat; `local` untuk development |
-| `WAG_URL` | Untuk WhatsApp | Endpoint WagHub; default `https://waghub.mekayastudio.com` |
-| `WAG_TOKEN` | Untuk WhatsApp | Bearer credential WagHub |
+| `AWS_ENDPOINT` / `AWS_URL` / `AWS_USE_PATH_STYLE_ENDPOINT` | Untuk MinIO/S3-compatible | Endpoint, URL publik, dan path-style (`true` untuk MinIO) |
+| `GA_SHARED_ACCOUNT_USERNAMES` | Tidak | Akun GA bersama (pisah koma) yang nama/jabatannya dikosongkan di PDF BA; default `adminga` |
+| `WAG_URL` / `WAG_TOKEN` | Untuk WhatsApp | Endpoint dan bearer WagHub; keduanya terisi mengaktifkan tombol login WhatsApp |
 | `WHATSAPP_OTP_TTL_MINUTES` | Tidak | Masa berlaku OTP login; default `5` menit |
-| `WA_CONNECT_TIMEOUT` | Tidak | Timeout koneksi gateway; default `5` detik |
-| `WA_API_TIMEOUT` | Tidak | Timeout request gateway; default `15` detik |
-| `WHATSAPP_DEFAULT_TARGET` | Tidak | Target fallback pengingat jika penerima kosong |
-| `SEED_SUPER_ADMIN_USERNAME` | Tidak | Default seeder `admin` |
-| `SEED_SUPER_ADMIN_EMAIL` | Tidak | Default seeder `admin@dev.com` |
-| `SEED_SUPER_ADMIN_NAME` | Tidak | Default seeder `Super Admin` |
+| `WA_CONNECT_TIMEOUT` / `WA_API_TIMEOUT` | Tidak | Timeout gateway; default `5` / `15` detik |
+| `WHATSAPP_DEFAULT_TARGET` | Tidak | Target fallback pengingat dokumen aset jika penerima kosong. Nomor tujuan pengingat sewa/asuransi diatur di menu Notifikasi WA, bukan env |
+| `ITEM_REQUEST_MAX_OPEN_PER_TYPE` | Tidak | Batas pengajuan terbuka per tipe per pemohon; default `2`; tidak tercantum di `.env.example` |
+| `SEED_SUPER_ADMIN_USERNAME` / `SEED_SUPER_ADMIN_EMAIL` / `SEED_SUPER_ADMIN_NAME` | Tidak | Default seeder `admin`, `admin@dev.com`, `Super Admin` |
 | `SEED_SUPER_ADMIN_PASSWORD` | Production seed | Wajib di production jika ingin men-seed Super Admin; local default kata sandi `password` |
 
-Panduan ENV production, preview bucket privat, dan pemindahan file lama:
-[`docs/s3-production.md`](docs/s3-production.md).
+Panduan ENV production, preview bucket privat, dan pemindahan file lama (`storage:migrate-to-s3`): [`docs/s3-production.md`](docs/s3-production.md).
 
 Untuk local development tanpa SMTP:
 
@@ -332,7 +419,7 @@ MAIL_FROM_ADDRESS=dev@example.test
 MAIL_FROM_NAME="${APP_NAME}"
 ```
 
-Panel dasar tetap berjalan tanpa WhatsApp. Tanpa kredensial gateway, notifikasi dan pengingat dokumen tidak terkirim lewat saluran itu.
+Panel dasar tetap berjalan tanpa WhatsApp. Tanpa kredensial gateway, notifikasi, pengingat, dan login OTP WhatsApp tidak tersedia.
 
 ## Menjalankan aplikasi
 
@@ -351,16 +438,34 @@ Buka:
 - Panel staf: `http://127.0.0.1:8000/admin`
 - Health check: `http://127.0.0.1:8000/up`
 
-Scheduler tidak wajib untuk UI, tetapi harus dijalankan bila sedang mengembangkan pengingat dokumen:
+Queue default adalah `redis`. Jalankan Horizon agar notifikasi, export, dan Impor Data Sumo diproses (unit systemd juga `php artisan horizon`):
+
+```bash
+php artisan horizon
+```
+
+Horizon punya dua supervisor di `config/horizon.php`: `supervisor-1` untuk queue `notifications`, `default`, `exports`, dan `supervisor-long` (koneksi `redis-long`) untuk queue `long-running` yang dipakai Impor Data Sumo. Setelah deploy yang mengubah konfigurasi Horizon, jalankan `php artisan horizon:terminate` supaya supervisor baru ikut jalan.
+
+Scheduler tidak wajib untuk UI, tetapi harus dijalankan bila sedang mengembangkan pengingat atau konfirmasi otomatis:
 
 ```bash
 php artisan schedule:work
 ```
 
-Queue default adalah `redis`. Jalankan Horizon agar notifikasi dan export tidak menumpuk (unit systemd juga `php artisan horizon`):
+Jadwal yang terdaftar:
 
-```bash
-php artisan horizon
+| Command | Jadwal | Didaftarkan di |
+|---|---|---|
+| `notifications:send-scheduled` | Setiap hari pukul 13:20 | `bootstrap/app.php` |
+| `model:prune` | Harian | `bootstrap/app.php` |
+| `horizon:snapshot` | Tiap 5 menit | `routes/console.php` |
+| `problem-reports:auto-confirm` | Tiap 10 menit | `routes/console.php` |
+| `reminder:whatsapp` | Tiap jam (mengirim sekali sehari setelah jam kirim di Notifikasi WA) | `routes/console.php` |
+
+Production memanggil scheduler setiap menit:
+
+```cron
+* * * * * cd /absolute/path/to/shelf-web && /absolute/path/to/php artisan schedule:run >> storage/logs/scheduler.log 2>&1
 ```
 
 Untuk frontend production-like:
@@ -369,33 +474,23 @@ Untuk frontend production-like:
 npm run build
 ```
 
-Jadwal yang terdaftar di `bootstrap/app.php`:
+Contoh unit worker: [`deploy/web-gais-queue.service`](deploy/web-gais-queue.service). Rilis rebranding Shelf → GAIS punya langkah deploy sekali jalan di [`docs/deploy-rebranding-gais.md`](docs/deploy-rebranding-gais.md), dan pemindahan ke S3 di [`docs/s3-production.md`](docs/s3-production.md).
 
-| Command | Jadwal |
-|---|---|
-| `notifications:send-scheduled` | Setiap hari pukul 13:20 |
-| `model:prune` | Harian |
-
-Production memanggil scheduler setiap menit:
-
-```cron
-* * * * * cd /absolute/path/to/shelf-web && /absolute/path/to/php artisan schedule:run >> storage/logs/scheduler.log 2>&1
-```
-
-Contoh unit worker: [`deploy/web-gais-queue.service`](deploy/web-gais-queue.service). Rilis rebranding Shelf → GAIS punya langkah deploy sekali jalan di [`docs/deploy-rebranding-gais.md`](docs/deploy-rebranding-gais.md).
-
-Setiap deploy production, cache konfigurasi, route, view, serta komponen dan ikon Filament supaya setiap request panel tidak memindai ulang file (ulangi setelah `git pull`):
+Setiap deploy production (ulangi setelah `git pull`):
 
 ```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
 php artisan optimize
 php artisan filament:optimize
+php artisan horizon:terminate
 ```
 
-Jangan jalankan keduanya di local: perubahan `.env`, route, atau resource baru tidak terbaca sampai `php artisan optimize:clear && php artisan filament:optimize-clear`.
+Pakai `--no-dev` di server: dengan paket dev, Ignition merekam setiap query dan impor sumo bisa melewati `memory_limit`. Jangan jalankan `optimize` di local: perubahan `.env`, route, atau resource baru tidak terbaca sampai `php artisan optimize:clear && php artisan filament:optimize-clear`.
 
 ## Workflow development
 
-Branch default repositori adalah `main`. Buat cabang pekerjaan dari `main` dengan pola `feat/<scope>`, `fix/<scope>`, atau `docs/<scope>`.
+Branch default repositori adalah `main`. Buat cabang pekerjaan dari `main` dengan pola `feat/<scope>`, `fix/<scope>`, atau `docs/<scope>`, dan masukkan ke `main` lewat pull request. Pesan commit mengikuti Conventional Commits berbahasa Inggris (`feat: ...`, `fix: ...`, `test: ...`, `docs: ...`).
 
 ### Memulai pekerjaan
 
@@ -412,18 +507,31 @@ Gunakan scope kecil dan satu tujuan per branch.
 | Kebutuhan | Lokasi umum |
 |---|---|
 | Tambah/ubah tabel | `database/migrations` dan `app/Models` |
-| Hak akses panel | `app/Policies`, permission Shield, `app/Support/EnsureAssetExportPermissions.php` |
-| Fitur panel web | `app/Filament/Resources`, `Pages`, atau `Widgets` |
-| Rekonsiliasi | `app/Services/*Reconciliation*`, `app/Services/*AuditWorkbook*` |
-| WhatsApp | `app/Services/WhatsAppGateway.php`, `WhatsappAssetQueryController` |
-| Background operation | `app/Console/Commands` dan `bootstrap/app.php` (`withSchedule`) |
+| Hak akses panel | `app/Policies`, permission Shield lewat migrasi, `app/Support/*Visibility.php` |
+| Fitur panel web | `app/Filament/Resources`, `Pages`, atau `Widgets`; grup baru didaftarkan di `AdminPanelProvider` dan `NavigationGroupsTest` |
+| Aset, BA, stok | `app/Models/Asset.php`, `AssetTransfer.php`, `config/asset-transfer.php` |
+| Rekonsiliasi | `app/Services/*Reconciliation*`, `app/Services/*AuditWorkbook*`, `config/*-reconciliation.php` |
+| Pengajuan Barang / Lapor Gangguan | `app/Services/ItemRequestWorkflow.php`, `ProblemReportWorkflow.php`, `app/Support/*Visibility.php`, `config/item-request.php`, `config/problem-report.php` |
+| Asuransi, sewa, pengingat WA | `app/Services/ContractReminderService.php`, `app/Filament/Pages/WaNotificationSettings.php` |
+| Impor sumo | `app/Services/Sumo`, `app/Jobs/Sumo`, `config/sumo-import.php`, `tests/Support/SumoLegacyFixture.php` |
+| WhatsApp | `app/Services/WhatsAppGateway.php`, `WhatsappService.php`, `Integrations/WhatsappAssetQueryController` |
+| Background operation | `app/Console/Commands`, `bootstrap/app.php` (`withSchedule`), `routes/console.php` |
+| Panduan pengguna | `app/Filament/Pages/Guide.php`, screenshot lewat `tools/guide-capture` |
+| Dokumentasi developer | `docs/dokumentasi-teknis.md` (dirender di panel) |
 | Verifikasi | `tests/Unit` atau `tests/Feature` |
 
 ### Aturan implementasi
 
 - Jangan mengubah schema melalui migration yang sudah pernah berjalan di shared environment; tambahkan migration baru.
+- Akses baru selalu lewat permission Shield (dibuat di migrasi dan diberikan ke role yang memakainya), bukan pengecekan nama role.
+- Query data per badan usaha wajib memakai `accessibleBy`, dan policy wajib menolak record di luar akses.
+- Pindah pemegang aset hanya lewat `AssetTransfer::applyLifecycleToAssets`.
+- Field user yang disinkronkan dari Talenta (`employee_id` terisi) hanya berubah lewat import ulang JSON Talenta.
 - Perubahan konfigurasi wajib diikuti update `.env.example` dan README tanpa memasukkan secret.
-- Tambahkan test regresi untuk setiap perbaikan bug pada policy, rekonsiliasi, atau gateway WhatsApp.
+- Tambahkan test regresi untuk setiap perbaikan bug pada policy, workflow, rekonsiliasi, impor sumo, atau gateway WhatsApp.
+- Teks UI dan komentar domain berbahasa Indonesia; nama kelas, kolom, dan method berbahasa Inggris.
+
+Langkah menambah modul baru (migration → model → resource → permission → service → test → panduan) dijelaskan di bab Maintenance [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md).
 
 ### Definition of Done
 
@@ -431,17 +539,20 @@ Sebelum membuka PR, pastikan:
 
 - Scope bisnis dan aktor yang boleh mengakses sudah jelas.
 - Test terkait ditambahkan dan `php artisan test --filter=...` untuk area yang diubah berhasil.
+- `vendor/bin/pint --test` bersih.
 - `npm run build` berhasil bila ada perubahan frontend/Filament asset.
-- Tidak ada `.env`, token, dump database, data pribadi, atau credential di commit.
+- Tidak ada `.env`, token, dump database (`*.sql.gz` di root), data pribadi, atau credential di commit.
 
 ## Testing dan quality check
 
-`phpunit.xml` **tidak** mengunci `DB_CONNECTION` ke SQLite in-memory (baris itu dikomentari). Suite yang menyentuh database mengikuti `.env` kecuali test itu sendiri memaksa SQLite. Tes berkas di `tests/Unit` yang memperluas `PHPUnit\Framework\TestCase` (termasuk tes README ini) tidak membutuhkan database.
+`phpunit.xml` **tidak** mengunci `DB_CONNECTION` ke SQLite in-memory (baris itu dikomentari). Feature test berjalan di database `.env` dengan `DatabaseTransactions`, jadi database development harus sudah dimigrasi. Tes di `tests/Unit` yang memperluas `PHPUnit\Framework\TestCase` (termasuk tes README ini, `ReadmeOnboardingDocumentTest`) tidak membutuhkan database.
 
 ```bash
 php artisan test
 php artisan test --filter=NamaTest
 ```
+
+Bila muncul `Allowed memory size ... exhausted`, naikkan batas memori: `php -d memory_limit=1G artisan test`. `SumoImportTest` memakai fixture `tests/Support/SumoLegacyFixture.php` dan menjaga id fixture tidak bentrok dengan data sumo yang sudah diimpor ke database development.
 
 Quality check yang didukung repositori:
 
@@ -455,21 +566,24 @@ npm run build
 
 Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 
-1. **Token approval bukan autentikasi.** Siapa pun yang memiliki tautan dapat memutuskan pengajuan.
-2. **Query WhatsApp aset bersifat publik.** `POST /api/integrations/whatsapp/assets/query` tidak memakai Sanctum; tes `WhatsappAssetIntegrationTest` menegaskan itu.
-4. **Role `general_affair` dan `admin` tidak di-seed.** Alur penarikan/BA dan grant `export_asset` membutuhkan role itu di database.
-5. **Reset password dan profil panel dimatikan.** Onboarding staf tetap seeder / administrator.
-6. **Tidak ada REST API domain.** Jangan mengasumsikan klien mobile/API v1 terpisah.
-7. **Queue default `redis` + Horizon.** Notifikasi aset mengantri di `notifications`, export Filament di `exports`. Tanpa Redis dan `php artisan horizon`, job tidak diproses. Tes memakai `QUEUE_CONNECTION=sync` di `phpunit.xml`.
-8. **`phpunit.xml` tidak memin SQLite memory.** Full suite dapat menyentuh database development jika feature test tidak mengisolasi koneksi.
-9. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
-10. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak menonjolkan trait `Prunable`.
+1. **Query WhatsApp aset bersifat publik.** `POST /api/integrations/whatsapp/assets/query` tidak memakai Sanctum; `WhatsappAssetIntegrationTest` menegaskan itu.
+2. **Halaman QR aset bersifat publik.** `GET /qr/{qr}` menampilkan ringkasan aset dan mencatat pemindaian siapa pun; hanya endpoint lokasi yang di-throttle.
+3. **Role `general_affair` dan `admin` tidak dibuat seeder maupun migrasi.** Migrasi hanya memberi permission bila role sudah ada; buat dulu lewat Shield. Empat role sumo (`pengajuan_admin`, `accounting`, `executor`, `requester`) dibuat migrasi.
+4. **Reset password dan profil panel dimatikan.** Onboarding staf tetap lewat seeder, import Talenta, atau administrator.
+5. **Tidak ada REST API domain.** Jangan mengasumsikan klien mobile/API terpisah.
+6. **Queue default `redis` + Horizon.** Notifikasi aset mengantri di `notifications`, export Filament di `exports`, Impor Data Sumo di `long-running`. Tanpa Redis dan `php artisan horizon`, job menumpuk diam-diam. Tes memakai `QUEUE_CONNECTION=sync`.
+7. **`phpunit.xml` tidak memaksa SQLite memory.** Full suite menyentuh database development.
+8. **File unggahan sumo lama tidak ikut diimpor.** Folder `Request_File`, `Problem_Report_File`, `Rent_File`, dan `product` harus disalin manual ke disk `public`; nama file di database hanya nama filenya (`App\Support\LegacyUpload`).
+9. **Nama infrastruktur masih Shelf.** Repo `shelf-web`, database `db_shelf`, bucket S3 `shelf`, folder server `/var/www/web-shelf`, dan domain tidak ikut rebranding. Ikon PWA di `public/images/icons/` dan `public/favicon.ico` masih logo lama.
+10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
+11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
+12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.
 
 ## Troubleshooting
 
 ### Composer menolak versi PHP
 
-Pastikan CLI memakai PHP 8.2 atau lebih baru:
+Pastikan CLI memakai PHP 8.4:
 
 ```bash
 php -v
@@ -488,6 +602,7 @@ php artisan optimize:clear
 
 ```bash
 php artisan optimize:clear
+php artisan filament:optimize-clear
 ```
 
 ### Lampiran atau asset `/storage` 404
@@ -496,23 +611,28 @@ php artisan optimize:clear
 php artisan storage:link
 ```
 
+Untuk lampiran pengajuan, laporan gangguan, sewa, atau foto produk hasil impor sumo: pastikan folder `Request_File`, `Problem_Report_File`, `Rent_File`, dan `product` sudah disalin ke disk `public`.
+
 ### Login panel ditolak
 
 Pastikan user memiliki minimal satu role. Akun tanpa role tidak dapat masuk `/admin`. Reset password tidak tersedia di panel.
 
+### Menu modul tidak muncul
+
+Menu dan widget hanya tampil bila user punya permission-nya. Periksa role di **Pengaturan > Roles**, lalu `php artisan permission:cache-reset` bila permission baru saja diubah lewat migrasi. Dokumentasi Teknis butuh `View:TechnicalDocs`, Impor Data Sumo butuh `Manage:SumoImport`, Horizon/Log Viewer/Pulse butuh `View:Horizon`, `View:LogViewer`, `View:Pulse`.
+
 ### Login WhatsApp
 
-Alur mengikuti Helpdesk: pilih **WhatsApp** di `/admin/login`, masukkan nomor HP di `/phone-login`, lalu masukkan OTP enam digit. Tautan **Ganti nomor atau kirim ulang OTP** membatalkan kode sebelumnya. Hanya akun terdaftar yang memiliki akses panel yang dapat masuk; tidak ada pendaftaran otomatis.
+Pilih **WhatsApp** di `/admin/login`, masukkan nomor HP di `/phone-login`, lalu masukkan OTP enam digit. Tautan **Ganti nomor atau kirim ulang OTP** membatalkan kode sebelumnya. Hanya akun terdaftar yang memiliki akses panel yang dapat masuk; tidak ada pendaftaran otomatis.
 
 Untuk mengaktifkan:
 
-1. Jalankan `php artisan migrate` untuk menambahkan `users.whatsapp_login_number`.
-2. Isi `WAG_URL` dan `WAG_TOKEN`. Tombol WhatsApp muncul jika keduanya terisi.
-3. Sebagai admin, buka **Master Data → Users → Edit**, lalu isi **Nomor WhatsApp**. Satu nomor dipakai untuk pengingat aset dan login OTP. Nomor dinormalisasi dan harus unik; kosongkan untuk menonaktifkan akses melalui WhatsApp.
+1. Isi `WAG_URL` dan `WAG_TOKEN`. Tombol WhatsApp muncul jika keduanya terisi.
+2. Sebagai admin, buka **Organisasi → Users → Edit**, lalu isi **Nomor WhatsApp**. Satu nomor dipakai untuk pengingat aset dan login OTP. Nomor dinormalisasi dan harus unik; kosongkan untuk menonaktifkan akses melalui WhatsApp.
 
-Admin yang menyimpan nomor di panel, atau **Import Talenta** / impor Excel yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP baru membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
+Admin yang menyimpan nomor di panel, atau **Import Talenta** yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP hanya membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
 
-OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun baru dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus GAIS.
+OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus GAIS.
 
 ### Login email
 
@@ -520,20 +640,38 @@ Pilih **Email** di `/admin/login`, masukkan alamat email di `/email-login`, lalu
 
 Kode dan link berlaku `EMAIL_LOGIN_EXPIRES_IN` detik (default 600), hangus setelah lima kali salah kode, saat kode baru diminta, atau saat email user diganti. Permintaan dibatasi per email (3 per 5 menit, 10 per jam) dan per IP. Membuka magic link tidak langsung memakai token; token ditukar setelah halaman tampil, sehingga pemindai link di email tidak menghabiskannya. Email dikirim langsung tanpa queue; bila SMTP gagal, kode dibatalkan dan halaman menampilkan pesan umum.
 
-### Penarikan tidak bisa di-fulfill
+### Pengajuan tidak bisa dibuat
 
-Buat role `general_affair`, tugaskan ke user penerima GA, lalu pilih user itu sebagai penerima fulfillment.
+Kuota pengajuan terbuka per tipe (default dua) sudah habis, atau tipe pengajuan nonaktif. Selesaikan atau batalkan pengajuan lama, atau ubah `ITEM_REQUEST_MAX_OPEN_PER_TYPE`.
 
-### WhatsApp atau pengingat tidak terkirim
+### Pengajuan tidak terlihat oleh executor atau manager
+
+Periksa `users.approver_user_id` pemohon (untuk manager) dan cakupan divisi executor di tabel `item_request_scopes` (diisi dari `config/sumo-import.php` saat impor; ubah lewat menu Divisi). Pengajuan juga dibatasi badan usaha.
+
+### Pengingat sewa, asuransi, atau cutoff tidak terkirim
+
+1. Buka **Pengaturan > Notifikasi WA**: saklar aktif, nomor tujuan terisi, jenis pengingat dicentang, dan jam kirim sudah lewat.
+2. Pastikan cron `schedule:run` berjalan tiap menit.
+3. Uji dengan `php artisan reminder:whatsapp --dry-run`, lalu `--force` bila perlu mengabaikan jam kirim.
+4. Cek `wa_notification_logs`: satu nomor hanya menerima satu pengingat per referensi per hari.
+
+### Impor Data Sumo tidak berjalan atau menggantung
+
+1. Butuh Redis dan Horizon dengan supervisor `supervisor-long`; setelah deploy jalankan `php artisan horizon:terminate`.
+2. `SUMO_DB_DATABASE` harus database terpisah dan kosong; loader menolak target yang sama dengan database GAIS atau yang berisi tabel GAIS.
+3. Batas unggah 12 MB (`SUMO_IMPORT_MAX_UPLOAD_KB`, plus `upload_max_filesize` PHP dan `client_max_body_size` nginx); pakai `.sql.gz` atau CLI `php artisan sumo:import`.
+4. Baca peringatan di hasil uji coba (pemetaan badan usaha, user bernama sama) sebelum **Impor sungguhan**, dan backup database GAIS dulu.
+
+### WhatsApp atau pengingat dokumen aset tidak terkirim
 
 1. Isi `WAG_URL` dan `WAG_TOKEN`.
-2. Pastikan nomor pemohon/penerima valid (normalisasi ke kode negara `62`).
-3. Periksa `storage/logs/laravel.log`.
-4. Jalankan `php artisan notifications:send-scheduled` dan pastikan scheduler aktif.
+2. Pastikan nomor penerima valid (normalisasi ke kode negara `62`).
+3. Periksa `storage/logs/laravel.log` atau Log Viewer.
+4. Jalankan `php artisan notifications:send-scheduled` dan pastikan scheduler dan Horizon aktif.
 
 ### Query integrasi WhatsApp terekspos
 
-Itu perilaku kode saat ini, bukan fitur yang dijanjikan. Batasi di reverse proxy atau jaringan sampai autentikasi ditambahkan.
+Itu perilaku kode saat ini, bukan fitur yang dijanjikan. Batasi di reverse proxy atau jaringan sampai autentikasi ditambahkan. Bot harus memakai route `gais.*`; route `shelf.*` lama ditolak dengan 422.
 
 ### Health check
 
