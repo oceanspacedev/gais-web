@@ -59,7 +59,7 @@ class ReadmeOnboardingDocumentTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/^## Installation/m', $this->readme);
     }
 
-    public function test_readme_describes_this_shelf_app_from_repo_facts(): void
+    public function test_readme_describes_this_gais_app_from_repo_facts(): void
     {
         foreach ([
             'https://github.com/oceanspacedev/shelf-web.git',
@@ -68,7 +68,7 @@ class ReadmeOnboardingDocumentTest extends TestCase
             'notifications:send-scheduled',
             'admin@dev.com',
             'locale `id`',
-            'APP_NAME=Shelf',
+            'APP_NAME=GAIS',
             'composer install',
             'npm ci',
             'php artisan key:generate',

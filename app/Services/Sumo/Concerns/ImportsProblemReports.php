@@ -3,7 +3,7 @@
 namespace App\Services\Sumo\Concerns;
 
 /**
- * Laporan gangguan (sumo: problem_report). Pelapor wajib ada di shelf.
+ * Laporan gangguan (sumo: problem_report). Pelapor wajib ada di GAIS.
  */
 trait ImportsProblemReports
 {

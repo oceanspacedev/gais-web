@@ -1,4 +1,4 @@
-# Data legacy sumo-web (Web Gais)
+# Data legacy sumo-web (Web Gais lama)
 
 Modul Pengajuan Barang, Lapor Gangguan, Asuransi, Perjanjian Sewa, master barang, QR dan
 notifikasi WA berasal dari aplikasi sumo-web. Data lamanya dibaca lewat koneksi database
@@ -17,12 +17,12 @@ Cara yang disarankan, karena setiap langkah tercatat (file, tabel yang dimuat, l
    File disimpan privat di disk `SUMO_IMPORT_DISK` (default `FILESYSTEM_DISK`).
 2. Job antrean `long-running` (supervisor Horizon `supervisor-long`) **mengosongkan database
    staging** (`SUMO_DB_DATABASE`) lalu menjalankan dump ke sana, kemudian **uji coba** otomatis.
-   Loader menolak target yang sama dengan database shelf, database yang berisi tabel shelf, dan
+   Loader menolak target yang sama dengan database GAIS, database yang berisi tabel GAIS, dan
    pernyataan yang menulis ke database lain (`USE`, `db.tabel`, `GRANT`, `DROP DATABASE`, ...).
 3. Periksa **Hasil uji coba**: jumlah per langkah, pemetaan badan usaha, peringatan penggabungan user.
    Ubah `config/sumo-import.php` bila perlu, lalu **Uji coba ulang**.
 4. **Impor sungguhan** (ketik `IMPOR`) memakai dump yang sama dengan uji coba terakhir, dalam satu
-   transaksi. Backup database shelf dulu.
+   transaksi. Backup database GAIS dulu.
 
 Izin: `Manage:SumoImport` (awalnya hanya `super_admin`). Batas unggah default 12 MB
 (`SUMO_IMPORT_MAX_UPLOAD_KB`); `upload_max_filesize`/`post_max_size` PHP dan `client_max_body_size`
@@ -31,32 +31,32 @@ supaya supervisor baru jalan. Dump yang lebih besar tetap bisa lewat CLI di bawa
 
 ### Lewat CLI
 
-Impor tidak menggandakan data yang sudah ada di shelf:
+Impor tidak menggandakan data yang sudah ada di GAIS:
 
-- **Badan usaha** tidak pernah dibuat baru. Semuanya dipetakan ke badan usaha shelf lewat
+- **Badan usaha** tidak pernah dibuat baru. Semuanya dipetakan ke badan usaha GAIS lewat
   `business_entities` di `config/sumo-import.php`. Hasil pemetaannya tercetak di laporan
   (bagian "Pemetaan"), jadi periksa saat `--dry-run`.
-- **User** digabung ke akun shelf milik orang yang sama. Urutannya: `user_links` di config,
+- **User** digabung ke akun GAIS milik orang yang sama. Urutannya: `user_links` di config,
   lalu username yang sama, lalu nama lengkap (minimal dua kata) yang hanya dipakai satu user
-  di shelf dan satu user aktif di sumo. Nama, badan usaha, dan login shelf dipertahankan.
-  Akun shelf yang belum punya username/password (data karyawan) dilengkapi login sumo.
+  di GAIS dan satu user aktif di sumo. Nama, badan usaha, dan login GAIS dipertahankan.
+  Akun GAIS yang belum punya username/password (data karyawan) dilengkapi login sumo.
   Nama yang dipakai lebih dari satu orang tidak ditebak; impor menulis peringatan, dan
   penggabungannya bisa diisi manual di `user_links`.
 - **Akun sumo yang sudah dihapus** hanya dibuat (nonaktif, tanpa role) bila punya riwayat
   pengajuan, approval, laporan, atau kontrak.
-- **Akses semua badan usaha** tidak diberikan otomatis ke akun shelf yang sudah memakai role
-  non-sumo, karena akses itu berlaku di seluruh shelf. Impor menulis peringatan untuk akun ini.
+- **Akses semua badan usaha** tidak diberikan otomatis ke akun GAIS yang sudah memakai role
+  non-sumo, karena akses itu berlaku di seluruh GAIS. Impor menulis peringatan untuk akun ini.
 
 Di server, install dengan `composer install --no-dev`. Dengan paket dev, Ignition merekam
 setiap query beserta binding upsert 500 baris. Akibatnya impor bisa melewati `memory_limit`
 128M begitu data sumo sekitar 5x ukuran sekarang. Kalau terpaksa menjalankan di lingkungan
 dev, pakai `php -d memory_limit=512M artisan sumo:import`.
 
-## Aturan utama: dump sumo TIDAK BOLEH di-import ke database shelf
+## Aturan utama: dump sumo TIDAK BOLEH di-import ke database GAIS
 
-Dump sumo memakai `DROP TABLE IF EXISTS` dan punya tabel bernama sama dengan shelf
+Dump sumo memakai `DROP TABLE IF EXISTS` dan punya tabel bernama sama dengan GAIS
 (`users`, `roles`, `categories`, `divisions`, `migrations`, `personal_access_tokens`,
-`failed_jobs`, `password_resets`). Di-import ke `db_shelf` berarti tabel shelf tertimpa,
+`failed_jobs`, `password_resets`). Di-import ke `db_shelf` berarti tabel GAIS tertimpa,
 login dan permission rusak, dan `php artisan migrate` berhenti bekerja.
 
 Cara yang benar di server:
@@ -66,7 +66,7 @@ mysql -e "CREATE DATABASE db_sumo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_
 mysql db_sumo < dump-sumo.sql
 ```
 
-lalu di `.env` shelf:
+lalu di `.env` GAIS:
 
 ```dotenv
 SUMO_DB_DATABASE=db_sumo
@@ -81,10 +81,10 @@ Dump sumo sempat di-import ke `db_shelf`. Pemulihan yang dilakukan, urutannya pe
 1. `mysqldump --single-transaction db_shelf > backup-penuh.sql` (simpan di luar repo).
 2. Salin 30 tabel sumo ke database baru `db_sumo_latest`
    (`mysqldump db_shelf <daftar tabel sumo> | mysql db_sumo_latest`).
-3. Muat backup shelf terakhir ke database sementara `db_shelf_bak`, lalu
+3. Muat backup GAIS terakhir ke database sementara `db_shelf_bak`, lalu
    `mysqldump db_shelf_bak users roles categories divisions migrations personal_access_tokens failed_jobs > restore7.sql`
    dan `mysql db_shelf < restore7.sql`. mysqldump sudah mematikan `FOREIGN_KEY_CHECKS`,
-   dan karena nama tabel sama, FK dari tabel shelf lain (asset_transfers, model_has_roles, dst)
+   dan karena nama tabel sama, FK dari tabel GAIS lain (asset_transfers, model_has_roles, dst)
    otomatis tersambung lagi. **Jangan** memakai `RENAME TABLE` pada tabel yang bentrok nama,
    karena FK tabel lain ikut pindah ke nama baru.
 4. `SET FOREIGN_KEY_CHECKS=0; DROP TABLE <23 tabel sumo yang tidak bentrok nama>;`
@@ -101,16 +101,16 @@ Yang hilang karena restore: perubahan pada 7 tabel itu antara tanggal backup dan
 ## Setelah impor: langkah manual di server
 
 1. **File unggahan sumo.** Salin folder berikut dari `storage/app/public` server sumo ke disk
-   `public` shelf (lokal: `storage/app/public`, atau bucket S3 bila `FILESYSTEM_DISK=s3`),
+   `public` GAIS (lokal: `storage/app/public`, atau bucket S3 bila `FILESYSTEM_DISK=s3`),
    dengan nama folder yang sama: `Request_File`, `Problem_Report_File`, `Rent_File`, `product`.
-   Nama file di database hanya nama filenya; shelf menambahkan folder saat menampilkan
+   Nama file di database hanya nama filenya; GAIS menambahkan folder saat menampilkan
    (`App\Support\LegacyUpload`).
 2. **Scheduler.** Pastikan cron `php artisan schedule:run` tiap menit aktif. Jadwal baru:
    `problem-reports:auto-confirm` (tiap 10 menit) dan `reminder:whatsapp` (tiap jam, mengirim
    sekali sehari setelah jam kirim di menu Notifikasi WA).
 3. **WhatsApp.** `WAG_URL` dan `WAG_TOKEN` sudah dipakai modul aset; nomor tujuan global diatur
    di menu Pengaturan > Notifikasi WA. Uji dengan tombol "Kirim Uji Coba".
-4. **Akun sumo.** 87 akun aktif dibuat sebagai user shelf dengan password lamanya. Role: ADMIN ->
+4. **Akun sumo.** 87 akun aktif dibuat sebagai user GAIS dengan password lamanya. Role: ADMIN ->
    `pengajuan_admin`, ACCOUNTING -> `accounting`, EXECUTOR -> `executor`, USER -> `requester`.
    Izin tambahan per divisi (HCM, AUDIT, MIS-IT) dan cakupan pengajuan per divisi ada di
    `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu.

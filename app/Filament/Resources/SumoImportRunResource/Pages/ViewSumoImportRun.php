@@ -35,7 +35,7 @@ class ViewSumoImportRun extends ViewRecord
             SumoImportRun::STATUS_QUEUED => 'Menunggu worker antrean (php artisan horizon).',
             SumoImportRun::STATUS_LOADING, SumoImportRun::STATUS_DRY_RUNNING, SumoImportRun::STATUS_IMPORTING => 'Sedang berjalan; log di bawah diperbarui otomatis.',
             SumoImportRun::STATUS_READY => 'Uji coba selesai. Periksa pemetaan dan peringatan, lalu jalankan Impor Sungguhan bila sudah benar.',
-            SumoImportRun::STATUS_IMPORTED => 'Data sudah diimpor ke shelf. Impor ulang hanya menambah baris yang belum ada.',
+            SumoImportRun::STATUS_IMPORTED => 'Data sudah diimpor ke GAIS. Impor ulang hanya menambah baris yang belum ada.',
             SumoImportRun::STATUS_FAILED => 'Gagal. Lihat penyebab dan log, perbaiki, lalu ulangi.',
             default => null,
         };
@@ -57,7 +57,7 @@ class ViewSumoImportRun extends ViewRecord
                 ->icon('heroicon-o-arrow-down-on-square-stack')
                 ->color('danger')
                 ->visible(fn (): bool => $this->record->canImport())
-                ->modalHeading('Impor data sumo ke shelf?')
+                ->modalHeading('Impor data sumo ke GAIS?')
                 ->modalDescription(fn (): string => $this->importSummary())
                 ->schema([
                     TextInput::make('confirmation')
@@ -127,7 +127,7 @@ class ViewSumoImportRun extends ViewRecord
     private function importSummary(): string
     {
         return sprintf(
-            'Memakai dump yang sama dengan uji coba %s (%d peringatan). Impor berjalan dalam satu transaksi: bila gagal, tidak ada yang tersimpan. Pastikan database shelf sudah di-backup.',
+            'Memakai dump yang sama dengan uji coba %s (%d peringatan). Impor berjalan dalam satu transaksi: bila gagal, tidak ada yang tersimpan. Pastikan database GAIS sudah di-backup.',
             $this->record->dry_run_at?->format('d M Y H:i') ?? '-',
             count($this->record->dry_run_report['warnings'] ?? []),
         );

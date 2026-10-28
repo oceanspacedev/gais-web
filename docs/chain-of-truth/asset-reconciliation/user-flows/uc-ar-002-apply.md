@@ -16,6 +16,6 @@ Main path:
 
 Exception: kandidat berubah/hilang atau batch sudah diterapkan menyebabkan rollback penuh.
 
-Postcondition: data Shelf mengikuti target audit dan `business_entity_id` target masing-masing item untuk semua gap yang aman.
+Postcondition: data GAIS mengikuti target audit dan `business_entity_id` target masing-masing item untuk semua gap yang aman.
 
 Acceptance: memenuhi FR-010 sampai FR-012, FR-015, FR-018, dan NFR-001, NFR-004, NFR-005, NFR-006.

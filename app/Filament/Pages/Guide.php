@@ -5,7 +5,7 @@ namespace App\Filament\Pages;
 use Filament\Pages\Page;
 
 /**
- * Panduan cara kerja Shelf untuk siapa pun yang memegang aplikasi ini.
+ * Panduan cara kerja GAIS untuk siapa pun yang memegang aplikasi ini.
  * Terbuka untuk semua user yang sudah login ke panel, tanpa permission khusus.
  */
 class Guide extends Page
@@ -16,7 +16,7 @@ class Guide extends Page
 
     protected static ?string $navigationLabel = 'Panduan';
 
-    protected static ?string $title = 'Panduan Shelf';
+    protected static ?string $title = 'Panduan GAIS';
 
     protected static ?string $slug = 'panduan';
 
@@ -84,7 +84,7 @@ class Guide extends Page
             ],
             'import' => [
                 ['actor' => 'admin', 'title' => 'Unggah dump', 'text' => 'Menu Pengaturan, Impor Data Sumo, tombol Unggah dump. File .sql atau .gz disimpan privat dan tercatat sebagai satu run.'],
-                ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running mengosongkan database staging sumo lalu memuat dump. Database shelf ditolak sebagai target.'],
+                ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running mengosongkan database staging sumo lalu memuat dump. Database GAIS ditolak sebagai target.'],
                 ['actor' => 'sistem', 'title' => 'Uji coba otomatis', 'text' => 'Semua langkah dijalankan lalu di-rollback. Laporan jumlah, pemetaan badan usaha, dan peringatan user tampil di run.'],
                 ['actor' => 'admin', 'title' => 'Impor sungguhan', 'text' => 'Ketik IMPOR. Satu transaksi dan idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
                 ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke pengajuan_admin, accounting, executor, requester. Cache permission direset.'],

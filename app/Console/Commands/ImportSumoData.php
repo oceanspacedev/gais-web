@@ -11,7 +11,7 @@ class ImportSumoData extends Command
         {--dry-run : Jalankan di dalam transaksi lalu batalkan; hanya menampilkan laporan}
         {--only=* : Langkah tertentu saja: areas, divisions, masters, users, requests, problems, insurances, rents, wa, scopes, access}';
 
-    protected $description = 'Impor data legacy sumo-web (Web Gais) dari koneksi `sumo` ke tabel shelf. Bisa diulang.';
+    protected $description = 'Impor data legacy sumo-web (Web Gais lama) dari koneksi `sumo` ke tabel GAIS. Bisa diulang.';
 
     public function handle(): int
     {

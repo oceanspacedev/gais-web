@@ -1,16 +1,17 @@
 <p align="center">
-  <img src="public/images/icon.svg" alt="Logo Shelf" width="150">
+  <img src="public/images/icon.svg" alt="Logo GAIS" width="150">
 </p>
 
-<h1 align="center">Shelf</h1>
+<h1 align="center">GAIS</h1>
 
 <p align="center">
+  <strong>General Affair Information System</strong><br>
   Sistem manajemen aset berbasis web untuk inventaris,
   transfer dan berita acara, rekonsiliasi audit,
   checksheet kendaraan, serta pengingat dokumen.
 </p>
 
-Shelf dipakai lewat satu jalur utama:
+GAIS dipakai lewat satu jalur utama:
 
 - **Panel staf Filament** di `/admin` untuk operasional aset, master data, transfer/BA, rekonsiliasi, checksheet kendaraan, tugas, dan pengguna.
 
@@ -39,7 +40,7 @@ Bahasa utama aplikasi adalah Bahasa Indonesia (locale `id`) dan seluruh perhitun
 
 ## Tujuan dan scope
 
-Shelf mencatat aset, transfer dan dokumen BA, rekonsiliasi, checksheet kendaraan, dan pengingat masa berlaku dokumen. Pengajuan barang ditangani modul Pengajuan Barang (dari sumo-web); modul Pengajuan Aset lama (pengadaan/penarikan/perbaikan, form publik, approval token) sudah dihapus.
+GAIS mencatat aset, transfer dan dokumen BA, rekonsiliasi, checksheet kendaraan, dan pengingat masa berlaku dokumen. Pengajuan barang ditangani modul Pengajuan Barang (dari sumo-web); modul Pengajuan Aset lama (pengadaan/penarikan/perbaikan, form publik, approval token) sudah dihapus.
 
 ### Termasuk dalam scope
 
@@ -50,7 +51,7 @@ Shelf mencatat aset, transfer dan dokumen BA, rekonsiliasi, checksheet kendaraan
 - Unduhan PDF berita acara / penyelesaian tugas (hanya user terautentikasi).
 - Pengingat dokumen terjadwal (`notifications:send-scheduled` setiap hari pukul 13:20) plus `model:prune` harian.
 - Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi dan pengingat.
-- Query aset dari integrasi WhatsApp: `shelf.search_asset`, `shelf.asset_history`, `shelf.expiring_documents`.
+- Query aset dari integrasi WhatsApp: `gais.search_asset`, `gais.asset_history`, `gais.expiring_documents`.
 - Health check Laravel di `/up`.
 
 ### Di luar scope implementasi saat ini
@@ -140,11 +141,11 @@ Unduhan: `GET /asset-transfer/{id}/download`, `GET /task-completion/{id}/downloa
 
 ### 2. Rekonsiliasi audit
 
-Resource **Import & Laporan Audit** membandingkan workbook CSA (sheet `ASET`, qty) atau audit kendaraan (sheet `Monitoring Asset`, plat) terhadap data Shelf. File di-stage dulu; data aplikasi baru berubah setelah **Terapkan Koreksi**. Resource ini memakai permission `import` pada `Asset`.
+Resource **Import & Laporan Audit** membandingkan workbook CSA (sheet `ASET`, qty) atau audit kendaraan (sheet `Monitoring Asset`, plat) terhadap data GAIS. File di-stage dulu; data aplikasi baru berubah setelah **Terapkan Koreksi**. Resource ini memakai permission `import` pada `Asset`.
 
 ### 3. Pengingat dokumen
 
-Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiable`. Command `notifications:send-scheduled` (jadwal harian 13:20) mengirim WhatsApp/email ke penerima yang dikonfigurasi. Integrasi WhatsApp juga dapat menanyakan dokumen yang akan kedaluwarsa lewat rute `shelf.expiring_documents`.
+Custom Asset Attribute bertipe dokumen/masa berlaku dapat menandai `is_notifiable`. Command `notifications:send-scheduled` (jadwal harian 13:20) mengirim WhatsApp/email ke penerima yang dikonfigurasi. Integrasi WhatsApp juga dapat menanyakan dokumen yang akan kedaluwarsa lewat rute `gais.expiring_documents`.
 
 ### 4. Login staf
 
@@ -188,7 +189,7 @@ flowchart TB
 | `routes/web.php` | Redirect `/`, PDF |
 | `routes/api.php` | Sanctum `/api/user` dan query WhatsApp |
 | `bootstrap/app.php` | Health `/up`, jadwal 13:20, trust proxies |
-| `deploy/web-shelf-queue.service` | Unit systemd `php artisan horizon` |
+| `deploy/web-gais-queue.service` | Unit systemd `php artisan horizon` |
 | `resources/views/public` | Blade form/status/approval |
 | `tests` | Unit dan feature test |
 | `docs/` | Panduan atribut kustom dan chain-of-truth rekonsiliasi |
@@ -244,7 +245,7 @@ Jangan menjalankan `composer update` hanya untuk setup; gunakan versi dependency
 `.env.example` memakai MySQL dengan `DB_DATABASE=laravel`. Buat database kosong lalu sesuaikan koneksi:
 
 ```dotenv
-APP_NAME=Shelf
+APP_NAME=GAIS
 APP_ENV=local
 APP_DEBUG=true
 APP_URL=http://127.0.0.1:8000
@@ -290,7 +291,7 @@ Blok inti `.env.example` mengikuti skeleton Laravel 12, termasuk `CACHE_STORE`, 
 |---|:---:|---|
 | `APP_KEY` | Ya | Kunci enkripsi Laravel; dibuat dengan `php artisan key:generate` |
 | `APP_URL` | Ya | Base URL, tautan token, dan asset |
-| `APP_NAME` | Tidak | Nama tampilan; default `.env.example` `Shelf` |
+| `APP_NAME` | Tidak | Nama tampilan; default `.env.example` `GAIS` |
 | `APP_ENV` / `APP_DEBUG` | Ya | Environment dan debug |
 | `APP_LOCALE` / `APP_FALLBACK_LOCALE` | Ya | Default `.env.example` `id` |
 | `DB_CONNECTION` / `DB_*` | Ya | Driver dan koneksi; default proyek `mysql` |
@@ -381,7 +382,7 @@ Production memanggil scheduler setiap menit:
 * * * * * cd /absolute/path/to/shelf-web && /absolute/path/to/php artisan schedule:run >> storage/logs/scheduler.log 2>&1
 ```
 
-Contoh unit worker: [`deploy/web-shelf-queue.service`](deploy/web-shelf-queue.service).
+Contoh unit worker: [`deploy/web-gais-queue.service`](deploy/web-gais-queue.service). Rilis rebranding Shelf → GAIS punya langkah deploy sekali jalan di [`docs/deploy-rebranding-gais.md`](docs/deploy-rebranding-gais.md).
 
 Setiap deploy production, cache konfigurasi, route, view, serta komponen dan ikon Filament supaya setiap request panel tidak memindai ulang file (ulangi setelah `git pull`):
 
@@ -511,7 +512,7 @@ Untuk mengaktifkan:
 
 Admin yang menyimpan nomor di panel, atau **Import Talenta** / impor Excel yang memuat `employee_id` dan nomor HP, yang menautkan nomor itu sebagai login. OTP baru membuktikan kepemilikan nomor, bukan hak untuk mengaitkannya ke akun tertentu.
 
-OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun baru dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus Shelf.
+OTP tersimpan sebagai hash, berlaku lima menit secara default (`WHATSAPP_OTP_TTL_MINUTES`), terikat ke sesi, dan hanya dapat digunakan sekali. Pengiriman dibatasi per nomor, sesi, dan IP; verifikasi dibatasi lima percobaan salah selama masa berlaku kode. Akun baru dicari setelah OTP valid dan sesi diganti setelah login. Pada beberapa instance aplikasi, gunakan cache dan session bersama serta `CACHE_PREFIX` khusus GAIS.
 
 ### Login email
 

@@ -100,9 +100,9 @@ class CsaAssetAuditWorkbookExporter
         $guide = $spreadsheet->createSheet();
         $guide->setTitle('PETUNJUK');
         $guide->fromArray([
-            ['Export Format CSA dari Shelf'],
+            ['Export Format CSA dari GAIS'],
             ['1. Jangan ubah nama sheet ASET atau header kolom.'],
-            ['2. Qty Akhir = saldo Shelf saat export. Isi Fisik (audit) dan/atau Selisih.'],
+            ['2. Qty Akhir = saldo GAIS saat export. Isi Fisik (audit) dan/atau Selisih.'],
             ['3. Selisih = Fisik - Qty Akhir bila keduanya diisi.'],
             ['4. Simpan file, lalu Import di menu Import & Laporan Audit.'],
             ['5. Tinjau Laporan (Inline/Gap/Blocked) sebelum Apply.'],

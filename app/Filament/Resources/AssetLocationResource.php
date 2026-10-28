@@ -34,7 +34,7 @@ class AssetLocationResource extends Resource
                     ->maxLength(255),
                 TextInput::make('external_code')
                     ->label('Kode Gudang CSA')
-                    ->helperText('Dipakai untuk memetakan kolom Gudang pada workbook audit ke Lokasi Shelf.')
+                    ->helperText('Dipakai untuk memetakan kolom Gudang pada workbook audit ke Lokasi GAIS.')
                     ->unique(ignoreRecord: true)
                     ->maxLength(255),
                 TextInput::make('address')

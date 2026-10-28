@@ -4,7 +4,7 @@ Status: Reviewed
 
 | ID | Classification | Gap | Mitigation | Residual decision |
 |---|---|---|---|---|
-| GAP-001 | Unknown intent | Kode gudang CSA belum tentu sudah dipetakan ke lokasi Shelf. | `external_code`, preview non-mutating, dan opsi create-on-apply. | Stakeholder meninjau lokasi baru setelah import pertama. |
+| GAP-001 | Unknown intent | Kode gudang CSA belum tentu sudah dipetakan ke lokasi GAIS. | `external_code`, preview non-mutating, dan opsi create-on-apply. | Stakeholder meninjau lokasi baru setelah import pertama. |
 | GAP-002 | Source ambiguity | Barang dan Item dipakai bergantian. | Master `AssetCatalogItem` memegang identitas eksternal; Asset memegang saldo lokasi. | Stakeholder mengonfirmasi istilah UI. |
 | GAP-003 | Missing identity | Sebagian baris tidak memiliki serial dan ditulis per unit. | Agregasi Gudang + Item sebelum compare. | Baris berserial ambigu tetap diblokir. |
 | GAP-004 | Validation | Dokumen belum divalidasi stakeholder. | Semua artifact berstatus Reviewed dan implementasi diuji; produksi menunggu approval. | Pending. |

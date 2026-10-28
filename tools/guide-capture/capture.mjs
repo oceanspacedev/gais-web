@@ -1,11 +1,11 @@
 // Membuat screenshot + gambar bergerak (GIF) untuk halaman Panduan (/admin/panduan) dan docs/.
-// Jalankan: npm run capture   (DB: db_shelf_capture, lihat README.md di folder ini)
+// Jalankan: npm run capture   (DB: db_gais_capture, lihat README.md di folder ini)
 import { chromium } from 'playwright';
 import { mkdtempSync, rmSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join, BASE, CURSOR_JS, Recorder, startServer, resetData, resetPermissionCache, toGif, cleanOld, OUT } from './lib.mjs';
 
-const DB = process.env.CAPTURE_DB || 'db_shelf_capture';
+const DB = process.env.CAPTURE_DB || 'db_gais_capture';
 // Contoh: node capture.mjs setup   atau   node capture.mjs --reset pengajuan-buat,pengajuan-proses
 const args = process.argv.slice(2);
 const only = args.find((a) => !a.startsWith('--'))?.split(',');
@@ -14,7 +14,7 @@ const sections = (await import('./sections.mjs')).default;
 if (!only || args.includes('--reset')) resetData(DB);
 const srv = await startServer(DB);
 const browser = await chromium.launch();
-const tmp = mkdtempSync(join(tmpdir(), 'shelf-capture-'));
+const tmp = mkdtempSync(join(tmpdir(), 'gais-capture-'));
 try {
   // Login sekali per akun, simpan sesinya (tidak direkam). Bagian memilih akun lewat `user` (default admin).
   const states = {};

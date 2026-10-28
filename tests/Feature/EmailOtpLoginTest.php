@@ -388,7 +388,7 @@ class EmailOtpLoginTest extends TestCase
 
     public function test_login_mail_contains_the_code_and_the_magic_link(): void
     {
-        $url = 'http://shelf.test/email-login/link/'.str_repeat('a', 64);
+        $url = 'http://gais.test/email-login/link/'.str_repeat('a', 64);
         $html = (new EmailLoginMail(name: 'Budi', otp: '482913', loginUrl: $url, expiresInMinutes: 10))->render();
 
         $this->assertStringContainsString('482913', $html);

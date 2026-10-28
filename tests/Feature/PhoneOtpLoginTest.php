@@ -288,7 +288,7 @@ class PhoneOtpLoginTest extends TestCase
 
         $component->call('changePhone')->assertSet('awaitingOtp', false)
             ->assertSet('otpChallengeId', null)->assertSet('data.otp', null);
-        $this->assertNull(Cache::get('shelf:phone-otp:login:challenge:'.hash('sha256', $challengeId)));
+        $this->assertNull(Cache::get('gais:phone-otp:login:challenge:'.hash('sha256', $challengeId)));
 
         $component->fillForm(['phone' => '081234567890'])->call('send')->assertHasNoFormErrors();
         $this->assertNotSame($challengeId, $component->get('otpChallengeId'));

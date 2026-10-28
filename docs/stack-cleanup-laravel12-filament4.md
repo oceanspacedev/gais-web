@@ -1,8 +1,8 @@
-# Stack Cleanup — Laravel 12 + Filament 4 + Tailwind v4 + Vite (web-shelf)
+# Stack Cleanup — Laravel 12 + Filament 4 + Tailwind v4 + Vite (GAIS)
 
-Dokumen ini mencatat langkah-langkah pembersihan yang telah dilakukan pada proyek **web-shelf** untuk memastikan basis kode sepenuhnya bersih, efisien, dan selaras dengan stack modern:
+Dokumen ini mencatat langkah-langkah pembersihan yang telah dilakukan pada proyek **GAIS** untuk memastikan basis kode sepenuhnya bersih, efisien, dan selaras dengan stack modern:
 
-| Komponen | Versi Aktif (`web-shelf`) | Keterangan |
+| Komponen | Versi Aktif (`GAIS`) | Keterangan |
 |---|---|---|
 | **Laravel Framework** | **12.63.0** | Framework modern standar (tanpa artefak legacy Laravel 9/10/11) |
 | **PHP Engine** | **8.4.23** | Mendukung fitur modern PHP 8.4 |
@@ -10,7 +10,7 @@ Dokumen ini mencatat langkah-langkah pembersihan yang telah dilakukan pada proye
 | **Tailwind CSS** | **v4.3.2** | Setup CSS-first menggunakan plugin `@tailwindcss/vite` |
 | **Vite & Frontend** | **v8.1.0** | Bundler super cepat dengan `laravel-vite-plugin` |
 
-Dokumen ini berfungsi sebagai **catatan standar & checklist verifikasi** bahwa proyek **web-shelf** benar-benar berjalan di atas stack Laravel 12 & Filament 4 yang bersih, tanpa menyisakan artefak boilerplate, konfigurasi mati, atau API deprecated.
+Dokumen ini berfungsi sebagai **catatan standar & checklist verifikasi** bahwa proyek **GAIS** benar-benar berjalan di atas stack Laravel 12 & Filament 4 yang bersih, tanpa menyisakan artefak boilerplate, konfigurasi mati, atau API deprecated.
 
 ---
 
@@ -61,7 +61,7 @@ public/build/assets/mekaya-Drf7ba5Z.js    3.46 kB │ gzip:  1.08 kB
 
 ## 2. Pembersihan Broadcasting & JS Bootstrap (`routes/channels.php`, `config/broadcasting.php`, `resources/js/`)
 
-> **Konteks:** Proyek **web-shelf** adalah aplikasi manajemen aset yang tidak menggunakan fitur real-time broadcasting (Pusher/Laravel Echo). Di `bootstrap/app.php`, metode `->withRouting()` tidak mendefinisikan parameter `channels:`, sehingga `routes/channels.php` tidak pernah dimuat oleh kernel Laravel (`dead code`).
+> **Konteks:** Proyek **GAIS** adalah aplikasi manajemen aset yang tidak menggunakan fitur real-time broadcasting (Pusher/Laravel Echo). Di `bootstrap/app.php`, metode `->withRouting()` tidak mendefinisikan parameter `channels:`, sehingga `routes/channels.php` tidak pernah dimuat oleh kernel Laravel (`dead code`).
 
 ### Yang Dilakukan
 1. **Menghapus File Konfigurasi & Rute Redundan:**
@@ -96,7 +96,7 @@ public/build/assets/mekaya-Drf7ba5Z.js    3.46 kB │ gzip:  1.08 kB
 > **Konteks:** Pada Filament v3, metode `->reactive()` digunakan untuk membuat komponen form bereaksi dan memicu re-render saat nilainya berubah. Di Filament v4, `->reactive()` telah didepresiasi dan hanya bertindak sebagai alias internal untuk `->live()`. Untuk menjaga konsistensi codebase dengan standar v4 murni, seluruh pemanggilan `->reactive()` dimigrasikan ke `->live()`.
 
 ### Yang Dilakukan
-Mengganti total **15 pemanggilan** `->reactive()` menjadi `->live()` di 3 file resource utama `web-shelf`:
+Mengganti total **15 pemanggilan** `->reactive()` menjadi `->live()` di 3 file resource utama `GAIS`:
 
 1. **`app/Filament/Resources/AssetTransferResource.php`** (3 tempat)
    - Field `Select::make('business_entity_id')`
@@ -150,7 +150,7 @@ php artisan config:cache && php artisan about
 php artisan route:list
 # => Seluruh rute web, API, dan halaman admin Filament terdaftar dan dapat dimuat tanpa error.
 
-# 4. Jalankan seluruh test suite web-shelf
+# 4. Jalankan seluruh test suite GAIS
 php artisan test
 ```
 
@@ -172,4 +172,4 @@ php artisan test
   Duration: 6.95s
 ```
 
-**Kesimpulan:** Basis kode **web-shelf** kini berada dalam kondisi sangat bersih, modern, dan lulus uji (`117 passed`), siap untuk pengembangan fitur baru maupun deployment ke production.
+**Kesimpulan:** Basis kode **GAIS** kini berada dalam kondisi sangat bersih, modern, dan lulus uji (`117 passed`), siap untuk pengembangan fitur baru maupun deployment ke production.

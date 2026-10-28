@@ -22,7 +22,7 @@ abstract class AssetQrLabelTestCase extends TestCase
             'database.default' => 'sqlite',
             'database.connections.sqlite.database' => ':memory:',
             'database.connections.sqlite.foreign_key_constraints' => true,
-            'app.url' => 'https://shelf.example.test',
+            'app.url' => 'https://gais.example.test',
             'filesystems.default' => 'local',
         ]);
         DB::purge('sqlite');

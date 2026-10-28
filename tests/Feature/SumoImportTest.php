@@ -113,11 +113,11 @@ class SumoImportTest extends TestCase
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('requires_products'));
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
 
-        // Perubahan di shelf sesudah impor pertama tidak boleh ditimpa impor ulang.
-        DB::table('problem_reports')->where('id', self::B + 20)->update(['status' => 'CANCELLED', 'result_desc' => 'diubah di shelf']);
-        DB::table('item_requests')->where('id', self::B + 10)->update(['client_status' => 1, 'notes' => 'diproses di shelf']);
+        // Perubahan di GAIS sesudah impor pertama tidak boleh ditimpa impor ulang.
+        DB::table('problem_reports')->where('id', self::B + 20)->update(['status' => 'CANCELLED', 'result_desc' => 'diubah di GAIS']);
+        DB::table('item_requests')->where('id', self::B + 10)->update(['client_status' => 1, 'notes' => 'diproses di GAIS']);
         DB::table('item_request_approvals')->where('item_request_id', self::B + 10)->where('approval_type', 'MANAGER')->update(['approved_by_user_id' => $admin->id]);
-        DB::table('item_request_types')->where('id', self::B + 1)->update(['name' => 'Diganti di shelf']);
+        DB::table('item_request_types')->where('id', self::B + 1)->update(['name' => 'Diganti di GAIS']);
         DB::table('users')->where('id', $requester->id)->update(['approver_user_id' => $admin->id]);
         $requester->removeRole('requester');
         ItemRequestScope::query()->where('division_id', self::B + 9)->delete();
@@ -126,15 +126,15 @@ class SumoImportTest extends TestCase
         $rerun = (new SumoImporter)->run();
 
         $this->assertSame($usersBefore, User::count(), 'Impor ulang tidak membuat user ganda.');
-        $this->assertSame('diubah di shelf', DB::table('problem_reports')->where('id', self::B + 20)->value('result_desc'));
+        $this->assertSame('diubah di GAIS', DB::table('problem_reports')->where('id', self::B + 20)->value('result_desc'));
         $this->assertSame('CANCELLED', DB::table('problem_reports')->where('id', self::B + 20)->value('status'));
-        $this->assertSame('diproses di shelf', DB::table('item_requests')->where('id', self::B + 10)->value('notes'));
+        $this->assertSame('diproses di GAIS', DB::table('item_requests')->where('id', self::B + 10)->value('notes'));
         $this->assertEquals(1, DB::table('item_requests')->where('id', self::B + 10)->value('client_status'));
         $this->assertEquals($admin->id, DB::table('item_request_approvals')->where('item_request_id', self::B + 10)->where('approval_type', 'MANAGER')->value('approved_by_user_id'));
-        $this->assertSame('Diganti di shelf', DB::table('item_request_types')->where('id', self::B + 1)->value('name'));
+        $this->assertSame('Diganti di GAIS', DB::table('item_request_types')->where('id', self::B + 1)->value('name'));
         $this->assertEquals($admin->id, DB::table('users')->where('id', $requester->id)->value('approver_user_id'));
-        $this->assertFalse($requester->fresh()->hasRole('requester'), 'Role yang dicabut di shelf tidak dipasang lagi.');
-        $this->assertSame(0, ItemRequestScope::query()->where('division_id', self::B + 9)->count(), 'Cakupan yang dihapus di shelf tidak diisi lagi.');
+        $this->assertFalse($requester->fresh()->hasRole('requester'), 'Role yang dicabut di GAIS tidak dipasang lagi.');
+        $this->assertSame(0, ItemRequestScope::query()->where('division_id', self::B + 9)->count(), 'Cakupan yang dihapus di GAIS tidak diisi lagi.');
         $this->assertSame(0, $rerun->count('item_requests'));
         $this->assertSame(2, $rerun->count('item_requests.existing'));
         $this->assertSame(0, $rerun->count('users.created'));
@@ -143,7 +143,7 @@ class SumoImportTest extends TestCase
         $this->assertSame(1, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
     }
 
-    public function test_existing_shelf_people_are_reused_instead_of_duplicated(): void
+    public function test_existing_gais_people_are_reused_instead_of_duplicated(): void
     {
         $b = self::B;
         $f = SumoLegacyFixture::class;
@@ -153,16 +153,16 @@ class SumoImportTest extends TestCase
             'badan_usaha_id' => $b + 2, 'division_id' => $b + 15, 'role_id' => $role, 'approval_id' => 0,
         ]);
 
-        // Data karyawan shelf tanpa login: digabung dan dilengkapi login sumo.
+        // Data karyawan GAIS tanpa login: digabung dan dilengkapi login sumo.
         $employee = User::factory()->create(['name' => 'PEGAWAI GABUNG UJI', 'username' => null, 'password' => null, 'business_entity_id' => null]);
         $sumoUser(50, 'pegawai-uji', 'Pegawai  Gabung Uji', 3);
 
-        // Akun shelf aktif dengan role non-sumo: digabung lewat username, login dan cakupan tidak diubah.
-        $shelfAdmin = User::factory()->create(['name' => 'ADMIN SHELF UJI', 'username' => 'admin-shelf-uji', 'access_all_business_entities' => false]);
-        $shelfAdmin->assignRole(Role::findOrCreate('shelf-lain-uji', 'web'));
-        $sumoUser(51, 'admin-shelf-uji', 'ADMIN SHELF UJI', 1);
+        // Akun GAIS aktif dengan role non-sumo: digabung lewat username, login dan cakupan tidak diubah.
+        $gaisAdmin = User::factory()->create(['name' => 'ADMIN GAIS UJI', 'username' => 'admin-gais-uji', 'access_all_business_entities' => false]);
+        $gaisAdmin->assignRole(Role::findOrCreate('gais-lain-uji', 'web'));
+        $sumoUser(51, 'admin-gais-uji', 'ADMIN GAIS UJI', 1);
 
-        // Nama dipakai dua user shelf: tidak ditebak, dibuat akun baru.
+        // Nama dipakai dua user GAIS: tidak ditebak, dibuat akun baru.
         User::factory()->count(2)->create(['name' => 'NAMA KEMBAR UJI']);
         $sumoUser(52, 'kembar-uji', 'NAMA KEMBAR UJI');
 
@@ -187,11 +187,11 @@ class SumoImportTest extends TestCase
         $this->assertTrue($employee->hasRole('executor'));
         $this->assertTrue($employee->access_all_business_entities);
 
-        $shelfAdmin->refresh();
-        $this->assertSame($b + 51, $shelfAdmin->legacy_sumo_user_id);
-        $this->assertFalse(Hash::check('rahasia-sumo', $shelfAdmin->password));
-        $this->assertFalse($shelfAdmin->access_all_business_entities, 'Akses akun shelf yang sudah dipakai tidak diperluas diam-diam.');
-        $this->assertTrue($shelfAdmin->hasRole('pengajuan_admin'));
+        $gaisAdmin->refresh();
+        $this->assertSame($b + 51, $gaisAdmin->legacy_sumo_user_id);
+        $this->assertFalse(Hash::check('rahasia-sumo', $gaisAdmin->password));
+        $this->assertFalse($gaisAdmin->access_all_business_entities, 'Akses akun GAIS yang sudah dipakai tidak diperluas diam-diam.');
+        $this->assertTrue($gaisAdmin->hasRole('pengajuan_admin'));
 
         foreach ([52, 53, 54] as $id) {
             $this->assertSame(1, User::where('legacy_sumo_user_id', $b + $id)->whereNotNull('username')->count());

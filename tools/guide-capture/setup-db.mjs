@@ -5,7 +5,7 @@ import { readFileSync } from 'node:fs';
 import { join, ROOT } from './lib.mjs';
 
 const env = Object.fromEntries(readFileSync(join(ROOT, '.env'), 'utf8').split(/\r?\n/).filter((l) => /^[A-Z_]+=/.test(l)).map((l) => [l.split('=')[0], l.slice(l.indexOf('=') + 1).replace(/^"|"$/g, '')]));
-const SRC = env.DB_DATABASE, DST = process.env.CAPTURE_DB || 'db_shelf_capture';
+const SRC = env.DB_DATABASE, DST = process.env.CAPTURE_DB || 'db_gais_capture';
 if (!DST.includes('capture') || DST === SRC) throw new Error('DB tujuan harus berbeda dari DB utama dan bernama *capture*');
 
 const bin = process.env.MYSQL_BIN || 'C:/laragon/bin/mysql/mysql-8.0.30-winx64/bin';

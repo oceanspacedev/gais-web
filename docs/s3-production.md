@@ -1,4 +1,4 @@
-# Storage S3 untuk Shelf
+# Storage S3 untuk GAIS
 
 Gunakan `.env.production.example` sebagai template. Isi kredensial di `.env`
 server atau `.env.production` yang diabaikan Git. Pertahankan `APP_KEY` production

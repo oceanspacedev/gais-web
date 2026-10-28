@@ -18,7 +18,7 @@ final class ExportVehicleAuditFormatAction
             ->label('0. Export Format Audit Kendaraan')
             ->icon('heroicon-o-truck')
             ->color('gray')
-            ->tooltip('Unduh aset MOBIL/MOTOR Shelf dalam format Monitoring Asset. Isi audit, lalu Import VEHICLE_AUDIT.')
+            ->tooltip('Unduh aset MOBIL/MOTOR GAIS dalam format Monitoring Asset. Isi audit, lalu Import VEHICLE_AUDIT.')
             ->visible(fn (): bool => auth()->user()?->can('import', Asset::class)
                 || auth()->user()?->can('export', Asset::class))
             ->action(function (): ?BinaryFileResponse {

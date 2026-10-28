@@ -1,11 +1,11 @@
-# Dokumentasi Teknis shelf-web
+# Dokumentasi Teknis GAIS
 
 Halaman **Dokumentasi Teknis** di panel (`/admin/dokumentasi-teknis`) merender file ini. Setiap `##` menjadi satu bab, setiap `###` menjadi bagian yang bisa dibuka-tutup, dan komentar `<!-- desc: ... -->` di bawah judul bab menjadi deskripsi singkatnya. Ditulis 14 Oktober 2026, diperbarui 27 Oktober 2026.
 
 ## Ringkasan
-<!-- desc: Apa itu Shelf dan dari mana modulnya berasal -->
+<!-- desc: Apa itu GAIS dan dari mana modulnya berasal -->
 
-Shelf adalah aplikasi manajemen aset internal. Dibangun dengan Laravel 12 + Filament 4, dipakai staf lewat satu panel di `/admin`.
+GAIS (General Affair Information System) adalah aplikasi manajemen aset internal. Dibangun dengan Laravel 12 + Filament 4, dipakai staf lewat satu panel di `/admin`.
 
 ### Apa yang dikerjakan aplikasi
 
@@ -18,7 +18,7 @@ Shelf adalah aplikasi manajemen aset internal. Dibangun dengan Laravel 12 + Fila
 
 ### Asal modul sumo-web
 
-Modul dari aplikasi lama **sumo-web (Web Gais)** dibangun ulang sebagai resource Filament dan sudah di-merge ke `main`. Data lamanya diimpor lewat menu **Pengaturan > Impor Data Sumo** atau command `sumo:import`.
+Modul dari aplikasi lama **sumo-web (Web Gais lama)** dibangun ulang sebagai resource Filament dan sudah di-merge ke `main`. Data lamanya diimpor lewat menu **Pengaturan > Impor Data Sumo** atau command `sumo:import`.
 
 ### Hubungan dengan README
 
@@ -111,7 +111,7 @@ Hanya dibutuhkan untuk import. Koneksinya `sumo` di `config/database.php`, nama 
 ### Peringatan
 
 - Feature test berjalan di database `.env` dengan `DatabaseTransactions`. **Jangan** jalankan `migrate:fresh`, `migrate:refresh`, atau `db:wipe` di sana.
-- **Jangan** impor dump sumo langsung ke database shelf: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Pakai database terpisah, langkahnya di `database/sumo/README.md`. Loader di panel menolak target yang sama dengan database shelf.
+- **Jangan** impor dump sumo langsung ke database GAIS: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Pakai database terpisah, langkahnya di `database/sumo/README.md`. Loader di panel menolak target yang sama dengan database GAIS.
 
 ## Struktur kode
 <!-- desc: Peta folder, rute, dan jadwal command -->
@@ -192,31 +192,31 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 - **Resource:** `AssetResource`, `AssetTransferResource` (BA), `AssetServiceResource`, `AssetReconciliationResource` (Import & Laporan Audit), `AssetQrLabelHistoryResource`
 - **Pencarian:** kotak cari daftar aset (dan pemilih aset di form BA dan servis) juga mencocokkan semua atribut kustom aktif non-dokumen, misalnya plat nomor dan serial number. Spasi, strip, titik, dan garis miring diabaikan (`Asset::scopeWhereAnyAttribute` memakai `asset_attributes.search_value`)
 - **Logika:** `AssetReconciliationService`, `VehicleAssetReconciliationService`, `*AuditWorkbookParser/Exporter`, `AssetQrService`, `AssetQrScanService`, `AssetNotificationService`
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### Master Aset
 
 - **Resource:** `CategoryResource`, `BrandResource`, `CustomAssetAttributeResource`, `VendorResource`
 - **Logika:** command `notifications:send-scheduled` untuk atribut dokumen
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### OB / Kebersihan
 
 - **Resource:** `ObChecksheetResource`, `ObRoomResource`, `ObShiftResource`
 - **Logika:** `ObTaskAssignmentService`
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### Kendaraan
 
 - **Resource:** `VehicleChecksheetResource`
 - **Logika:** `VehicleChecksheetImport`, `VehiclePlateNormalizer`
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### Pekerjaan Vendor
 
 - **Resource:** `TaskResource`
 - **Logika:** `PdfController` (PDF penyelesaian tugas)
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### Pengajuan Barang
 
@@ -243,7 +243,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 - **Logika:** `TalentaUserImportService` (satu-satunya import user, dari JSON Talenta), `HasBusinessEntityAccess`
 - **Halaman user:** lima tab relasi baca-saja di `UserResource/RelationManagers`: Aset Dipegang, Berita Acara (BA), Pengajuan Barang, Approval Pengajuan, Laporan Gangguan
 - **Talenta:** user yang punya `employee_id` dianggap tersinkron dari Talenta (`UserResource::isSyncedFromTalenta`). Nama, Employee ID, WhatsApp, email, badan usaha, dan jabatan dikunci di form dan hanya berubah lewat import ulang JSON
-- **Asal:** Shelf
+- **Asal:** GAIS
 
 ### Pengaturan dan lainnya
 

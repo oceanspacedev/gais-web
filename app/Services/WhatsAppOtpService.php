@@ -38,7 +38,7 @@ class WhatsAppOtpService
         $scopeHash = hash('sha256', $scope);
         $phoneHash = hash('sha256', $phone);
         $aliasKey = $this->scopeAliasKey($purpose, $scopeHash);
-        $lock = Cache::lock('shelf:phone-otp:lock:issue:'.$scopeHash, 30);
+        $lock = Cache::lock('gais:phone-otp:lock:issue:'.$scopeHash, 30);
         if (! $lock->get()) {
             return $this->failure('busy', 1);
         }
@@ -58,24 +58,24 @@ class WhatsAppOtpService
                 Cache::forget($aliasKey);
             }
 
-            $targetLimiter = 'shelf:phone-otp:send:target:'.$phoneHash;
-            $principalLimiter = 'shelf:phone-otp:send:principal:'.hash('sha256', $principal);
+            $targetLimiter = 'gais:phone-otp:send:target:'.$phoneHash;
+            $principalLimiter = 'gais:phone-otp:send:principal:'.hash('sha256', $principal);
             $tenant = trim($tenant) !== '' ? trim($tenant) : $principal;
             $tenantHash = hash('sha256', $tenant);
-            $tenantLimiter = 'shelf:phone-otp:send:tenant:'.$tenantHash;
-            $principalLock = Cache::lock('shelf:phone-otp:lock:principal:'.hash('sha256', $principal), 30);
+            $tenantLimiter = 'gais:phone-otp:send:tenant:'.$tenantHash;
+            $principalLock = Cache::lock('gais:phone-otp:lock:principal:'.hash('sha256', $principal), 30);
             if (! $principalLock->get()) {
                 return $this->failure('busy', 1);
             }
 
             try {
-                $targetLock = Cache::lock('shelf:phone-otp:lock:target:'.$phoneHash, 30);
+                $targetLock = Cache::lock('gais:phone-otp:lock:target:'.$phoneHash, 30);
                 if (! $targetLock->get()) {
                     return $this->failure('busy', 1);
                 }
 
                 try {
-                    $quotaLock = Cache::lock('shelf:phone-otp:lock:tenant-quota:'.$tenantHash, 10);
+                    $quotaLock = Cache::lock('gais:phone-otp:lock:tenant-quota:'.$tenantHash, 10);
                     if (! $quotaLock->get()) {
                         return $this->failure('busy', 1);
                     }
@@ -126,7 +126,7 @@ class WhatsAppOtpService
                         return $this->failure('storage_failed');
                     }
 
-                    $message = "Kode verifikasi Shelf Anda: *{$otp}*\n"
+                    $message = "Kode verifikasi GAIS Anda: *{$otp}*\n"
                         ."Berlaku {$ttlMinutes} menit dan hanya untuk satu proses login. "
                         .'Jangan bagikan kode ini kepada siapa pun.';
                     if (! $this->gateway->send($phone, $message)) {
@@ -165,8 +165,8 @@ class WhatsAppOtpService
 
         $scopeHash = hash('sha256', $scope);
         $challengeKey = $this->challengeKey($purpose, $challengeId);
-        $verifyLimiter = 'shelf:phone-otp:verify:'.hash('sha256', $scope."\0".$challengeId);
-        $lock = Cache::lock('shelf:phone-otp:lock:issue:'.$scopeHash, 30);
+        $verifyLimiter = 'gais:phone-otp:verify:'.hash('sha256', $scope."\0".$challengeId);
+        $lock = Cache::lock('gais:phone-otp:lock:issue:'.$scopeHash, 30);
         if (! $lock->get()) {
             return $this->failure('busy', 1);
         }
@@ -227,7 +227,7 @@ class WhatsAppOtpService
         }
 
         $scopeHash = hash('sha256', $scope);
-        $lock = Cache::lock('shelf:phone-otp:lock:issue:'.$scopeHash, 30);
+        $lock = Cache::lock('gais:phone-otp:lock:issue:'.$scopeHash, 30);
         if (! $lock->get()) {
             return false;
         }
@@ -262,12 +262,12 @@ class WhatsAppOtpService
 
     private function challengeKey(string $purpose, string $challengeId): string
     {
-        return "shelf:phone-otp:{$purpose}:challenge:".hash('sha256', $challengeId);
+        return "gais:phone-otp:{$purpose}:challenge:".hash('sha256', $challengeId);
     }
 
     private function scopeAliasKey(string $purpose, string $scopeHash): string
     {
-        return "shelf:phone-otp:{$purpose}:scope:{$scopeHash}";
+        return "gais:phone-otp:{$purpose}:scope:{$scopeHash}";
     }
 
     private function ttlMinutes(): int

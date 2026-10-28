@@ -79,7 +79,7 @@ class EmailLogin extends SimplePage
 
         $this->ensureMailerConfigured();
         $this->throttle([
-            ['shelf:email-otp:link:ip:'.$this->ipHash(), 20, 60],
+            ['gais:email-otp:link:ip:'.$this->ipHash(), 20, 60],
         ], 'data.email', 'Terlalu banyak percobaan masuk. Coba lagi sebentar lagi.');
 
         $user = $otpService->consumeMagicLink($token, EmailOtp::PURPOSE_LOGIN);
@@ -104,9 +104,9 @@ class EmailLogin extends SimplePage
 
         $emailHash = hash('sha256', $email);
         $this->throttle([
-            ['shelf:email-otp:send:email-5m:'.$emailHash, 3, 300],
-            ['shelf:email-otp:send:email-1h:'.$emailHash, 10, 3600],
-            ['shelf:email-otp:send:ip:'.$this->ipHash(), 20, 60],
+            ['gais:email-otp:send:email-5m:'.$emailHash, 3, 300],
+            ['gais:email-otp:send:email-1h:'.$emailHash, 10, 3600],
+            ['gais:email-otp:send:ip:'.$this->ipHash(), 20, 60],
         ], 'data.email', 'Terlalu banyak permintaan kode. Silakan coba lagi nanti.');
 
         // Seperti login WhatsApp: jangan ungkap apakah email terdaftar atau punya akses. Email hanya dikirim ke
@@ -137,8 +137,8 @@ class EmailLogin extends SimplePage
         }
 
         $this->throttle([
-            ['shelf:email-otp:verify:email:'.hash('sha256', $email), 15, 300],
-            ['shelf:email-otp:verify:ip:'.$this->ipHash(), 20, 60],
+            ['gais:email-otp:verify:email:'.hash('sha256', $email), 15, 300],
+            ['gais:email-otp:verify:ip:'.$this->ipHash(), 20, 60],
         ], 'data.otp', 'Terlalu banyak percobaan kode. Silakan coba lagi nanti.');
 
         $user = $otpService->verify($email, EmailOtp::PURPOSE_LOGIN, (string) ($data['otp'] ?? ''));

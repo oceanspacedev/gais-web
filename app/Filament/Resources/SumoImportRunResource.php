@@ -84,8 +84,8 @@ class SumoImportRunResource extends Resource
     {
         return $schema->schema([
             Section::make('Unggah dump sumo')
-                ->description(fn (): string => 'Dump dimuat ke database staging `'.self::stagingDatabase().'` (SUMO_DB_DATABASE), bukan ke database shelf. '
-                    .'Setelah dimuat, uji coba berjalan otomatis; data shelf baru berubah setelah tombol Impor Sungguhan dikonfirmasi.')
+                ->description(fn (): string => 'Dump dimuat ke database staging `'.self::stagingDatabase().'` (SUMO_DB_DATABASE), bukan ke database GAIS. '
+                    .'Setelah dimuat, uji coba berjalan otomatis; data GAIS baru berubah setelah tombol Impor Sungguhan dikonfirmasi.')
                 ->schema([
                     FileUpload::make('file_path')
                         ->label('File dump')

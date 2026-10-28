@@ -77,11 +77,11 @@ class ItemsRelationManager extends RelationManager
                     ->numeric()
                     ->placeholder('-')
                     ->visible(fn (): bool => ! $this->isVehicleAudit()),
-                TextColumn::make('shelf_qty')->label('Shelf Saat Ini')->numeric()->placeholder('-'),
+                TextColumn::make('gais_qty')->label('GAIS Saat Ini')->numeric()->placeholder('-'),
                 TextColumn::make('target_qty')
-                    ->label(fn (): string => $this->isVehicleAudit() ? 'Target (1 aktif / 0 sold)' : 'Target Shelf')
+                    ->label(fn (): string => $this->isVehicleAudit() ? 'Target (1 aktif / 0 sold)' : 'Target GAIS')
                     ->numeric(),
-                TextColumn::make('gap_qty')->label('Gap Shelf')->numeric()->placeholder('-'),
+                TextColumn::make('gap_qty')->label('Gap GAIS')->numeric()->placeholder('-'),
                 TextColumn::make('comparison_status')
                     ->label('Status')
                     ->badge()

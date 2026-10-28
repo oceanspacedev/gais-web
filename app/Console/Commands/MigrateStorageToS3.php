@@ -14,7 +14,7 @@ class MigrateStorageToS3 extends Command
 {
     protected $signature = 'storage:migrate-to-s3 {--dry-run : List files without copying or updating records}';
 
-    protected $description = 'Copy existing Shelf uploads and private documents to S3 without deleting local files';
+    protected $description = 'Copy existing GAIS uploads and private documents to S3 without deleting local files';
 
     public function handle(): int
     {

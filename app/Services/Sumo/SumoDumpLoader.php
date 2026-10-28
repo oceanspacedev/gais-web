@@ -11,8 +11,8 @@ use Throwable;
 /**
  * Memuat dump sumo ke database staging (koneksi `sumo`) supaya bisa dibaca
  * `SumoImporter`. Dump sumo memakai DROP TABLE untuk tabel yang namanya sama
- * dengan shelf (users, roles, migrations, ...), jadi loader menolak target yang
- * sama dengan database shelf dan menolak pernyataan yang keluar dari database
+ * dengan GAIS (users, roles, migrations, ...), jadi loader menolak target yang
+ * sama dengan database GAIS dan menolak pernyataan yang keluar dari database
  * staging (USE, nama tabel berkualifikasi database lain, GRANT, dsb.).
  */
 class SumoDumpLoader
@@ -49,7 +49,7 @@ class SumoDumpLoader
         $this->ensureDatabase($database);
 
         $db = DB::connection($this->connection);
-        $this->guardNotShelf($db, $database);
+        $this->guardNotGais($db, $database);
 
         $this->log("Mengosongkan database staging `{$database}`.");
         $db->getSchemaBuilder()->dropAllViews();
@@ -174,30 +174,30 @@ class SumoDumpLoader
     private function guardTarget(): string
     {
         $target = (array) config("database.connections.{$this->connection}");
-        $shelfName = (string) config('database.default');
-        $shelf = (array) config("database.connections.{$shelfName}");
+        $gaisName = (string) config('database.default');
+        $gais = (array) config("database.connections.{$gaisName}");
         $database = (string) ($target['database'] ?? '');
 
-        if ($this->connection === $shelfName || ! in_array($target['driver'] ?? null, ['mysql', 'mariadb'], true)) {
-            throw new RuntimeException("Koneksi staging `{$this->connection}` harus koneksi MySQL tersendiri, bukan koneksi utama shelf.");
+        if ($this->connection === $gaisName || ! in_array($target['driver'] ?? null, ['mysql', 'mariadb'], true)) {
+            throw new RuntimeException("Koneksi staging `{$this->connection}` harus koneksi MySQL tersendiri, bukan koneksi utama GAIS.");
         }
 
-        if ($database === '' || strcasecmp($database, (string) ($shelf['database'] ?? '')) === 0) {
-            throw new RuntimeException("Database staging (`{$database}`) tidak boleh kosong atau sama dengan database shelf. Isi SUMO_DB_DATABASE dengan database tersendiri, mis. db_sumo.");
+        if ($database === '' || strcasecmp($database, (string) ($gais['database'] ?? '')) === 0) {
+            throw new RuntimeException("Database staging (`{$database}`) tidak boleh kosong atau sama dengan database GAIS. Isi SUMO_DB_DATABASE dengan database tersendiri, mis. db_sumo.");
         }
 
         return $database;
     }
 
     /**
-     * Database staging yang ternyata berisi tabel migrasi shelf tidak akan dikosongkan.
+     * Database staging yang ternyata berisi tabel migrasi GAIS tidak akan dikosongkan.
      */
-    private function guardNotShelf(Connection $db, string $database): void
+    private function guardNotGais(Connection $db, string $database): void
     {
         $schema = $db->getSchemaBuilder();
 
         if ($schema->hasTable('migrations') && $db->table('migrations')->where('migration', 'like', '%create_asset_transfers_table')->exists()) {
-            throw new RuntimeException("Database `{$database}` berisi tabel shelf (migrasi create_asset_transfers_table). Pilih database staging lain di SUMO_DB_DATABASE.");
+            throw new RuntimeException("Database `{$database}` berisi tabel GAIS (migrasi create_asset_transfers_table). Pilih database staging lain di SUMO_DB_DATABASE.");
         }
     }
 

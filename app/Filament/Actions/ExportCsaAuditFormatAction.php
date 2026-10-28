@@ -18,7 +18,7 @@ final class ExportCsaAuditFormatAction
             ->label('0. Export Format CSA')
             ->icon('heroicon-o-arrow-down-tray')
             ->color('gray')
-            ->tooltip('Unduh saldo Shelf dalam format audit CSA. Isi kolom Fisik/Selisih, lalu Import.')
+            ->tooltip('Unduh saldo GAIS dalam format audit CSA. Isi kolom Fisik/Selisih, lalu Import.')
             ->visible(fn (): bool => auth()->user()?->can('import', Asset::class)
                 || auth()->user()?->can('export', Asset::class))
             ->action(function (): ?BinaryFileResponse {

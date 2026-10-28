@@ -93,7 +93,7 @@ trait ImportsItemRequests
     private function importItemRequestApprovals(): void
     {
         $types = array_map(fn (ItemRequestApprovalType $type): string => $type->value, ItemRequestApprovalType::cases());
-        // Tahap yang sudah ada di shelf (bisa sudah diisi di shelf) tidak ditimpa duplikat sumo.
+        // Tahap yang sudah ada di GAIS (bisa sudah diisi di GAIS) tidak ditimpa duplikat sumo.
         $existing = DB::table('item_request_approvals')->get(['item_request_id', 'approval_type'])
             ->mapWithKeys(fn (object $row): array => [$row->item_request_id.'|'.$row->approval_type => true])->all();
 

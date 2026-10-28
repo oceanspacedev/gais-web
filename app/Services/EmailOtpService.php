@@ -64,7 +64,7 @@ class EmailOtpService
     public function issue(User $user, string $email, string $purpose): void
     {
         $expiresIn = max(60, (int) config('services.email_login.expires_in', 600));
-        $lockKey = 'shelf:email-otp:lock:issue:'.hash('sha256', $purpose."\0".$email);
+        $lockKey = 'gais:email-otp:lock:issue:'.hash('sha256', $purpose."\0".$email);
 
         Cache::lock($lockKey, 90)->block(10, function () use ($user, $email, $purpose, $expiresIn): void {
             $otp = (string) random_int(100000, 999999);

@@ -138,7 +138,7 @@ class SumoImportRun extends Model
 
     /**
      * Tambah baris log. Selama job berjalan baris disimpan di cache (impor berjalan
-     * di dalam transaksi shelf, jadi tulisan ke tabel baru terlihat setelah commit);
+     * di dalam transaksi GAIS, jadi tulisan ke tabel baru terlihat setelah commit);
      * flushLog() memindahkannya ke kolom `log`.
      */
     public function appendLog(string $line): void

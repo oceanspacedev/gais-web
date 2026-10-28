@@ -11,7 +11,7 @@ Main path:
 1. Sistem mengambil aset inventori aktif beserta lokasi, katalog, dan badan usaha.
 2. Sistem mengelompokkan baris per badan usaha lalu per gudang.
 3. Untuk badan usaha beralias resmi (mis. CSN), sistem menulis judul blok `Gudang {nama} (CSA {alias})`.
-4. Sistem menulis header kanonik CSA dan baris data: kode gudang, kode/nama item, serial/IMEI, `Qty Akhir` dari Shelf; kolom `Fisik`, `Selisih`, dan `Keterangan` dikosongkan.
+4. Sistem menulis header kanonik CSA dan baris data: kode gudang, kode/nama item, serial/IMEI, `Qty Akhir` dari GAIS; kolom `Fisik`, `Selisih`, dan `Keterangan` dikosongkan.
 5. Sistem menulis sheet `PETUNJUK` berisi langkah isi audit dan Import.
 6. Sistem mengunduh workbook sheet `ASET` siap diisi auditor.
 

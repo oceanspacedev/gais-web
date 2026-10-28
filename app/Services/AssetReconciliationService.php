@@ -466,7 +466,7 @@ class AssetReconciliationService
         if ($row['external_location_code'] === null) {
             $errors[] = 'Gudang wajib diisi.';
         } elseif ($locationId === null && ! $autoCreateLocations) {
-            $errors[] = 'Gudang belum dipetakan ke Lokasi Shelf.';
+            $errors[] = 'Gudang belum dipetakan ke Lokasi GAIS.';
         }
 
         if ($row['item_name'] === null) {
@@ -475,7 +475,7 @@ class AssetReconciliationService
 
         if ($errors !== []) {
             return [
-                'shelf_qty' => null,
+                'gais_qty' => null,
                 'gap_qty' => null,
                 'candidate_asset_ids' => [],
                 'match_strategy' => null,
@@ -490,20 +490,20 @@ class AssetReconciliationService
 
         if ($ambiguous) {
             return [
-                'shelf_qty' => $assets->whereIn('id', $candidateIds)->sum('qty'),
+                'gais_qty' => $assets->whereIn('id', $candidateIds)->sum('qty'),
                 'gap_qty' => null,
                 'candidate_asset_ids' => $candidateIds,
                 'match_strategy' => $strategy,
                 'matched_asset_id' => null,
                 'comparison_status' => AssetReconciliationItem::STATUS_BLOCKED,
                 'action' => 'review',
-                'message' => 'Lebih dari satu aset Shelf cocok dan memiliki identitas serial. Baris harus ditinjau manual.',
+                'message' => 'Lebih dari satu aset GAIS cocok dan memiliki identitas serial. Baris harus ditinjau manual.',
             ];
         }
 
         $matched = $assets->whereIn('id', $candidateIds);
-        $shelfQty = (int) $matched->sum('qty');
-        $gap = $row['target_qty'] - $shelfQty;
+        $gaisQty = (int) $matched->sum('qty');
+        $gap = $row['target_qty'] - $gaisQty;
         $metadataDiffers = $matched->contains(function (Asset $asset) use ($row, $locationId, $catalogId, $businessEntityId): bool {
             $catalogDiffers = $catalogId === null || $asset->asset_catalog_item_id !== $catalogId;
 
@@ -516,19 +516,19 @@ class AssetReconciliationService
         if ($candidateIds === []) {
             if ($row['target_qty'] === 0) {
                 return [
-                    'shelf_qty' => 0,
+                    'gais_qty' => 0,
                     'gap_qty' => 0,
                     'candidate_asset_ids' => [],
                     'match_strategy' => 'none',
                     'matched_asset_id' => null,
                     'comparison_status' => AssetReconciliationItem::STATUS_INLINE,
                     'action' => 'none',
-                    'message' => 'Tidak ada aset Shelf dan target audit juga 0.',
+                    'message' => 'Tidak ada aset GAIS dan target audit juga 0.',
                 ];
             }
 
             return [
-                'shelf_qty' => 0,
+                'gais_qty' => 0,
                 'gap_qty' => $row['target_qty'],
                 'candidate_asset_ids' => [],
                 'match_strategy' => 'none',
@@ -537,7 +537,7 @@ class AssetReconciliationService
                 'action' => 'create',
                 'message' => $locationId === null
                     ? 'Aset dan lokasi baru akan dibuat saat koreksi diterapkan.'
-                    : 'Aset belum ada di Shelf dan akan dibuat saat koreksi diterapkan.',
+                    : 'Aset belum ada di GAIS dan akan dibuat saat koreksi diterapkan.',
             ];
         }
 
@@ -547,19 +547,19 @@ class AssetReconciliationService
 
         if ($gap === 0 && ! $metadataDiffers && $inventoryStateAligned) {
             return [
-                'shelf_qty' => $shelfQty,
+                'gais_qty' => $gaisQty,
                 'gap_qty' => 0,
                 'candidate_asset_ids' => $candidateIds,
                 'match_strategy' => $strategy,
                 'matched_asset_id' => count($candidateIds) === 1 ? $candidateIds[0] : null,
                 'comparison_status' => AssetReconciliationItem::STATUS_INLINE,
                 'action' => 'none',
-                'message' => 'Kuantitas dan identitas Shelf sudah sesuai hasil audit.',
+                'message' => 'Kuantitas dan identitas GAIS sudah sesuai hasil audit.',
             ];
         }
 
         return [
-            'shelf_qty' => $shelfQty,
+            'gais_qty' => $gaisQty,
             'gap_qty' => $gap,
             'candidate_asset_ids' => $candidateIds,
             'match_strategy' => $strategy,
@@ -641,7 +641,7 @@ class AssetReconciliationService
     /**
      * Workbook tertentu menulis satu baris per unit tetapi tidak memberi S/N.
      * Baris seperti itu adalah satu saldo Barang/Item, sehingga wajib dijumlahkan
-     * sebelum dibandingkan dengan qty Shelf agar tidak membuat aset duplikat.
+     * sebelum dibandingkan dengan qty GAIS agar tidak membuat aset duplikat.
      *
      * @param  array<int, array<string, mixed>>  $rows
      * @return array<int, array<string, mixed>>

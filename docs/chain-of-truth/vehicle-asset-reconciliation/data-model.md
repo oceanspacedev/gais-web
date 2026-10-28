@@ -12,7 +12,7 @@ Reuse entitas rekonsiliasi CSA dengan semantik kendaraan:
   - `external_location_code` = keberadaan (hint)
   - `external_business_entity_code` = ACC/marker
   - `target_qty` = 0 sold / 1 active
-  - `shelf_qty` = 1 bila ada aset aktif inventory untuk plat, else 0
+  - `gais_qty` = 1 bila ada aset aktif inventory untuk plat, else 0
   - `raw_payload` = kolom audit penuh + disposition
 - ENT-VA-003 `assets` + `asset_attributes` (`Plat Nomor`, `STNK`, `KIR`, `Pajak`, `Asuransi`, `BPKB`, `Pemegang Inventaris`) + kategori MOBIL/MOTOR.
 - ENT-VA-004 Snapshot before/after mencakup `condition_status`, `inventory_active`, plat, serial, entity, lokasi.

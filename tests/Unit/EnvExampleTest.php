@@ -6,7 +6,7 @@ use PHPUnit\Framework\TestCase;
 
 class EnvExampleTest extends TestCase
 {
-    public function test_env_example_documents_laravel_12_and_shelf_keys(): void
+    public function test_env_example_documents_laravel_12_and_gais_keys(): void
     {
         $path = dirname(__DIR__, 2).'/.env.example';
         $contents = file_get_contents($path);

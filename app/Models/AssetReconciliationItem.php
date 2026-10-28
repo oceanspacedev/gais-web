@@ -28,7 +28,7 @@ class AssetReconciliationItem extends Model
         'physical_qty',
         'correction_qty',
         'target_qty',
-        'shelf_qty',
+        'gais_qty',
         'gap_qty',
         'asset_location_id',
         'asset_catalog_item_id',

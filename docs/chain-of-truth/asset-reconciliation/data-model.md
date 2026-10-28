@@ -3,7 +3,7 @@
 Status: Reviewed
 
 - ENT-001 `asset_catalog_items`: identitas master Barang/Item per `source_system` dan `external_code`; nama ternormalisasi mendukung fallback.
-- ENT-002 `asset_locations.external_code`: mapping Gudang CSA ke Lokasi Shelf.
+- ENT-002 `asset_locations.external_code`: mapping Gudang CSA ke Lokasi GAIS.
 - ENT-003 `assets.asset_catalog_item_id`: hubungan saldo Asset ke master Item.
 - ENT-004 `assets.inventory_active`: membedakan saldo inventori nol dari kondisi operasional/NBH.
 - ENT-005 `asset_reconciliations`: batch, parent, `business_entity_id` default, JSON `business_entity_mappings` per Gudang, file hash, status, actor, hitungan, waktu compare/apply.

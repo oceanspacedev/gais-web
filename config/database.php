@@ -63,7 +63,7 @@ return [
             ]) : [],
         ],
 
-        // Database legacy sumo-web (Web Gais) yang dibaca `php artisan sumo:import`.
+        // Database legacy sumo-web (Web Gais lama) yang dibaca `php artisan sumo:import`.
         // Lihat database/sumo/README.md. Default mengikuti DB_* selain nama database.
         'sumo' => [
             'driver' => 'mysql',

@@ -110,12 +110,13 @@ class AssetReconciliationServiceTest extends TestCase
             '2026_09_24_000002_batch_asset_qr_label_histories',
             '2026_09_24_000003_add_file_to_asset_qr_label_histories',
             '2026_09_24_000004_add_storage_disks_to_asset_files',
+            '2026_10_28_200000_rebrand_shelf_to_gais',
         ] as $fileMigration) {
             (require database_path('migrations/'.$fileMigration.'.php'))->up();
         }
     }
 
-    public function test_compare_apply_and_recompare_make_shelf_inline_without_deleting_the_asset(): void
+    public function test_compare_apply_and_recompare_make_gais_inline_without_deleting_the_asset(): void
     {
         $location = AssetLocation::create(['name' => 'CS PERUMNAS', 'external_code' => 'TPRM']);
         $asset = Asset::create([
@@ -137,7 +138,7 @@ class AssetReconciliationServiceTest extends TestCase
 
         $this->assertSame(1, $batch->gap_rows);
         $this->assertSame('adjust', $batch->items()->first()->action);
-        $this->assertSame(2, $batch->items()->first()->shelf_qty);
+        $this->assertSame(2, $batch->items()->first()->gais_qty);
         $this->assertSame(-1, $batch->items()->first()->gap_qty);
 
         $service->apply($batch);

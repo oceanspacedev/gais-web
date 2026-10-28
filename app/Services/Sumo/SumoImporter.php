@@ -15,7 +15,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Throwable;
 
 /**
- * Memindahkan data sumo-web (koneksi `sumo`) ke tabel shelf. Setiap langkah
+ * Memindahkan data sumo-web (koneksi `sumo`) ke tabel GAIS. Setiap langkah
  * idempoten: baris dikenali dari id sumo (dipertahankan) atau legacy_sumo_user_id,
  * jadi perintah boleh diulang setelah dump sumo diperbarui.
  */
@@ -33,14 +33,14 @@ class SumoImporter
 
     protected ?Closure $logger = null;
 
-    /** @var array<int, int> id user sumo => id user shelf */
+    /** @var array<int, int> id user sumo => id user GAIS */
     protected array $userMap = [];
 
-    /** @var array<int, int|null> id user shelf => business_entity_id */
+    /** @var array<int, int|null> id user GAIS => business_entity_id */
     protected array $userEntity = [];
 
     /**
-     * User shelf yang baru dibuat atau baru ditautkan di run ini; hanya mereka yang
+     * User GAIS yang baru dibuat atau baru ditautkan di run ini; hanya mereka yang
      * diberi role/izin sumo (null = langkah users tidak dijalankan, semua user sumo).
      *
      * @var array<int, true>|null
@@ -94,7 +94,7 @@ class SumoImporter
     }
 
     /**
-     * Jalankan impor dalam satu transaksi shelf. Uji coba dibatalkan di akhir,
+     * Jalankan impor dalam satu transaksi GAIS. Uji coba dibatalkan di akhir,
      * jadi laporannya sama dengan impor sungguhan tanpa ada yang tersimpan.
      *
      * @param  list<string>|null  $only
@@ -135,7 +135,7 @@ class SumoImporter
     }
 
     /**
-     * Id yang sudah ada di tabel shelf, untuk menjaga FK saat memetakan.
+     * Id yang sudah ada di tabel GAIS, untuk menjaga FK saat memetakan.
      */
     protected function has(string $table, mixed $id): bool
     {
@@ -159,8 +159,8 @@ class SumoImporter
     }
 
     /**
-     * Hanya baris yang id-nya belum ada di shelf yang ditulis: impor ulang tidak
-     * menimpa perubahan yang dibuat di shelf sesudah impor pertama (status yang
+     * Hanya baris yang id-nya belum ada di GAIS yang ditulis: impor ulang tidak
+     * menimpa perubahan yang dibuat di GAIS sesudah impor pertama (status yang
      * sudah diproses, pengaturan yang diubah, dst.), hanya menambah baris baru.
      *
      * @param  list<array<string, mixed>>  $rows
