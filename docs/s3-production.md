@@ -7,7 +7,7 @@ yang sudah dipakai. Jangan menambahkan file ENV berisi kredensial ke Git.
 ```dotenv
 APP_ENV=production
 APP_DEBUG=false
-APP_URL=https://shelf.completeselular.com
+APP_URL=https://gais.oceanspace.co.id
 LOG_STACK=daily
 LOG_LEVEL=info
 SESSION_SECURE_COOKIE=true
@@ -43,7 +43,7 @@ hanya setelah konfigurasi email tersedia.
   Folder `storage` dan `bootstrap/cache` harus dapat ditulis oleh PHP.
 
 Bucket tidak perlu dibuka ke publik. Izinkan CORS `GET` dan `HEAD` dari origin
-`https://shelf.completeselular.com` untuk preview browser. Expose `ETag`,
+`https://gais.oceanspace.co.id` untuk preview browser. Expose `ETag`,
 `Content-Length`, dan `Content-Type`. Kredensial aplikasi perlu izin read,
 write, delete, list, dan pengaturan ACL object pada bucket `shelf`.
 
