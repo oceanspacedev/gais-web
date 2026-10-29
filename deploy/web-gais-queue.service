@@ -6,8 +6,8 @@ After=network.target mysql.service
 Type=simple
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/web-shelf
-ExecStart=/usr/bin/php /var/www/web-shelf/artisan horizon
+WorkingDirectory=/var/www/gais-web
+ExecStart=/usr/bin/php /var/www/gais-web/artisan horizon
 Restart=always
 RestartSec=3
 

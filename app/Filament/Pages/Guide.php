@@ -79,7 +79,7 @@ class Guide extends Page
                 ['actor' => 'user', 'title' => 'Browser staf', 'text' => 'Membuka /admin. Semua layar adalah Filament + Livewire.'],
                 ['actor' => 'sistem', 'title' => 'Policy dan Shield', 'text' => 'Setiap halaman dan aksi dicek ke permission role, lalu dipersempit per badan usaha.'],
                 ['actor' => 'sistem', 'title' => 'Model Eloquent', 'text' => 'Aturan bisnis ada di model dan service (mis. ItemRequestWorkflow, ProblemReportWorkflow).'],
-                ['actor' => 'sistem', 'title' => 'MySQL', 'text' => 'Satu database db_shelf. Berkas unggahan ke disk lokal atau S3.'],
+                ['actor' => 'sistem', 'title' => 'MySQL', 'text' => 'Satu database db_gais. Berkas unggahan ke disk lokal atau S3.'],
                 ['actor' => 'sistem', 'title' => 'Queue (Redis + Horizon)', 'text' => 'Export, email, dan notifikasi antre di sini. Tanpa php artisan horizon, job tidak diproses.'],
             ],
             'import' => [

@@ -56,7 +56,7 @@ dev, pakai `php -d memory_limit=512M artisan sumo:import`.
 
 Dump sumo memakai `DROP TABLE IF EXISTS` dan punya tabel bernama sama dengan GAIS
 (`users`, `roles`, `categories`, `divisions`, `migrations`, `personal_access_tokens`,
-`failed_jobs`, `password_resets`). Di-import ke `db_shelf` berarti tabel GAIS tertimpa,
+`failed_jobs`, `password_resets`). Di-import ke `db_gais` berarti tabel GAIS tertimpa,
 login dan permission rusak, dan `php artisan migrate` berhenti bekerja.
 
 Cara yang benar di server:
@@ -76,14 +76,14 @@ SUMO_DB_DATABASE=db_sumo
 
 ## Catatan kejadian 12 Okt 2026 (lokal) dan cara memulihkannya
 
-Dump sumo sempat di-import ke `db_shelf`. Pemulihan yang dilakukan, urutannya penting:
+Dump sumo sempat di-import ke `db_gais`. Pemulihan yang dilakukan, urutannya penting:
 
-1. `mysqldump --single-transaction db_shelf > backup-penuh.sql` (simpan di luar repo).
+1. `mysqldump --single-transaction db_gais > backup-penuh.sql` (simpan di luar repo).
 2. Salin 30 tabel sumo ke database baru `db_sumo_latest`
-   (`mysqldump db_shelf <daftar tabel sumo> | mysql db_sumo_latest`).
-3. Muat backup GAIS terakhir ke database sementara `db_shelf_bak`, lalu
-   `mysqldump db_shelf_bak users roles categories divisions migrations personal_access_tokens failed_jobs > restore7.sql`
-   dan `mysql db_shelf < restore7.sql`. mysqldump sudah mematikan `FOREIGN_KEY_CHECKS`,
+   (`mysqldump db_gais <daftar tabel sumo> | mysql db_sumo_latest`).
+3. Muat backup GAIS terakhir ke database sementara `db_gais_bak`, lalu
+   `mysqldump db_gais_bak users roles categories divisions migrations personal_access_tokens failed_jobs > restore7.sql`
+   dan `mysql db_gais < restore7.sql`. mysqldump sudah mematikan `FOREIGN_KEY_CHECKS`,
    dan karena nama tabel sama, FK dari tabel GAIS lain (asset_transfers, model_has_roles, dst)
    otomatis tersambung lagi. **Jangan** memakai `RENAME TABLE` pada tabel yang bentrok nama,
    karena FK tabel lain ikut pindah ke nama baru.

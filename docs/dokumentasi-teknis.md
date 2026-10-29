@@ -90,7 +90,7 @@ cp .env.example .env
 php artisan key:generate
 npm ci
 
-# .env: DB_HOST, DB_PORT, DB_DATABASE sesuai MySQL lokal (Laragon: port 3308, db_shelf)
+# .env: DB_HOST, DB_PORT, DB_DATABASE sesuai MySQL lokal (Laragon: port 3308, db_gais)
 php artisan migrate --seed
 php artisan storage:link
 ```
@@ -253,7 +253,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ## Database
 <!-- desc: Peta tabel, kolom kunci, dan relasi Eloquent -->
 
-MySQL `db_shelf`, dibangun dari 110 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
+MySQL `db_gais`, dibangun dari 110 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
 
 ### Peta tabel
 
@@ -384,7 +384,7 @@ Per 27 Oktober 2026 tidak ada test gagal yang diketahui. Bila muncul `Allowed me
 - [ ] Test area terkait lulus.
 - [ ] `pint --test` bersih.
 - [ ] `npm run build` sukses bila ada perubahan aset.
-- [ ] Tidak ada `.env`, dump database (`shelf.gz` di root), atau data pribadi yang ikut ter-commit.
+- [ ] Tidak ada `.env`, dump database (`*.sql`, `*.gz` di root), atau data pribadi yang ikut ter-commit.
 
 ## Maintenance
 <!-- desc: Langkah menambah modul dan hal yang perlu diwaspadai -->

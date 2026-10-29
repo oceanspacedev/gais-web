@@ -899,7 +899,7 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                         <table class="pg-table">
                             <thead><tr><th>Variabel</th><th>Fungsi</th></tr></thead>
                             <tbody>
-                                <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_shelf)</td></tr>
+                                <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_gais)</td></tr>
                                 <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database GAIS.</td></tr>
                                 <tr><td><code>SUMO_IMPORT_MAX_UPLOAD_KB</code></td><td>Batas unggah dump di menu Impor Data Sumo (default 12288)</td></tr>
                                 <tr><td><code>QUEUE_CONNECTION</code>, <code>REDIS_*</code></td><td>Antrean (default redis, butuh Horizon)</td></tr>

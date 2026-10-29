@@ -12,7 +12,7 @@ Langkah sekali jalan saat merilis perubahan nama aplikasi menjadi **GAIS (Genera
 
 ## Yang tidak berubah
 
-Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, dan folder server `/var/www/web-shelf`. Repo GitHub belakangan di-rename menjadi `oceanspacedev/gais-web`; GitHub mengalihkan URL lama, tetapi perbarui `git remote set-url origin` di server dan mesin developer. Ikon panel dan favicon panel (`public/images/icon.svg`) sudah memakai logo GAIS, tetapi ikon PWA (PNG di `public/images/icons/` dan yang diunggah di Pengaturan PWA) serta `public/favicon.ico` masih logo lama.
+Rilis ini tidak mengganti domain, bucket S3, database, maupun folder server. Nama GAIS untuk production adalah domain `gais.oceanspace.co.id`, database `db_gais`, bucket S3 `gais`, dan folder server `/var/www/gais-web` (lihat [`.env.production.example`](../.env.production.example)). Server yang masih memakai nama lama (`shelf.completeselular.com`, `db_shelf`, bucket `shelf`, `/var/www/web-shelf`) tetap berjalan selama `.env` dan unit worker menunjuk ke sana. Repo GitHub belakangan di-rename menjadi `oceanspacedev/gais-web`; GitHub mengalihkan URL lama, tetapi perbarui `git remote set-url origin` di server dan mesin developer. Ikon panel dan favicon panel (`public/images/icon.svg`) sudah memakai logo GAIS, tetapi ikon PWA (PNG di `public/images/icons/` dan yang diunggah di Pengaturan PWA) serta `public/favicon.ico` masih logo lama.
 
 ## Urutan deploy
 
@@ -33,7 +33,7 @@ Domain (`shelf.completeselular.com`), bucket S3 `shelf`, database `db_shelf`, da
    php artisan optimize
    php artisan filament:optimize
    ```
-5. Nyalakan worker lagi. Bila ingin ikut memakai nama unit baru:
+5. Nyalakan worker lagi. Bila ingin ikut memakai nama unit baru (unit menunjuk ke `/var/www/gais-web`; sesuaikan `WorkingDirectory` dan path `artisan` bila folder server masih `/var/www/web-shelf`):
    ```bash
    sudo cp deploy/web-gais-queue.service /etc/systemd/system/
    sudo systemctl disable --now web-shelf-queue

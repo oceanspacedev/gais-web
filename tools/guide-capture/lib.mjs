@@ -10,7 +10,7 @@ export const PORT = 8099;
 export const BASE = `http://127.0.0.1:${PORT}`;
 export const PHP = process.env.PHP_BIN || 'C:/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe';
 
-// Server Laravel khusus capture: DB terpisah, queue sync, tidak menyentuh db_shelf.
+// Server Laravel khusus capture: DB terpisah, queue sync, tidak menyentuh DB utama.
 export async function startServer(db) {
   if (!db.includes('capture')) throw new Error(`DB "${db}" bukan DB capture; nama harus mengandung "capture".`);
   resetPermissionCache(db);

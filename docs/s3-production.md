@@ -14,9 +14,9 @@ SESSION_SECURE_COOKIE=true
 FILESYSTEM_DISK=s3
 PUBLIC_FILESYSTEM_DRIVER=s3
 AWS_DEFAULT_REGION=us-east-1
-AWS_BUCKET=shelf
+AWS_BUCKET=gais
 AWS_ENDPOINT=https://storage.completeselular.com
-AWS_URL=https://storage.completeselular.com/shelf
+AWS_URL=https://storage.completeselular.com/gais
 AWS_USE_PATH_STYLE_ENDPOINT=true
 ```
 
@@ -45,7 +45,7 @@ hanya setelah konfigurasi email tersedia.
 Bucket tidak perlu dibuka ke publik. Izinkan CORS `GET` dan `HEAD` dari origin
 `https://gais.oceanspace.co.id` untuk preview browser. Expose `ETag`,
 `Content-Length`, dan `Content-Type`. Kredensial aplikasi perlu izin read,
-write, delete, list, dan pengaturan ACL object pada bucket `shelf`.
+write, delete, list, dan pengaturan ACL object pada bucket `gais`.
 
 ## Deployment dan pemindahan file lama
 
