@@ -79,7 +79,7 @@ Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::n
 | OB / Kebersihan | OB Checksheets, Ruangan OB, Shift OB, pintasan Lokasi | Shelf | Checklist kebersihan per shift dan ruangan, foto bisa diperbesar, export Excel |
 | Kendaraan | Checksheet kendaraan | Shelf | Import/export checksheet kendaraan per plat |
 | Pekerjaan Vendor | Tugas vendor | Shelf | PDF penyelesaian tugas vendor |
-| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log |
+| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log; ekspor Excel Rekap per Divisi dan Master QR |
 | Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup |
 | Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp |
 | Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta |
@@ -194,6 +194,13 @@ Logikanya ada di `app/Services/ItemRequestWorkflow.php`:
 6. **Pemohon** mengonfirmasi penerimaan; status menjadi Diterima dan pengajuan tertutup.
 
 Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan mengatur tanggal buka/tutup per bulan; cutoff-nya ikut diingatkan lewat WhatsApp. QR pengajuan dan QR barang dicetak dari resource dan dipindai lewat halaman **Scan QR Pengajuan** / **Scan QR Barang**.
+
+Pemegang izin `export_item::request` punya dua unduhan Excel di header daftar pengajuan, pengganti `RequestExport` dan `RequestMasterQRExport` sumo (`app/Services/ItemRequestRecapExport.php`, `app/Services/ItemRequestMasterQrExport.php`):
+
+- **Rekap per Divisi**: pivot barang x divisi untuk satu area, satu tipe pengajuan, rentang tanggal pengajuan (default bulan berjalan), dan filter status (belum/sudah diproses executor, semua kecuali dibatalkan, dibatalkan, selesai). Kolom: Barang, Tipe Unit, Harga, satu kolom per divisi aktif di area itu, Total Item, Total Biaya, ditutup baris "Total Item per Divisi" dan "Total Biaya per Divisi". Jumlah memakai jumlah disetujui bila sudah diisi, kalau belum jumlah diminta; divisi diambil dari divisi pemohon saat ini; barisnya adalah barang yang muncul pada pengajuan yang cocok (sumo memakai kategori barang yang id-nya sama dengan id tipe).
+- **Ekspor Master QR**: satu baris per detail pengajuan dengan kolom `id` (isi QR, sama dengan Cetak QR per pengajuan), `nama_barang`, `pemohon`, untuk satu tipe dan rentang tanggal; dipakai mencetak label QR massal.
+
+Keduanya hanya menghitung pengajuan yang boleh dilihat user yang mengunduh, sama dengan daftar.
 
 ### 5. Lapor Gangguan (sumo-web)
 

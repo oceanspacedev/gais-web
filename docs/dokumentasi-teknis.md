@@ -144,7 +144,7 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 | --- | --- |
 | `Models` | 52 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
 | `Enums` | Enum status. Trait `Concerns/Utilities` untuk label dan opsi |
-| `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
+| `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, ekspor rekap pengajuan (`ItemRequestRecapExport`, `ItemRequestMasterQrExport`), `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
 | `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
 | `Policies` | 39 policy hasil `shield:generate` |
 | `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan, serta baris pembaharuan/perpanjangan per kontrak (`InsuranceUpdateImport`, `RentUpdateImport`). User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
@@ -224,6 +224,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 - **Resource:** `ItemRequestResource`, `ItemRequestLogResource`, `ItemRequestSettingResource`, `ItemRequestTypeResource`, `ProductResource`, `ProductCategoryResource`, `UnitTypeResource`
 - **Page:** `ScanItemRequestQr`, `ScanProductQr`
 - **Logika:** `ItemRequestWorkflow` (persetujuan atasan, accounting, executor), `ItemRequestVisibility`, `config/item-request.php`, `SumoQrLabelController`
+- **Ekspor:** `ItemRequestRecapExport` (Rekap per Divisi: pivot barang x divisi per area, tipe, rentang `requested_at`, dan filter status `ItemRequestRecapStatus`; jumlah = `COALESCE(qty_approved, qty_request)`) dan `ItemRequestMasterQrExport` (`id` detail, `nama_barang`, `pemohon` untuk cetak QR massal). Keduanya aksi header `ListItemRequests` dengan izin `export_item::request`, ditulis lewat maatwebsite/excel, dan memakai `ItemRequestResource::scopeToViewer()` supaya angkanya sama dengan daftar.
 - **Asal:** sumo-web. Setiap perubahan status dicatat di `item_request_logs`.
 
 ### Lapor Gangguan
