@@ -11,8 +11,6 @@ use EightyNine\ExcelImport\ExcelImportAction;
 use Filament\Actions\Action;
 use Filament\Forms\Components\FileUpload;
 use Illuminate\Database\Eloquent\Model;
-use Maatwebsite\Excel\Facades\Excel;
-use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 /**
  * Header action tab Riwayat Pembaharuan/Perpanjangan: impor Excel bertemplate
@@ -41,14 +39,6 @@ final class ContractUpdateExcelActions
      */
     public static function export(string $name, string $label, Closure $export): Action
     {
-        return Action::make($name)
-            ->label($label)
-            ->icon('heroicon-o-arrow-up-tray')
-            ->color('gray')
-            ->action(function () use ($export): BinaryFileResponse {
-                $file = $export();
-
-                return Excel::download($file, $file->fileName());
-            });
+        return DownloadExcelAction::make($name, $label, $export);
     }
 }

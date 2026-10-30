@@ -114,6 +114,14 @@ class UserPolicy
     }
 
     /**
+     * Ekspor daftar user ke Excel (kolom ekspor sumo).
+     */
+    public function export(User $user): bool
+    {
+        return $user->can('export_user');
+    }
+
+    /**
      * Determine whether the user can impersonate other users.
      */
     public function impersonate(User $user): bool

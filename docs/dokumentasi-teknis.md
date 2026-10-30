@@ -148,7 +148,7 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 | `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
 | `Policies` | 39 policy hasil `shield:generate` |
 | `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan, serta baris pembaharuan/perpanjangan per kontrak (`InsuranceUpdateImport`, `RentUpdateImport`). User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
-| `Exports` | Ekspor Maatwebsite berkolom template impor: `InsuranceUpdateExport`, `RentUpdateExport` (baris pembaharuan satu kontrak). Exporter antrean Filament ada di `Filament/Exports` |
+| `Exports` | Ekspor Maatwebsite berkolom template impor (sumo: export + template per modul), diunduh lewat `Filament/Actions/DownloadExcelAction`: `ProductExport`, `InsuranceExport`, `RentExport` (semua baris yang boleh dilihat), `InsuranceUpdateExport`, `RentUpdateExport` (baris pembaharuan satu kontrak), `UserExport` (kolom sumo, izin `export_user`), `ProblemReportExport` (rentang tanggal pelaporan, kolom sumo). Exporter antrean Filament ada di `Filament/Exports` |
 | `Jobs`, `Mail` | Kirim notifikasi aset via WhatsApp dan email; `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`) untuk Impor Data Sumo; `Jobs/Filament` menimpa job export/import Filament |
 | `Queue` | `RestoresQueuedModels`: job export tidak gagal bila baris `exports` belum terlihat |
 | `Console/Commands` | Pengingat, auto-confirm, import sumo, migrasi S3, generate QR |

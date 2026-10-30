@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Exports\Concerns\ExportsRenewalRows;
+use App\Exports\Concerns\ExportsTemplateRows;
 use App\Imports\RentUpdateImport;
 use App\Models\Rent;
 use App\Models\RentUpdate;
@@ -16,7 +16,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
  */
 class RentUpdateExport implements FromCollection, WithHeadings, WithMapping
 {
-    use ExportsRenewalRows;
+    use ExportsTemplateRows;
 
     public function __construct(private Rent $rent) {}
 

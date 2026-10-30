@@ -2,7 +2,7 @@
 
 namespace App\Exports;
 
-use App\Exports\Concerns\ExportsRenewalRows;
+use App\Exports\Concerns\ExportsTemplateRows;
 use App\Imports\InsuranceUpdateImport;
 use App\Models\Insurance;
 use App\Models\InsuranceUpdate;
@@ -16,7 +16,7 @@ use Maatwebsite\Excel\Concerns\WithMapping;
  */
 class InsuranceUpdateExport implements FromCollection, WithHeadings, WithMapping
 {
-    use ExportsRenewalRows;
+    use ExportsTemplateRows;
 
     public function __construct(private Insurance $insurance) {}
 

@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\RentResource\Pages;
 
+use App\Exports\RentExport;
+use App\Filament\Actions\DownloadExcelAction;
 use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\RentResource;
 use App\Imports\RentImport;
@@ -25,6 +27,9 @@ class ListRents extends ListRecords
                 ->use(RentImport::class)
                 ->sampleExcel(sampleData: [RentImport::sampleRow()], fileName: 'template-sewa.xlsx')
                 ->visible(fn (): bool => auth()->user()?->can('import', Rent::class) ?? false),
+            // Sumo: /rent/export, kolom sama dengan template impor.
+            DownloadExcelAction::make('exportAll', 'Ekspor Semua Sewa', fn (): RentExport => new RentExport)
+                ->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
             CreateAction::make(),
         ];
     }

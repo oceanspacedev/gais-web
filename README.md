@@ -79,10 +79,10 @@ Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::n
 | OB / Kebersihan | OB Checksheets, Ruangan OB, Shift OB, pintasan Lokasi | Shelf | Checklist kebersihan per shift dan ruangan, foto bisa diperbesar, export Excel |
 | Kendaraan | Checksheet kendaraan | Shelf | Import/export checksheet kendaraan per plat |
 | Pekerjaan Vendor | Tugas vendor | Shelf | PDF penyelesaian tugas vendor |
-| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log; ekspor Excel Rekap per Divisi dan Master QR |
-| Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup |
-| Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp |
-| Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta |
+| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log; ekspor Excel Rekap per Divisi dan Master QR; impor barang dari template dan ekspor semua barang dengan kolom yang sama |
+| Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup; ekspor laporan per rentang tanggal dengan kolom sumo |
+| Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp; impor dari template dan ekspor semua kontrak dengan kolom yang sama, plus impor/ekspor baris pembaharuan per kontrak |
+| Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta; ekspor Excel user (kolom sumo) untuk pemegang `export_user` |
 | Pengaturan (collapsed) | Roles (Shield), site/PWA settings, Notifikasi WA, Impor Data Sumo, Exceptions, tautan Horizon dan Log Viewer | campuran | Tiap item dijaga permission masing-masing |
 
 Di luar grup: **Dashboard** (widget statistik aset, Overlook, dan sepuluh widget modul sumo), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
@@ -585,7 +585,7 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
 11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
 12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.
-13. **Foto profil user dan ekspor Excel user/barang sumo tidak dibawa.** Folder `profile` tidak dipakai; ekspor user diganti data Talenta, ekspor barang memakai ekspor tabel.
+13. **Foto profil user dan impor user dari Excel sumo tidak dibawa.** Folder `profile` tidak dipakai dan user masuk hanya lewat JSON Talenta; ekspor Excel user (kolom sumo) tetap ada untuk pemegang `export_user`.
 
 ## Troubleshooting
 

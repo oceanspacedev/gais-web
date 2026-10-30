@@ -77,7 +77,7 @@ return [
      */
     'division_permissions' => [
         'HCM' => [
-            'view_any_user', 'view_user', 'create_user', 'update_user',
+            'view_any_user', 'view_user', 'create_user', 'update_user', 'export_user',
             'view_any_division', 'view_division', 'create_division', 'update_division',
             'view_any_business::entity', 'view_business::entity',
             'widget_InsuranceCostChart', 'widget_ExpiringInsurancesTable', 'widget_ExpiringRentsTable',

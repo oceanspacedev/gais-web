@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\UserResource\Pages;
 
+use App\Exports\UserExport;
+use App\Filament\Actions\DownloadExcelAction;
 use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\UserResource;
 use App\Services\TalentaUserImportService;
@@ -86,6 +88,9 @@ class ListUsers extends ListRecords
 
                     $notification->send();
                 }),
+            // Sumo: /user/export (username, fullname, badan_usaha, divisi, role, approval).
+            DownloadExcelAction::make('exportExcel', 'Ekspor Excel', fn (): UserExport => new UserExport)
+                ->visible(fn (): bool => auth()->user()?->can('export', static::$resource::getModel()) ?? false),
             Actions\CreateAction::make(),
         ];
     }

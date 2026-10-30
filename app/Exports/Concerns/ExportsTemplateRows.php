@@ -3,10 +3,10 @@
 namespace App\Exports\Concerns;
 
 /**
- * Ekspor baris pembaharuan/perpanjangan memakai kolom template impor, supaya
- * file hasil ekspor bisa diimpor kembali tanpa diubah (sumo: exportUpdate).
+ * Ekspor memakai kolom template impor, supaya file hasil ekspor bisa diimpor
+ * kembali tanpa diubah (sumo: export + template per modul).
  */
-trait ExportsRenewalRows
+trait ExportsTemplateRows
 {
     /**
      * Susun nilai berkunci kolom mengikuti urutan judul; kolom tanpa nilai kosong.

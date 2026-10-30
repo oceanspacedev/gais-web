@@ -50,6 +50,7 @@ class PermissionOnlyAuthorizationTest extends TestCase
         'update_all_ob::checksheet' => ['updateAll', ObChecksheet::class],
         'delete_all_ob::checksheet' => ['deleteAll', ObChecksheet::class],
         'import_user' => ['import', User::class],
+        'export_user' => ['export', User::class],
         'manage_access_user' => ['manageAccess', User::class],
         'manage_business_entity_access_user' => ['manageBusinessEntityAccess', User::class],
     ];
