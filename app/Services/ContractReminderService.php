@@ -8,6 +8,7 @@ use App\Models\ItemRequestSetting;
 use App\Models\Rent;
 use App\Models\WaNotificationLog;
 use App\Models\WaNotificationSetting;
+use App\Support\ContractDue;
 use Carbon\Carbon;
 use Carbon\CarbonInterface;
 
@@ -217,7 +218,7 @@ class ContractReminderService
 
     private function daysUntil(CarbonInterface $today, ?CarbonInterface $date): ?int
     {
-        return $date === null ? null : (int) $today->diffInDays(Carbon::instance($date)->startOfDay(), false);
+        return $date === null ? null : ContractDue::daysUntil($date, $today);
     }
 
     /**

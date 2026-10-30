@@ -106,7 +106,8 @@ class InsuranceUpdateImport implements ToCollection, WithHeadingRow
                     'expired_date' => $this->dateCell($row, 'tanggal_akhir', $number, $isNew, $update->expired_date),
                     'status' => $this->cell($row, 'status', fn ($value) => $this->status($value), $isNew ? ContractStatus::Running->value : $update->status),
                     'notes' => $this->cell($row, 'catatan', fn ($value) => $this->text($value), $update->notes),
-                    'user_id' => auth()->id(),
+                    // Pembuat baris lama dipertahankan; pengimpor hanya tercatat pada baris baru.
+                    'user_id' => $update->user_id ?? auth()->id(),
                 ])->save();
             }
         });

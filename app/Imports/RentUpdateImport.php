@@ -107,7 +107,8 @@ class RentUpdateImport implements ToCollection, WithHeadingRow
                     'status' => $this->cell($row, 'status', fn ($value) => $this->status($value), $isNew ? ContractStatus::Running->value : $update->status),
                     'month_before_reminder' => $this->cell($row, 'reminder_bulan_sebelumnya', fn ($value) => $this->text($value), $update->month_before_reminder),
                     'notes' => $this->cell($row, 'catatan', fn ($value) => $this->text($value), $update->notes),
-                    'user_id' => auth()->id(),
+                    // Pembuat baris lama dipertahankan; pengimpor hanya tercatat pada baris baru.
+                    'user_id' => $update->user_id ?? auth()->id(),
                 ])->save();
             }
         });

@@ -125,7 +125,8 @@ final class ProblemReportVisibility
                 }
             }
 
-            return [$include, $exclude];
+            // Daftar kosong berarti divisi itu tidak dibatasi; query dan policy harus sepakat.
+            return $include === [] && $exclude === [] ? null : [$include, $exclude];
         }
 
         return null;

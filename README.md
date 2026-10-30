@@ -585,8 +585,7 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
 11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
 12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.
-13. **Rekap pengajuan per divisi dan ekspor master QR sumo belum ada.** Ekspor pengajuan di GAIS adalah ekspor tabel; rekap pivot barang x divisi per area/tipe/periode (`RequestExport` sumo) dan daftar id detail untuk cetak QR massal (`RequestMasterQRExport`) belum dibangun ulang.
-14. **Foto profil user dan ekspor Excel user/barang sumo tidak dibawa.** Folder `profile` tidak dipakai; ekspor user diganti data Talenta, ekspor barang memakai ekspor tabel.
+13. **Foto profil user dan ekspor Excel user/barang sumo tidak dibawa.** Folder `profile` tidak dipakai; ekspor user diganti data Talenta, ekspor barang memakai ekspor tabel.
 
 ## Troubleshooting
 

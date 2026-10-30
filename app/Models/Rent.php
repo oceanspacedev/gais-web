@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ContractStatus;
 use App\Models\Concerns\ComputesRentBilling;
+use App\Models\Concerns\GeneratesSequentialCode;
 use App\Support\ContractDue;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Rent extends Model
 {
-    use ComputesRentBilling, HasFactory, SoftDeletes;
+    use ComputesRentBilling, GeneratesSequentialCode, HasFactory, SoftDeletes;
 
     public const CODE_PREFIX = 'RENT';
 
@@ -40,30 +41,6 @@ class Rent extends Model
     ];
 
     protected $attributes = ['status' => 'BERJALAN'];
-
-    protected static function booted(): void
-    {
-        static::creating(function (self $rent): void {
-            if (blank($rent->rent_code)) {
-                $rent->rent_code = static::nextCode();
-            }
-        });
-    }
-
-    /**
-     * Kode berikutnya (sumo: "RENT" + urutan empat digit dari jumlah data), dilewati
-     * bila kodenya sudah dipakai.
-     */
-    public static function nextCode(): string
-    {
-        $number = static::withTrashed()->count();
-
-        do {
-            $code = self::CODE_PREFIX.str_pad((string) (++$number), 4, '0', STR_PAD_LEFT);
-        } while (static::withTrashed()->where('rent_code', $code)->exists());
-
-        return $code;
-    }
 
     public function user(): BelongsTo
     {

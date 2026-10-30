@@ -61,6 +61,7 @@ use App\Policies\RentUpdatePolicy;
 use App\Policies\RolePolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\UnitTypePolicy;
+use App\Services\ItemRequestWorkflow;
 use App\Support\IndexedPermissionRegistrar;
 use App\Support\MekayaAssets;
 use App\Support\ObservabilityAccess;
@@ -130,6 +131,10 @@ class AppServiceProvider extends ServiceProvider
         $this->app->singleton(Mekaya::class, fn (): MekayaAssets => new MekayaAssets);
         // Spatie mendaftarkan registrarnya saat boot, jadi penggantinya juga di sini.
         $this->app->singleton(PermissionRegistrar::class, IndexedPermissionRegistrar::class);
+
+        // Satu instance per request: memo once() cakupan "menyetujui jumlah" dipakai
+        // bersama oleh tabel, aksi, relation manager, dan widget pengajuan.
+        $this->app->scoped(ItemRequestWorkflow::class);
 
         Livewire::component('phone-login', PhoneLogin::class);
         Livewire::component('email-login', EmailLogin::class);

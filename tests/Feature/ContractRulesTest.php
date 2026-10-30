@@ -126,7 +126,7 @@ class ContractRulesTest extends TestCase
     {
         // Database pengembangan bisa berisi data impor sumo; prefix unik + pencarian
         // menjaga record uji tetap di halaman pertama tabel.
-        $running = $this->insurance('UJIRULE-RUN', '2027-06-30');
+        $running = $this->insurance('UJIRULE-RUN', today()->addMonths(6)->toDateString());
         $closed = $this->insurance('UJIRULE-CLOSED', '2027-06-30', ContractStatus::Closed);
         $closedByRenewal = $this->insurance('UJIRULE-CLOSED-UP', '2027-06-30');
         $closedByRenewal->updates()->create(['policy_number' => 'UJIRULE-CLOSED-UP-A', 'join_date' => '2027-07-01', 'expired_date' => '2028-06-30', 'status' => ContractStatus::Closed->value]);
@@ -142,7 +142,8 @@ class ContractRulesTest extends TestCase
         Livewire::test(ListInsurances::class)
             ->assertOk()
             ->searchTable('UJIRULE')
-            ->assertCanSeeTableRecords([$running, $renewedFar, $dueSoon])
+            // Urutan default: jatuh tempo efektif (pembaharuan terakhir) menaik.
+            ->assertCanSeeTableRecords([$dueSoon, $running, $renewedFar], inOrder: true)
             ->assertCanNotSeeTableRecords([$closed, $closedByRenewal])
             ->filterTable('due_soon')
             ->assertCanSeeTableRecords([$dueSoon])

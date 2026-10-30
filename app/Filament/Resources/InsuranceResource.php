@@ -131,7 +131,11 @@ class InsuranceResource extends Resource
                     ->state(fn (Insurance $record): string => (string) $record->effective('policy_number'))
                     ->description(fn (Insurance $record): ?string => $record->latestUpdate() !== null && $record->latestUpdate()->policy_number !== $record->policy_number ? 'Awal: '.$record->policy_number : null)
                     ->searchable(query: fn (Builder $query, string $search): Builder => static::applySearch($query, $search))
-                    ->sortable()
+                    // Urut sesuai nilai yang tampil: nomor pembaharuan terakhir, bukan nomor induk.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByRaw(
+                        'COALESCE((SELECT u.policy_number FROM insurance_updates u WHERE u.insurance_id = insurances.id AND u.deleted_at IS NULL ORDER BY u.expired_date DESC, u.id DESC LIMIT 1), insurances.policy_number) '
+                        .($direction === 'desc' ? 'desc' : 'asc'),
+                    ))
                     ->weight('bold'),
                 TextColumn::make('insured_name')->label('Tertanggung')->sortable()->description(fn (Insurance $record): ?string => $record->warehouse_code),
                 TextColumn::make('insured_detail')->label('Detail')->limit(20)->placeholder('-')->toggleable(),

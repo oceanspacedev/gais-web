@@ -33,7 +33,7 @@ class ExpiringInsurancesTable extends TableWidget
     {
         return $table
             ->heading('Asuransi Terdekat Jatuh Tempo')
-            ->query(fn () => InsuranceResource::getEloquentQuery()->activeContracts()->with('updates')->withMax('updates', 'expired_date')->orderByRaw('COALESCE(updates_max_expired_date, expired_date) ASC')->limit(5))
+            ->query(fn () => InsuranceResource::orderByEffectiveExpiry(InsuranceResource::getEloquentQuery()->activeContracts()->with('updates')->withMax('updates', 'expired_date'))->limit(5))
             ->paginated(false)
             ->columns([
                 TextColumn::make('policy_number')->label('Polis')->weight('bold')->url(fn (Insurance $record): string => InsuranceResource::getUrl('view', ['record' => $record])),

@@ -33,7 +33,7 @@ class ExpiringRentsTable extends TableWidget
     {
         return $table
             ->heading('Sewa Terdekat Jatuh Tempo')
-            ->query(fn () => RentResource::getEloquentQuery()->activeContracts()->with('updates')->withMax('updates', 'expired_date')->orderByRaw('COALESCE(updates_max_expired_date, expired_date) ASC')->limit(5))
+            ->query(fn () => RentResource::orderByEffectiveExpiry(RentResource::getEloquentQuery()->activeContracts()->with('updates')->withMax('updates', 'expired_date'))->limit(5))
             ->paginated(false)
             ->columns([
                 TextColumn::make('rent_code')->label('Kode')->weight('bold')->url(fn (Rent $record): string => RentResource::getUrl('view', ['record' => $record])),

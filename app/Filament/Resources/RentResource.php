@@ -192,7 +192,11 @@ class RentResource extends Resource
                     ->state(fn (Rent $record): string => (string) $record->effective('rent_code'))
                     ->description(fn (Rent $record): ?string => $record->latestUpdate() !== null ? 'Awal: '.$record->rent_code : null)
                     ->searchable(query: fn (Builder $query, string $search): Builder => static::applySearch($query, $search))
-                    ->sortable()
+                    // Urut sesuai nilai yang tampil: kode perpanjangan terakhir, bukan kode induk.
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => $query->orderByRaw(
+                        'COALESCE((SELECT u.rent_code FROM rent_updates u WHERE u.rent_id = rents.id AND u.deleted_at IS NULL ORDER BY u.expired_date DESC, u.id DESC LIMIT 1), rents.rent_code) '
+                        .($direction === 'desc' ? 'desc' : 'asc'),
+                    ))
                     ->weight('bold'),
                 TextColumn::make('rented_detail')->label('Objek Sewa')->description(fn (Rent $record): ?string => $record->rented_address)->wrap(),
                 TextColumn::make('first_party')->label('Pihak Pertama')->state(fn (Rent $record): mixed => $record->effective('first_party'))->toggleable(),
