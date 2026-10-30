@@ -229,7 +229,7 @@ flowchart TB
     Queue --> Horizon[php artisan horizon]
     Horizon --> WA[WhatsAppGateway WagHub]
     Horizon --> Mail[SMTP]
-    Horizon --> Sumo[(MySQL db_sumo staging)]
+    Horizon --> Sumo[(Tabel staging sumo_dump_*)]
     Sumo -. sumo:import .-> DB
     Bot[Bot WhatsApp] --> Query["POST /api/integrations/whatsapp/assets/query"]
     Publik[Pemindai QR] --> QR["GET /qr/{qr}"]
@@ -355,16 +355,16 @@ php artisan storage:link
 ```
 
 > [!WARNING]
-> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data; feature test juga berjalan di database `.env`. Jangan menjalankan seeder development di production. Dan jangan pernah memuat dump sumo-web ke database GAIS: delapan tabel bernama sama (`users`, `roles`, `categories`, `divisions`, `migrations`, dan lainnya) akan tertimpa. Dump sumo hanya boleh masuk ke database terpisah (`SUMO_DB_DATABASE`).
+> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data; feature test juga berjalan di database `.env`. Jangan menjalankan seeder development di production. Dan jangan pernah memuat dump sumo-web ke database GAIS: delapan tabel bernama sama (`users`, `roles`, `categories`, `divisions`, `migrations`, dan lainnya) akan tertimpa. Muat dump sumo hanya lewat menu Impor Data Sumo atau `php artisan sumo:import --file=...`, yang memberi awalan `sumo_dump_` pada setiap tabelnya.
 
 Seeder membuat Super Admin lokal (tabel di atas) plus master kategori, badan usaha, jabatan, dan merek. Migrasi membuat empat role modul sumo. Seeder tidak membuat role `general_affair`/`admin`, divisi, atau aset contoh.
 
 ### Data legacy sumo (opsional)
 
-Hanya dibutuhkan untuk memindahkan data dari sumo-web. Buat database kosong `db_sumo`, isi `SUMO_DB_DATABASE`, lalu pakai menu **Pengaturan > Impor Data Sumo** (unggah dump `.sql`/`.sql.gz`, uji coba, impor) atau CLI:
+Hanya dibutuhkan untuk memindahkan data dari sumo-web. Tidak perlu database lain: dump dimuat ke tabel berawalan `sumo_dump_` di database GAIS, lalu dipetakan ke tabel GAIS. Pakai menu **Pengaturan > Impor Data Sumo** (unggah dump `.sql`/`.sql.gz`, uji coba, impor) atau CLI:
 
 ```bash
-php artisan sumo:import --dry-run
+php artisan sumo:import --file=sumo.sql.gz --dry-run
 php artisan sumo:import
 ```
 
@@ -384,7 +384,7 @@ Blok inti mengikuti skeleton Laravel 12 (`CACHE_STORE`, `MAIL_SCHEME`, `BROADCAS
 | `APP_ENV` / `APP_DEBUG` | Ya | Environment dan debug |
 | `APP_LOCALE` / `APP_FALLBACK_LOCALE` | Ya | Default `id` |
 | `DB_CONNECTION` / `DB_*` | Ya | Driver dan koneksi; default proyek `mysql` |
-| `SUMO_DB_DATABASE` | Untuk impor sumo | Database staging dump sumo; default `db_sumo`. `SUMO_DB_HOST/PORT/USERNAME/PASSWORD/PREFIX` mengikuti `DB_*` bila kosong |
+| `SUMO_DB_PREFIX` / `SUMO_DB_DATABASE` | Tidak | Staging dump sumo: tabel berawalan `SUMO_DB_PREFIX` (default `sumo_dump_`) di database `DB_DATABASE`. Untuk database staging tersendiri isi `SUMO_DB_DATABASE` dan kosongkan `SUMO_DB_PREFIX`; `SUMO_DB_HOST/PORT/USERNAME/PASSWORD` mengikuti `DB_*` bila kosong |
 | `SUMO_IMPORT_DISK` / `SUMO_IMPORT_MAX_UPLOAD_KB` | Tidak | Disk privat penyimpanan dump unggahan (default `FILESYSTEM_DISK`) dan batas unggah (default 12288 KB); tidak tercantum di `.env.example` |
 | `CACHE_STORE` / `CACHE_PREFIX` | Ya / Tidak | Cache default `file`; isi prefix khusus bila beberapa aplikasi berbagi Redis |
 | `FILESYSTEM_DISK` | Ya | Disk default; `local`, `public`, atau `s3` |
@@ -658,8 +658,8 @@ Periksa `users.approver_user_id` pemohon (untuk manager) dan cakupan divisi exec
 ### Impor Data Sumo tidak berjalan atau menggantung
 
 1. Butuh Redis dan Horizon dengan supervisor `supervisor-long`; setelah deploy jalankan `php artisan horizon:terminate`.
-2. `SUMO_DB_DATABASE` harus database terpisah dan kosong; loader menolak target yang sama dengan database GAIS atau yang berisi tabel GAIS.
-3. Batas unggah 12 MB (`SUMO_IMPORT_MAX_UPLOAD_KB`, plus `upload_max_filesize` PHP dan `client_max_body_size` nginx); pakai `.sql.gz` atau CLI `php artisan sumo:import`.
+2. Error `Access denied ... to database 'db_sumo'` berarti `.env` masih berisi `SUMO_DB_DATABASE=db_sumo` dari versi lama. Hapus baris itu supaya dump dimuat ke tabel `sumo_dump_*` di database GAIS, lalu `php artisan optimize` dan `php artisan horizon:terminate`.
+3. Batas unggah 12 MB (`SUMO_IMPORT_MAX_UPLOAD_KB`, plus `upload_max_filesize` PHP dan `client_max_body_size` nginx); pakai `.sql.gz` atau CLI `php artisan sumo:import --file=...`.
 4. Baca peringatan di hasil uji coba (pemetaan badan usaha, user bernama sama) sebelum **Impor sungguhan**, dan backup database GAIS dulu.
 
 ### WhatsApp atau pengingat dokumen aset tidak terkirim

@@ -106,12 +106,12 @@ Jalankan masing-masing di terminal terpisah:
 
 ### Database legacy sumo
 
-Hanya dibutuhkan untuk import. Koneksinya `sumo` di `config/database.php`, nama database lewat `SUMO_DB_DATABASE` (default `db_sumo`). Database ini adalah **staging**: impor lewat panel mengosongkannya lalu memuat dump yang diunggah.
+Hanya dibutuhkan untuk import. Koneksinya `sumo` di `config/database.php`. Bawaannya **staging** adalah tabel berawalan `sumo_dump_` (`SUMO_DB_PREFIX`) di database GAIS: impor lewat panel atau `sumo:import --file` menghapus tabel itu lalu memuat dump yang diunggah dengan nama tabel diberi awalan. Database staging tersendiri tetap bisa dipakai lewat `SUMO_DB_DATABASE` dengan `SUMO_DB_PREFIX` kosong.
 
 ### Peringatan
 
 - Feature test berjalan di database `.env` dengan `DatabaseTransactions`. **Jangan** jalankan `migrate:fresh`, `migrate:refresh`, atau `db:wipe` di sana.
-- **Jangan** impor dump sumo langsung ke database GAIS: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Pakai database terpisah, langkahnya di `database/sumo/README.md`. Loader di panel menolak target yang sama dengan database GAIS.
+- **Jangan** impor dump sumo langsung ke database GAIS: 8 tabel bernama sama akan tertimpa (insiden 12 Oktober 2026). Muat dump hanya lewat panel atau `sumo:import --file`, yang memberi awalan `sumo_dump_` pada setiap tabel; loader menolak database GAIS tanpa awalan. Langkahnya di `database/sumo/README.md`.
 
 ## Struktur kode
 <!-- desc: Peta folder, rute, dan jadwal command -->

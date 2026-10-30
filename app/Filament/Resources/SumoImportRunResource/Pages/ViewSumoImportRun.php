@@ -82,7 +82,7 @@ class ViewSumoImportRun extends ViewRecord
                 ->color('gray')
                 ->visible(fn (): bool => $this->record->canReload())
                 ->requiresConfirmation()
-                ->modalDescription(fn (): string => 'Isi database staging `'.SumoImportRunResource::stagingDatabase().'` diganti dengan dump ini, lalu uji coba dijalankan.')
+                ->modalDescription(fn (): string => 'Isi '.SumoImportRunResource::stagingTarget().' diganti dengan dump ini, lalu uji coba dijalankan.')
                 ->action(fn () => $this->queue(fn () => LoadSumoDump::dispatchWithDryRun($this->record), 'Muat ulang dan uji coba masuk antrean.')),
             Action::make('cancel')
                 ->label('Batalkan')

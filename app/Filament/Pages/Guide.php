@@ -84,7 +84,7 @@ class Guide extends Page
             ],
             'import' => [
                 ['actor' => 'admin', 'title' => 'Unggah dump', 'text' => 'Menu Pengaturan, Impor Data Sumo, tombol Unggah dump. File .sql atau .gz disimpan privat dan tercatat sebagai satu run.'],
-                ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running mengosongkan database staging sumo lalu memuat dump. Database GAIS ditolak sebagai target.'],
+                ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running memuat dump ke tabel berawalan sumo_dump_ di database GAIS. Nama tabel di dump diberi awalan, jadi tabel GAIS tidak tersentuh.'],
                 ['actor' => 'sistem', 'title' => 'Uji coba otomatis', 'text' => 'Semua langkah dijalankan lalu di-rollback. Laporan jumlah, pemetaan badan usaha, dan peringatan user tampil di run.'],
                 ['actor' => 'admin', 'title' => 'Impor sungguhan', 'text' => 'Ketik IMPOR. Satu transaksi dan idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
                 ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke pengajuan_admin, accounting, executor, requester. Cache permission direset.'],

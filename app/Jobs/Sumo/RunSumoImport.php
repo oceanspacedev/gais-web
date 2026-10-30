@@ -48,7 +48,7 @@ class RunSumoImport implements ShouldQueue
         try {
             // Run lain bisa saja memuat dump-nya ke staging di antara unggah dan job ini.
             if (! $run->staged) {
-                throw new RuntimeException('Dump run ini sudah tidak ada di database staging. Muat ulang dulu.');
+                throw new RuntimeException('Dump run ini sudah tidak ada di staging. Muat ulang dulu.');
             }
 
             if (! $this->dryRun && $run->dry_run_report === null) {

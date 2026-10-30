@@ -886,8 +886,8 @@ php artisan schedule:work   # bila menguji pengingat</pre>
                     <h3>Mengimpor data dari sumo-web</h3>
                     <x-guide.flow :steps="$flows['import']" />
 <p>Cara yang disarankan: menu <strong>Pengaturan, Impor Data Sumo</strong> (izin <code>Manage:SumoImport</code>, awalnya hanya super admin). Unggah dump <code>.sql</code> atau <code>.gz</code> (batas default 12 MB), tunggu uji coba otomatis selesai, periksa laporannya, lalu tekan Impor sungguhan dan ketik <code>IMPOR</code>. Setiap run menyimpan file, tabel yang dimuat, laporan, dan log. Butuh Horizon dengan supervisor antrean <code>long-running</code>.</p>
-                    <p>Dump yang lebih besar dimuat manual ke database staging, lalu lewat CLI:</p>
-<pre>php artisan sumo:import --dry-run
+                    <p>Dump yang lebih besar lewat CLI di server:</p>
+<pre>php artisan sumo:import --file=sumo.sql.gz --dry-run
 php artisan sumo:import
 php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                     <p>Langkah yang tersedia: <code>areas, divisions, masters, users, requests, problems, insurances, rents, wa, scopes, access</code>. Baris yang tidak bisa dipetakan dilewati dengan peringatan, bukan menggagalkan semuanya.</p>
@@ -900,7 +900,7 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                             <thead><tr><th>Variabel</th><th>Fungsi</th></tr></thead>
                             <tbody>
                                 <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_gais)</td></tr>
-                                <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database GAIS.</td></tr>
+                                <tr><td><code>SUMO_DB_PREFIX</code></td><td>Awalan tabel staging dump sumo di database GAIS (default <code>sumo_dump_</code>). Impor menghapus tabel berawalan ini lalu memuat dump.</td></tr>
                                 <tr><td><code>SUMO_IMPORT_MAX_UPLOAD_KB</code></td><td>Batas unggah dump di menu Impor Data Sumo (default 12288)</td></tr>
                                 <tr><td><code>QUEUE_CONNECTION</code>, <code>REDIS_*</code></td><td>Antrean (default redis, butuh Horizon)</td></tr>
                                 <tr><td><code>WAG_URL</code>, <code>WAG_TOKEN</code></td><td>Gateway WhatsApp untuk OTP dan pengingat</td></tr>

@@ -25,8 +25,9 @@ use Tests\Support\SumoLegacyFixture;
 use Tests\TestCase;
 
 /**
- * Unggah dump sumo dari panel. Database staging adalah database MySQL tersendiri
- * (dibuat dan dihapus oleh tes ini), terpisah dari database GAIS yang dipakai tes.
+ * Unggah dump sumo dari panel. Staging bawaan adalah tabel berawalan PREFIX di database
+ * GAIS yang dipakai tes (dihapus di tearDown); tes mode lama memakai database MySQL
+ * tersendiri STAGING (dibuat dan dihapus oleh tes ini).
  */
 class SumoImportPanelTest extends TestCase
 {
@@ -35,6 +36,8 @@ class SumoImportPanelTest extends TestCase
     private const B = 9100000;
 
     private const STAGING = 'gais_sumo_panel_test';
+
+    private const PREFIX = 'sumo_panel_test_';
 
     private string $scratch;
 
@@ -50,7 +53,7 @@ class SumoImportPanelTest extends TestCase
         config([
             'sumo-import.panel.disk' => 'local',
             'sumo-import.connection' => 'sumo',
-            'database.connections.sumo' => ['database' => self::STAGING] + config('database.connections.'.config('database.default')),
+            'database.connections.sumo' => ['prefix' => self::PREFIX] + config('database.connections.'.config('database.default')),
         ]);
         DB::purge('sumo');
         $this->server = config('database.connections.sumo');
@@ -67,9 +70,17 @@ class SumoImportPanelTest extends TestCase
 
         parent::tearDown();
 
-        // Koneksi sendiri: DROP DATABASE di koneksi GAIS akan meng-commit transaksi tes.
-        (new \PDO("mysql:host={$this->server['host']};port={$this->server['port']}", $this->server['username'], $this->server['password']))
-            ->exec('DROP DATABASE IF EXISTS `'.self::STAGING.'`');
+        // Koneksi sendiri: DDL di koneksi GAIS akan meng-commit transaksi tes.
+        $pdo = new \PDO("mysql:host={$this->server['host']};port={$this->server['port']}", $this->server['username'], $this->server['password']);
+        $pdo->exec('DROP DATABASE IF EXISTS `'.self::STAGING.'`');
+        $pdo->exec('SET FOREIGN_KEY_CHECKS=0');
+
+        $tables = $pdo->query('SELECT table_name FROM information_schema.tables WHERE table_schema = '.$pdo->quote($this->server['database'])
+            .' AND table_name LIKE '.$pdo->quote(str_replace('_', '\\_', self::PREFIX).'%'))->fetchAll(\PDO::FETCH_COLUMN);
+
+        foreach ($tables as $table) {
+            $pdo->exec("DROP TABLE IF EXISTS `{$this->server['database']}`.`{$table}`");
+        }
     }
 
     public function test_reader_splits_statements_like_the_mysql_client(): void
@@ -111,6 +122,7 @@ class SumoImportPanelTest extends TestCase
 
     public function test_loader_skips_server_statements_and_rejects_writes_outside_staging(): void
     {
+        $this->useSeparateStagingDatabase();
         $loader = new SumoDumpLoader('sumo');
         $gais = (string) config('database.connections.'.config('database.default').'.database');
 
@@ -140,13 +152,101 @@ class SumoImportPanelTest extends TestCase
         }
     }
 
-    public function test_loader_refuses_the_gais_database_as_staging(): void
+    public function test_loader_prefixes_every_table_when_staging_shares_the_gais_database(): void
     {
-        config(['database.connections.sumo.database' => config('database.connections.'.config('database.default').'.database')]);
+        $loader = new SumoDumpLoader('sumo');
+        $gais = (string) config('database.connections.'.config('database.default').'.database');
+        $p = self::PREFIX;
 
-        $this->expectExceptionMessage('tidak boleh kosong atau sama dengan database GAIS');
+        $this->assertSame("DROP TABLE IF EXISTS `{$p}users`", $loader->prepare('DROP TABLE IF EXISTS `users`', $gais));
+        $this->assertSame("/*!50001 DROP TABLE IF EXISTS `{$p}v`*/", $loader->prepare('/*!50001 DROP TABLE IF EXISTS `v`*/', $gais));
+        $this->assertSame("LOCK TABLES `{$p}users` WRITE", $loader->prepare('LOCK TABLES `users` WRITE', $gais));
+        $this->assertSame("/*!40000 ALTER TABLE `{$p}users` DISABLE KEYS */", $loader->prepare('/*!40000 ALTER TABLE `users` DISABLE KEYS */', $gais));
+        $this->assertSame("INSERT INTO `{$p}users` (`id`,`username`) VALUES (1,'users'),(2,'roles')", $loader->prepare("INSERT INTO `users` (`id`,`username`) VALUES (1,'users'),(2,'roles')", $gais));
+        $this->assertSame("INSERT INTO `{$p}users` VALUES (1)", $loader->prepare('INSERT INTO users VALUES (1)', $gais));
+        $this->assertSame('/*!40101 SET NAMES utf8mb4 */', $loader->prepare('/*!40101 SET NAMES utf8mb4 */', $gais));
+        $this->assertSame('UNLOCK TABLES', $loader->prepare('UNLOCK TABLES', $gais));
+
+        // Nama constraint unik per database dan REFERENCES menunjuk tabel GAIS: dibuang.
+        $this->assertSame(
+            "CREATE TABLE `{$p}requests` (\n  `id` bigint NOT NULL,\n  `user_id` bigint DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `requests_user_id_foreign` (`user_id`)\n) ENGINE=InnoDB",
+            $loader->prepare("CREATE TABLE `requests` (\n  `id` bigint NOT NULL,\n  `user_id` bigint DEFAULT NULL,\n  PRIMARY KEY (`id`),\n  KEY `requests_user_id_foreign` (`user_id`),\n  CONSTRAINT `requests_user_id_foreign` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,\n  CONSTRAINT `requests_chk_1` CHECK (json_valid(`id`))\n) ENGINE=InnoDB", $gais),
+        );
+
+        foreach ([
+            'ALTER TABLE `requests` ADD CONSTRAINT `fk` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`)',
+            '/*!50001 CREATE ALGORITHM=UNDEFINED */ /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */ /*!50001 VIEW `v` AS select 1 */',
+            '/*!50001 DROP VIEW IF EXISTS `v`*/',
+            '/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `tr` BEFORE INSERT ON `users` FOR EACH ROW SET NEW.id = 1 */',
+            '/*!50003 DROP PROCEDURE IF EXISTS `p` */',
+            '/*!50717 PREPARE s FROM @rocksdb_get_is_supported */',
+        ] as $sql) {
+            $this->assertNull($loader->prepare($sql, $gais), "Seharusnya dilewati: {$sql}");
+        }
+
+        foreach ([
+            "INSERT INTO `{$gais}`.`users` VALUES (1)",
+            'DROP TABLE IF EXISTS `users`, `roles`',
+            'INSERT INTO `users` SELECT * FROM `roles`',
+            'INSERT `users` VALUES (1)',
+            'UPDATE users SET username = NULL',
+            'DELETE FROM users',
+            'RENAME TABLE `a` TO `users`',
+            'ALTER TABLE `a` RENAME TO `users`',
+            'CREATE TABLE `a` LIKE `users`',
+            'LOCK TABLES `a` WRITE, `users` WRITE',
+            "CREATE TABLE `a` (`id` int, CONSTRAINT `f` FOREIGN KEY (`id`) REFERENCES `users` (`id`))",
+        ] as $sql) {
+            try {
+                $loader->prepare($sql, $gais);
+                $this->fail("Seharusnya ditolak: {$sql}");
+            } catch (RuntimeException) {
+                $this->addToAssertionCount(1);
+            }
+        }
+    }
+
+    public function test_loader_needs_a_prefix_that_no_gais_table_uses_in_the_gais_database(): void
+    {
+        config(['database.connections.sumo.prefix' => '']);
+
+        try {
+            (new SumoDumpLoader('sumo'))->load($this->write('dump.sql', SumoLegacyFixture::mysqlDump()));
+            $this->fail('Tanpa awalan, database GAIS harus ditolak.');
+        } catch (RuntimeException $exception) {
+            $this->assertStringContainsString('butuh awalan tabel', $exception->getMessage());
+        }
+
+        // sumo_import_runs adalah tabel GAIS: awalan `sumo_` akan ikut menghapusnya.
+        config(['database.connections.sumo.prefix' => 'sumo_']);
+
+        $this->expectExceptionMessage('juga dipakai tabel GAIS `sumo_import_runs`');
 
         (new SumoDumpLoader('sumo'))->load($this->write('dump.sql', SumoLegacyFixture::mysqlDump()));
+    }
+
+    public function test_separate_staging_database_still_loads_without_prefix(): void
+    {
+        $this->useSeparateStagingDatabase();
+
+        $tables = (new SumoDumpLoader('sumo'))->load($this->write('dump.sql', SumoLegacyFixture::mysqlDump($this->legacyRows())));
+
+        $this->assertSame(2, $tables['users']);
+        $this->assertSame(self::STAGING, DB::connection('sumo')->getDatabaseName());
+        $this->assertSame(2, DB::connection('sumo')->table('users')->count());
+    }
+
+    public function test_cli_loads_a_dump_file_before_importing(): void
+    {
+        $this->configureMapping(BusinessEntity::create(['name' => 'PT Uji Panel Sumo', 'format' => 'UPS']));
+        $users = User::count();
+
+        $this->artisan('sumo:import', ['--file' => $this->write('dump.sql.gz', gzencode(SumoLegacyFixture::mysqlDump($this->legacyRows()))), '--dry-run' => true])
+            ->expectsOutputToContain('Membuat tabel users')
+            ->assertSuccessful();
+
+        $this->assertSame(2, DB::connection('sumo')->table('users')->count());
+        $this->assertSame($users, User::count());
     }
 
     public function test_upload_loads_staging_dry_runs_and_imports_after_confirmation(): void
@@ -173,6 +273,10 @@ class SumoImportPanelTest extends TestCase
         $this->assertSame(2, $run->dry_run_report['counts']['users.created']);
         $this->assertStringContainsString('Membuat tabel users', $run->log);
         $this->assertStringContainsString('Uji coba selesai', $run->log);
+        // `DROP TABLE users` di dump mengenai tabel berawalan, bukan tabel users GAIS. Dibaca lewat
+        // koneksi sumo: snapshot transaksi tes lebih tua dari tabel itu.
+        $this->assertSame(2, DB::connection('sumo')->table('users')->count());
+        $this->assertSame(self::PREFIX.'users', DB::connection('sumo')->getTablePrefix().'users');
         // Uji coba dibatalkan: belum ada user sumo di GAIS.
         $this->assertSame(0, User::where('legacy_sumo_user_id', self::B + 3)->count());
 
@@ -212,7 +316,7 @@ class SumoImportPanelTest extends TestCase
 
         $this->assertSame(SumoImportRun::STATUS_FAILED, $run->status);
         $this->assertFalse($run->staged);
-        $this->assertStringContainsString("database lain (`{$gais}`)", $run->error);
+        $this->assertStringContainsString("nama database (`{$gais}`)", $run->error);
         $this->assertSame($users, User::count());
         $this->assertFalse($run->canImport());
     }
@@ -264,6 +368,15 @@ class SumoImportPanelTest extends TestCase
         $this->actingAsImporter();
 
         $this->get(SumoImportRunResource::getUrl('index'))->assertOk();
+    }
+
+    /**
+     * Mode lama: database staging tersendiri tanpa awalan tabel.
+     */
+    private function useSeparateStagingDatabase(): void
+    {
+        config(['database.connections.sumo' => ['database' => self::STAGING, 'prefix' => ''] + config('database.connections.sumo')]);
+        DB::purge('sumo');
     }
 
     private function actingAsImporter(): User
