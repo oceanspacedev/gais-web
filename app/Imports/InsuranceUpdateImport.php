@@ -95,11 +95,11 @@ class InsuranceUpdateImport implements ToCollection, WithHeadingRow
                 $isNew = ! $update->exists;
 
                 $update->fill([
-                    'stock_provider_id' => $this->cell($row, 'asuransi_stok', fn ($value) => $this->provider($value), $update->stock_provider_id),
+                    'stock_provider_id' => $this->cell($row, 'asuransi_stok', fn ($value) => $this->provider($value, $number, 'asuransi_stok'), $update->stock_provider_id),
                     'stock_worth' => $this->cell($row, 'nilai_stok', fn ($value) => $this->money($value), $update->stock_worth),
                     'actual_stock_worth' => $this->cell($row, 'nilai_aktual_stok', fn ($value) => $this->money($value), $update->actual_stock_worth),
                     'stock_premium' => $this->cell($row, 'premi_stok', fn ($value) => $this->money($value), $update->stock_premium),
-                    'building_provider_id' => $this->cell($row, 'asuransi_bangunan', fn ($value) => $this->provider($value), $update->building_provider_id),
+                    'building_provider_id' => $this->cell($row, 'asuransi_bangunan', fn ($value) => $this->provider($value, $number, 'asuransi_bangunan'), $update->building_provider_id),
                     'building_worth' => $this->cell($row, 'nilai_bangunan', fn ($value) => $this->money($value), $update->building_worth),
                     'building_premium' => $this->cell($row, 'premi_bangunan', fn ($value) => $this->money($value), $update->building_premium),
                     'join_date' => $this->dateCell($row, 'tanggal_mulai', $number, $isNew, $update->join_date),
@@ -113,10 +113,21 @@ class InsuranceUpdateImport implements ToCollection, WithHeadingRow
         });
     }
 
-    private function provider(mixed $name): ?int
+    /**
+     * Provider dicocokkan dengan master yang sudah ada (abaikan huruf besar-kecil);
+     * nama yang tidak dikenal menolak baris, bukan membuat master baru (sumo tidak
+     * pernah membuat master dari impor pembaharuan).
+     */
+    private function provider(mixed $name, int $rowNumber, string $column): ?int
     {
         $name = $this->text($name);
 
-        return $name === null ? null : InsuranceProvider::query()->firstOrCreate(['name' => $name])->id;
+        if ($name === null) {
+            return null;
+        }
+
+        $provider = InsuranceProvider::query()->whereRaw('LOWER(name) = ?', [mb_strtolower($name)])->first();
+
+        return $provider?->id ?? $this->reject($rowNumber, "kolom {$column} \"{$name}\" tidak ada di master Penyedia Asuransi; tambahkan dulu lewat menu Penyedia Asuransi.");
     }
 }

@@ -73,6 +73,8 @@ class ContractRenewalImportTest extends TestCase
     {
         $insurance = $this->insurance('POL-IMP-1');
         $other = $this->insurance('POL-IMP-LAIN');
+        // Provider harus sudah ada di master; nama di file boleh beda huruf besar-kecil.
+        InsuranceProvider::create(['name' => 'Provider Impor']);
         $other->updates()->create(['policy_number' => 'POL-IMP-1A', 'join_date' => '2026-01-01', 'expired_date' => '2026-12-31']);
         $existing = $insurance->updates()->create([
             'policy_number' => 'POL-IMP-1A', 'stock_premium' => 100, 'notes' => 'catatan lama',
@@ -83,7 +85,7 @@ class ContractRenewalImportTest extends TestCase
             ->assertOk()
             ->callTableAction('importUpdates', data: ['upload' => $this->upload([
                 // Induk ditulis huruf kecil: pencocokan mengabaikan huruf besar-kecil; sel kosong dibiarkan.
-                $this->insuranceRow(['no_polis_induk' => 'pol-imp-1', 'no_polis' => 'POL-IMP-1A', 'asuransi_stok' => 'Provider Impor', 'nilai_stok' => '150.000.000']),
+                $this->insuranceRow(['no_polis_induk' => 'pol-imp-1', 'no_polis' => 'POL-IMP-1A', 'asuransi_stok' => 'provider impor', 'nilai_stok' => '150.000.000']),
                 $this->insuranceRow(['no_polis_induk' => 'POL-IMP-1', 'no_polis' => 'POL-IMP-1B', 'nilai_stok' => 200000000, 'premi_stok' => 500000, 'tanggal_mulai' => '01/01/2027', 'tanggal_akhir' => '2027-12-31', 'catatan' => 'baru']),
                 $this->insuranceRow([]),
             ])])
@@ -96,6 +98,7 @@ class ContractRenewalImportTest extends TestCase
         $this->assertSame('catatan lama', $existing->notes);
         $this->assertSame(ContractStatus::Renewed, $existing->status, 'Status kosong pada baris lama dibiarkan.');
         $this->assertSame('Provider Impor', $existing->stockProvider?->name);
+        $this->assertSame(1, InsuranceProvider::query()->whereRaw('LOWER(name) = ?', ['provider impor'])->count(), 'Impor tidak membuat provider baru.');
         $this->assertSame($this->manager->id, $existing->user_id);
 
         $created = InsuranceUpdate::query()->where('insurance_id', $insurance->id)->where('policy_number', 'POL-IMP-1B')->firstOrFail();
