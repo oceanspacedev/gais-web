@@ -10,7 +10,8 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Pelapor melihat laporannya sendiri. Pemegang "Lihat Data Semua User" melihat
  * semua laporan, kecuali divisinya dibatasi ke jenis gangguan tertentu di
- * config/problem-report.php (sumo: HCM hanya gangguan UMUM).
+ * config/problem-report.php: daftar jenis yang boleh, atau dengan awalan "!"
+ * jenis yang dikecualikan (sumo: HCM hanya UMUM, executor lain selain UMUM).
  */
 final class ProblemReportVisibility
 {
@@ -20,16 +21,26 @@ final class ProblemReportVisibility
             return $query->where('problem_reports.user_id', $user->id);
         }
 
-        $categories = self::restrictedCategoriesFor($user);
+        $rule = self::restrictedCategoriesFor($user);
 
-        if ($categories === null) {
+        if ($rule === null) {
             return $query;
         }
 
-        return $query->whereIn(
-            'problem_reports.problem_report_category_id',
-            ProblemReportCategory::withTrashed()->select('problem_report_categories.id')->whereIn('name', $categories),
-        );
+        [$include, $exclude] = $rule;
+        $ids = fn (array $names): Builder => ProblemReportCategory::withTrashed()->select('problem_report_categories.id')->whereIn('name', $names);
+
+        if ($include !== []) {
+            $query->whereIn('problem_reports.problem_report_category_id', $ids($include));
+        }
+
+        if ($exclude !== []) {
+            // Laporan tanpa jenis ikut tersembunyi, sama seperti whereIn di atas (sumo: pr_category_id != 7).
+            $query->whereNotNull('problem_reports.problem_report_category_id')
+                ->whereNotIn('problem_reports.problem_report_category_id', $ids($exclude));
+        }
+
+        return $query;
     }
 
     /**
@@ -51,9 +62,9 @@ final class ProblemReportVisibility
             return (int) $report->user_id === $user->getKey();
         }
 
-        $categories = self::restrictedCategoriesFor($user);
+        $rule = self::restrictedCategoriesFor($user);
 
-        if ($categories === null) {
+        if ($rule === null) {
             return true;
         }
 
@@ -61,14 +72,26 @@ final class ProblemReportVisibility
             // whereIn('name') di MySQL tidak peka huruf besar/kecil (collation *_ci).
             $name = $report->category?->name;
 
-            return $name !== null && in_array(mb_strtolower($name), array_map('mb_strtolower', $categories), true);
+            if ($name === null) {
+                return false;
+            }
+
+            [$include, $exclude] = $rule;
+            $lower = fn (array $names): array => array_map('mb_strtolower', $names);
+            $name = mb_strtolower($name);
+
+            if ($include !== [] && ! in_array($name, $lower($include), true)) {
+                return false;
+            }
+
+            return $exclude === [] || ! in_array($name, $lower($exclude), true);
         }
 
         return ProblemReport::query()->whereKey($report->getKey())->visibleTo($user)->exists();
     }
 
     /**
-     * @return list<string>|null
+     * @return array{0: list<string>, 1: list<string>}|null [jenis yang boleh, jenis yang dikecualikan]
      */
     private static function restrictedCategoriesFor(User $user): ?array
     {
@@ -81,9 +104,28 @@ final class ProblemReportVisibility
         $map = config('problem-report.division_categories', []);
 
         foreach ($map as $division => $categories) {
-            if (strcasecmp((string) $division, $divisionName) === 0) {
-                return array_values((array) $categories);
+            if (strcasecmp((string) $division, $divisionName) !== 0) {
+                continue;
             }
+
+            $include = [];
+            $exclude = [];
+
+            foreach ((array) $categories as $category) {
+                $category = trim((string) $category);
+
+                if ($category === '') {
+                    continue;
+                }
+
+                if (str_starts_with($category, '!')) {
+                    $exclude[] = ltrim(substr($category, 1));
+                } else {
+                    $include[] = $category;
+                }
+            }
+
+            return [$include, $exclude];
         }
 
         return null;

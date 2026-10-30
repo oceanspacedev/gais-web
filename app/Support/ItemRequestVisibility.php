@@ -123,10 +123,7 @@ final class ItemRequestVisibility
         $areaId = $requester?->division?->area_id;
 
         foreach ($scopes as $scope) {
-            $typeMatches = $scope->item_request_type_id === null || (int) $scope->item_request_type_id === (int) $request->item_request_type_id;
-            $areaMatches = $scope->area_id === null || ($areaId !== null && (int) $scope->area_id === (int) $areaId);
-
-            if ($typeMatches && $areaMatches) {
+            if ($scope->matches($request->item_request_type_id, $areaId)) {
                 return true;
             }
         }

@@ -339,7 +339,9 @@ Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibilit
 - pemegang izin Accounting;
 - executor sesuai cakupan di `item_request_scopes` (per tipe dan/atau area).
 
-`ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`.
+Cakupan dengan `approves_quantity` menjadikan tahap Manager wajib: hanya divisi itu yang menyetujui jumlah (`ItemRequestWorkflow::canApproveQuantity`), dan executor baru boleh memproses setelah tahap Accounting/Manager yang wajib lewat (`executorMayProcess`, `pendingStageBeforeExecutor`, `scopeAwaitingExecutor`). Importer mengisinya dari elemen ketiga `sumo-import.scopes`.
+
+`ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`; nilai berawalan `!` mengecualikan jenis itu (sumo: executor non-HCM melihat selain UMUM).
 
 ### Catatan
 

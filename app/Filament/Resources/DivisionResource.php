@@ -92,7 +92,7 @@ class DivisionResource extends Resource
                     }),
 
                 Section::make('Cakupan Pengajuan Barang')
-                    ->description('Pengajuan mana yang boleh dilihat dan diproses executor/manager di divisi ini. Kosongkan tipe atau area untuk "semua". Tanpa baris, anggota divisi hanya melihat pengajuannya sendiri.')
+                    ->description('Pengajuan mana yang boleh dilihat dan diproses executor/manager di divisi ini. Kosongkan tipe atau area untuk "semua". Tanpa baris, anggota divisi hanya melihat pengajuannya sendiri. Centang "Menyetujui jumlah" bila divisi ini yang menyetujui jumlah (tahap Manager): executor baru bisa memproses pengajuan di cakupan itu setelah divisi ini menyetujui.')
                     ->collapsible()
                     ->schema([
                         Forms\Components\Repeater::make('itemRequestScopes')
@@ -108,8 +108,12 @@ class DivisionResource extends Resource
                                     ->placeholder('Semua area')
                                     ->options(fn (): array => Area::query()->orderBy('name')->pluck('name', 'id')->all())
                                     ->searchable(),
+                                Forms\Components\Toggle::make('approves_quantity')
+                                    ->label('Menyetujui jumlah')
+                                    ->helperText('Tahap Manager wajib; executor menunggu divisi ini.')
+                                    ->inline(false),
                             ])
-                            ->columns(2)
+                            ->columns(3)
                             ->defaultItems(0)
                             ->addActionLabel('Tambah cakupan'),
                     ]),

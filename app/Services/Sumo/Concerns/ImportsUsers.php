@@ -172,12 +172,14 @@ trait ImportsUsers
                 continue;
             }
 
-            foreach ($entries as [$typeId, $areaId]) {
+            foreach ($entries as $entry) {
+                [$typeId, $areaId] = $entry;
+
                 $scope = ItemRequestScope::query()->firstOrCreate([
                     'division_id' => (int) $divisionId,
                     'item_request_type_id' => $this->idOrNull('item_request_types', $typeId),
                     'area_id' => $this->idOrNull('areas', $areaId),
-                ]);
+                ], ['approves_quantity' => (bool) ($entry[2] ?? false)]);
 
                 $this->report->add($scope->wasRecentlyCreated ? 'scopes.created' : 'scopes.existing');
             }

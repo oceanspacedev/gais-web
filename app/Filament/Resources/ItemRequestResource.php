@@ -343,6 +343,7 @@ class ItemRequestResource extends Resource
                 ->modalHeading('Setujui pengajuan ini?')
                 ->modalDescription('Jumlah barang yang belum diisi akan disetujui sesuai jumlah yang diminta. Ubah jumlah per barang lebih dulu bila perlu.')
                 ->visible(fn (ItemRequest $record) => ($user()?->can('approveManager', ItemRequest::class) ?? false)
+                    && $workflow->canApproveQuantity($user(), $record)
                     && ! $record->isApproved(ItemRequestApprovalType::Manager)
                     && ! in_array($record->client_status, [ItemRequestClientStatus::Accepted, ItemRequestClientStatus::Cancelled], true))
                 ->action(fn (ItemRequest $record) => static::runWorkflow(fn () => $workflow->approveManager($record, $user()), 'Pengajuan telah disetujui.')),
@@ -354,6 +355,7 @@ class ItemRequestResource extends Resource
                 ->modalHeading('Proses pengajuan')
                 ->modalWidth('md')
                 ->visible(fn (ItemRequest $record) => ($user()?->can('process', ItemRequest::class) ?? false)
+                    && $workflow->executorMayProcess($record)
                     && ! in_array($record->client_status, [ItemRequestClientStatus::Accepted], true))
                 ->form(fn (ItemRequest $record): array => [
                     Radio::make('decision')->label('Keputusan')->options(ItemRequestExecutorDecision::class)->default(static::defaultDecision($record))->required(),
@@ -476,9 +478,11 @@ class ItemRequestResource extends Resource
 
     private static function approvalSummary(ItemRequest $record): string
     {
+        $pending = app(ItemRequestWorkflow::class)->pendingStageBeforeExecutor($record);
+
         return collect(ItemRequestApprovalType::cases())
             ->filter(fn (ItemRequestApprovalType $type): bool => $type !== ItemRequestApprovalType::Accounting || (bool) $record->type?->requires_accounting_approval)
-            ->map(fn (ItemRequestApprovalType $type): string => ($record->isApproved($type) ? '✓ ' : '○ ').$type->label())
+            ->map(fn (ItemRequestApprovalType $type): string => ($record->isApproved($type) ? '✓ ' : ($type === $pending ? '⏳ ' : '○ ')).$type->label())
             ->implode('  ');
     }
 

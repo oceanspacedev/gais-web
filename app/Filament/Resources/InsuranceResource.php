@@ -8,7 +8,6 @@ use App\Filament\Resources\InsuranceResource\RelationManagers\UpdatesRelationMan
 use App\Models\BusinessEntity;
 use App\Models\Insurance;
 use App\Models\User;
-use Carbon\CarbonInterface;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -31,7 +30,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 /**
  * Polis asuransi (sumo: ASURANSI > Data Asuransi). Riwayat pembaharuan ada di
- * relation manager; jatuh tempo efektif mengikuti pembaharuan terakhir.
+ * relation manager; daftar menampilkan nilai pembaharuan terakhir (nomor polis,
+ * provider, nilai, status, catatan) dan jatuh tempo efektif, seperti sumo.
  */
 class InsuranceResource extends Resource
 {
@@ -80,8 +80,8 @@ class InsuranceResource extends Resource
                         TextInput::make('policy_number')->label('Nomor Polis')->required()->maxLength(255),
                         TextInput::make('insured_name')->label('Nama Tertanggung')->required()->maxLength(255),
                         TextInput::make('warehouse_code')->label('Kode Gudang')->maxLength(255),
-                        Select::make('insurance_category_id')->label('Kategori')->relationship('category', 'name')->preload()->searchable(),
-                        Select::make('insurance_scope_id')->label('Cakupan')->relationship('scope', 'name')->preload()->searchable(),
+                        Select::make('insurance_category_id')->label('Kategori')->relationship('category', 'name')->preload()->searchable()->required(),
+                        Select::make('insurance_scope_id')->label('Cakupan')->relationship('scope', 'name')->preload()->searchable()->required(),
                         Select::make('business_entity_id')
                             ->label('Badan Usaha')
                             ->options(fn (?Insurance $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
@@ -120,41 +120,71 @@ class InsuranceResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $money = fn (TextColumn $column): TextColumn => $column->money('IDR', decimalPlaces: 0)->placeholder('-');
+
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['category', 'scope', 'stockProvider', 'buildingProvider', 'updates']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query
+                ->with(['category', 'scope', 'stockProvider', 'buildingProvider', 'updates.stockProvider', 'updates.buildingProvider'])
+                ->withMax('updates', 'expired_date'))
             ->columns([
-                TextColumn::make('policy_number')->label('Nomor Polis')->searchable()->sortable()->weight('bold'),
-                TextColumn::make('insured_name')->label('Tertanggung')->searchable()->sortable()->description(fn (Insurance $record): ?string => $record->warehouse_code),
+                TextColumn::make('policy_number')->label('Nomor Polis')
+                    ->state(fn (Insurance $record): string => (string) $record->effective('policy_number'))
+                    ->description(fn (Insurance $record): ?string => $record->latestUpdate() !== null && $record->latestUpdate()->policy_number !== $record->policy_number ? 'Awal: '.$record->policy_number : null)
+                    ->searchable(query: fn (Builder $query, string $search): Builder => static::applySearch($query, $search))
+                    ->sortable()
+                    ->weight('bold'),
+                TextColumn::make('insured_name')->label('Tertanggung')->sortable()->description(fn (Insurance $record): ?string => $record->warehouse_code),
+                TextColumn::make('insured_detail')->label('Detail')->limit(20)->placeholder('-')->toggleable(),
                 TextColumn::make('category.name')->label('Kategori')->placeholder('-')->toggleable(),
                 TextColumn::make('scope.name')->label('Cakupan')->placeholder('-')->toggleable(),
-                TextColumn::make('stockProvider.name')->label('Provider Stok')->placeholder('-')->toggleable(),
-                TextColumn::make('stock_premium')->label('Premi Stok')->money('IDR', decimalPlaces: 0)->placeholder('-')->toggleable(),
-                TextColumn::make('building_premium')->label('Premi Bangunan')->money('IDR', decimalPlaces: 0)->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
-                TextColumn::make('join_date')->label('Mulai')->date('d/m/Y')->sortable()->toggleable(),
+                TextColumn::make('stock_provider')->label('Asuransi Stok')->state(fn (Insurance $record): ?string => $record->effectiveRow()->stockProvider?->name)->placeholder('-')->toggleable(),
+                $money(TextColumn::make('stock_worth')->label('Nilai Stok')->state(fn (Insurance $record): mixed => $record->effective('stock_worth')))->toggleable(),
+                $money(TextColumn::make('actual_stock_worth')->label('Aktual Stok')->state(fn (Insurance $record): mixed => $record->effective('actual_stock_worth')))->toggleable(),
+                $money(TextColumn::make('stock_difference')->label('Selisih')->state(fn (Insurance $record): ?int => $record->effectiveRow()->stockDifference()))->color('danger')->toggleable(),
+                TextColumn::make('stock_status')->label('Status Stok')
+                    ->state(fn (Insurance $record): ?string => $record->effectiveRow()->stockStatus())
+                    ->badge()
+                    ->color(fn (?string $state): string => Insurance::stockStatusColor($state))
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('building_provider')->label('Asuransi Bangunan')->state(fn (Insurance $record): ?string => $record->effectiveRow()->buildingProvider?->name)->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
+                $money(TextColumn::make('building_worth')->label('Nilai Bangunan')->state(fn (Insurance $record): mixed => $record->effective('building_worth')))->toggleable(isToggledHiddenByDefault: true),
+                $money(TextColumn::make('stock_premium')->label('Premi Stok')->state(fn (Insurance $record): mixed => $record->effective('stock_premium')))->toggleable(isToggledHiddenByDefault: true),
+                $money(TextColumn::make('building_premium')->label('Premi Bangunan')->state(fn (Insurance $record): mixed => $record->effective('building_premium')))->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('join_date')->label('Mulai')->date('d/m/Y')->sortable()->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('effective_expired_date')
                     ->label('Jatuh Tempo')
                     ->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->format('d/m/Y'))
                     ->description(fn (Insurance $record): ?string => $record->updates->isNotEmpty() ? $record->updates->count().' pembaharuan' : null)
-                    ->color(fn (Insurance $record): ?string => static::dueColor($record->effectiveExpiredDate())),
+                    ->color(fn (Insurance $record): ?string => $record->effectiveDueColor())
+                    ->weight('bold')
+                    ->sortable(query: fn (Builder $query, string $direction): Builder => static::orderByEffectiveExpiry($query, $direction)),
                 TextColumn::make('effective_status')->label('Status')->state(fn (Insurance $record): ?ContractStatus => $record->effectiveStatus())->badge(),
+                TextColumn::make('notes')->label('Catatan')->state(fn (Insurance $record): mixed => $record->effective('notes'))->limit(30)->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
             ])
-            ->defaultSort('expired_date')
+            ->defaultSort(fn (Builder $query, string $direction): Builder => static::orderByEffectiveExpiry($query, $direction))
             ->filters([
-                SelectFilter::make('status')->label('Status')->options(ContractStatus::class),
+                SelectFilter::make('status')
+                    ->label('Status')
+                    ->options(ContractStatus::class)
+                    // Sumo: cocok bila status polis atau salah satu pembaharuannya sama.
+                    ->query(fn (Builder $query, array $data): Builder => filled($data['value'] ?? null)
+                        ? $query->where(fn (Builder $matches) => $matches
+                            ->where('insurances.status', $data['value'])
+                            ->orWhereHas('updates', fn (Builder $updates) => $updates->where('status', $data['value'])))
+                        : $query),
                 SelectFilter::make('insurance_category_id')->label('Kategori')->relationship('category', 'name')->preload(),
                 SelectFilter::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name')->preload(),
                 Filter::make('active')
                     ->label('Masih berjalan')
                     ->toggle()
+                    // Sumo menyembunyikan polis tutup/refund secara default.
+                    ->default()
                     ->query(fn (Builder $query): Builder => $query->activeContracts()),
                 Filter::make('due_soon')
                     ->label('Jatuh tempo ≤ 30 hari')
                     ->toggle()
-                    ->query(fn (Builder $query): Builder => $query->activeContracts()->where(function (Builder $due): void {
-                        $limit = now()->addDays(30)->toDateString();
-                        $due->whereHas('updates', fn (Builder $updates) => $updates->whereDate('expired_date', '<=', $limit))
-                            ->orWhere(fn (Builder $base) => $base->whereDoesntHave('updates')->whereDate('expired_date', '<=', $limit));
-                    })),
+                    ->query(fn (Builder $query): Builder => $query->activeContracts()->dueWithin(30)),
             ])
             ->recordActions([
                 ViewAction::make(),
@@ -189,16 +219,30 @@ class InsuranceResource extends Resource
         ];
     }
 
-    public static function dueColor(?CarbonInterface $date): ?string
+    /**
+     * Urut berdasarkan jatuh tempo efektif (sumo: COALESCE(MAX(update.expired_date), expired_date)).
+     * Memerlukan withMax('updates', 'expired_date') pada query tabel.
+     */
+    public static function orderByEffectiveExpiry(Builder $query, string $direction = 'asc'): Builder
     {
-        if ($date === null) {
-            return null;
-        }
+        return $query->orderByRaw('COALESCE(updates_max_expired_date, insurances.expired_date) '.($direction === 'desc' ? 'desc' : 'asc'));
+    }
 
-        if ($date->isPast()) {
-            return 'danger';
-        }
+    /**
+     * Pencarian seperti sumo: nomor polis (termasuk pembaharuan), tertanggung,
+     * kode gudang, alamat tertanggung, detail, dan alamat risiko.
+     */
+    private static function applySearch(Builder $query, string $search): Builder
+    {
+        $like = '%'.$search.'%';
 
-        return $date->diffInDays(now()) <= 30 ? 'warning' : null;
+        return $query->where(fn (Builder $matches) => $matches
+            ->where('insurances.policy_number', 'like', $like)
+            ->orWhere('insurances.insured_name', 'like', $like)
+            ->orWhere('insurances.warehouse_code', 'like', $like)
+            ->orWhere('insurances.insured_address', 'like', $like)
+            ->orWhere('insurances.insured_detail', 'like', $like)
+            ->orWhere('insurances.risk_address', 'like', $like)
+            ->orWhereHas('updates', fn (Builder $updates) => $updates->where('policy_number', 'like', $like)));
     }
 }

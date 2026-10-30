@@ -6,9 +6,11 @@ use App\Enums\ItemRequestApprovalType;
 use App\Enums\ItemRequestClientStatus;
 use App\Enums\ItemRequestExecutorDecision;
 use App\Exceptions\ItemRequestException;
+use App\Models\Division;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestApproval;
 use App\Models\ItemRequestDetail;
+use App\Models\ItemRequestScope;
 use App\Models\ItemRequestType;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
@@ -129,10 +131,15 @@ class ItemRequestWorkflow
 
     /**
      * Tahap Manager: jumlah yang belum diisi disetujui sesuai jumlah diminta (sumo: fixRequest).
+     * Bila pengajuan masuk cakupan divisi yang menyetujui jumlah, hanya divisi itu yang boleh.
      */
     public function approveManager(ItemRequest $request, User $actor): void
     {
         $this->assertNotFinal($request);
+
+        if (! $this->canApproveQuantity($actor, $request)) {
+            throw new ItemRequestException('Jumlah pengajuan ini disetujui oleh divisi yang ditunjuk pada cakupan pengajuan (menyetujui jumlah).');
+        }
 
         DB::transaction(function () use ($request, $actor): void {
             $request->details()->whereNull('qty_approved')->update(['qty_approved' => DB::raw('qty_request')]);
@@ -154,6 +161,13 @@ class ItemRequestWorkflow
     {
         if ($request->client_status === ItemRequestClientStatus::Accepted) {
             throw new ItemRequestException('Pengajuan sudah dikonfirmasi diterima oleh pemohon.');
+        }
+
+        if (! $this->executorMayProcess($request)) {
+            throw new ItemRequestException(sprintf(
+                'Pengajuan belum lewat tahap %s; executor belum bisa memproses.',
+                $this->pendingStageBeforeExecutor($request)?->label() ?? '-',
+            ));
         }
 
         DB::transaction(function () use ($request, $actor, $decision, $notes): void {
@@ -237,11 +251,12 @@ class ItemRequestWorkflow
     }
 
     /**
-     * Pengajuan yang menunggu tindakan executor (sumo: filter "belum diproses").
+     * Pengajuan yang menunggu tindakan executor (sumo: filter "belum diproses"):
+     * tahap Accounting dan Manager yang wajib sudah lewat, executor belum mengisi.
      */
     public function scopeAwaitingExecutor(Builder $query): Builder
     {
-        return $query
+        $query
             ->where('client_status', ItemRequestClientStatus::Waiting->value)
             ->whereHas('approvals', fn (Builder $approvals) => $approvals
                 ->where('approval_type', ItemRequestApprovalType::Executor->value)
@@ -251,6 +266,131 @@ class ItemRequestWorkflow
                 ->orWhereHas('approvals', fn (Builder $approvals) => $approvals
                     ->where('approval_type', ItemRequestApprovalType::Accounting->value)
                     ->whereNotNull('approved_by_user_id')));
+
+        $scopes = $this->quantityApproverScopes();
+
+        if ($scopes->isEmpty()) {
+            return $query;
+        }
+
+        // Subquery tanpa korelasi (whereIn) seperti ItemRequestVisibility, supaya
+        // MySQL cukup menghitungnya sekali.
+        return $query->where(function (Builder $ready) use ($scopes): void {
+            $ready->whereHas('approvals', fn (Builder $approvals) => $approvals
+                ->where('approval_type', ItemRequestApprovalType::Manager->value)
+                ->whereNotNull('approved_by_user_id'));
+
+            $ready->orWhere(function (Builder $outside) use ($scopes): void {
+                foreach ($scopes as $scope) {
+                    $outside->whereNot(function (Builder $inside) use ($scope): void {
+                        if ($scope->coversEverything()) {
+                            $inside->whereNotNull('item_requests.id');
+
+                            return;
+                        }
+
+                        if ($scope->item_request_type_id !== null) {
+                            $inside->where('item_requests.item_request_type_id', $scope->item_request_type_id);
+                        }
+
+                        if ($scope->area_id !== null) {
+                            $inside->whereIn('item_requests.user_id', User::query()->select('users.id')->whereIn(
+                                'division_id',
+                                Division::query()->select('divisions.id')->where('area_id', $scope->area_id),
+                            ));
+                        }
+                    });
+                }
+            });
+        });
+    }
+
+    /**
+     * Tahap Manager wajib bila pengajuan masuk cakupan divisi yang menyetujui jumlah
+     * (item_request_scopes.approves_quantity; sumo: ATK dari area TOP/MKLI menunggu
+     * WHM/MKLI-HO, NOTA menunggu AUDIT).
+     */
+    public function requiresManagerApproval(ItemRequest $request): bool
+    {
+        return $this->quantityApproverScopesFor($request)->isNotEmpty();
+    }
+
+    /**
+     * Siapa boleh menyetujui jumlah: siapa saja bila tahap Manager tidak wajib untuk
+     * pengajuan ini; bila wajib, anggota divisi yang cakupannya menyetujui jumlah
+     * (super admin selalu). Izin Shield-nya dicek terpisah oleh resource.
+     */
+    public function canApproveQuantity(?User $user, ItemRequest $request): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        $scopes = $this->quantityApproverScopesFor($request);
+
+        if ($scopes->isEmpty() || $user->isSuperAdmin()) {
+            return true;
+        }
+
+        return $user->division_id !== null
+            && $scopes->contains(fn (ItemRequestScope $scope): bool => (int) $scope->division_id === (int) $user->division_id);
+    }
+
+    /**
+     * Tahap yang masih harus lewat sebelum executor boleh memproses: Accounting
+     * (tipe yang mensyaratkannya) lalu Manager (bila wajib). null = siap diproses.
+     */
+    public function pendingStageBeforeExecutor(ItemRequest $request): ?ItemRequestApprovalType
+    {
+        if ($request->type?->requires_accounting_approval && ! $request->isApproved(ItemRequestApprovalType::Accounting)) {
+            return ItemRequestApprovalType::Accounting;
+        }
+
+        if ($this->requiresManagerApproval($request) && ! $request->isApproved(ItemRequestApprovalType::Manager)) {
+            return ItemRequestApprovalType::Manager;
+        }
+
+        return null;
+    }
+
+    /**
+     * Executor boleh memproses bila sudah pernah mengisi tahapnya (mis. status
+     * Diproses) atau semua tahap sebelumnya sudah lewat (sumo: tombol ubah status).
+     */
+    public function executorMayProcess(ItemRequest $request): bool
+    {
+        return $request->isApproved(ItemRequestApprovalType::Executor) || $this->pendingStageBeforeExecutor($request) === null;
+    }
+
+    /**
+     * Cakupan "menyetujui jumlah" yang mengenai pengajuan ini.
+     *
+     * @return Collection<int, ItemRequestScope>
+     */
+    private function quantityApproverScopesFor(ItemRequest $request): Collection
+    {
+        $scopes = $this->quantityApproverScopes();
+
+        if ($scopes->isEmpty()) {
+            return $scopes;
+        }
+
+        $request->loadMissing('user.division');
+        $areaId = $request->user?->division?->area_id;
+
+        return $scopes
+            ->filter(fn (ItemRequestScope $scope): bool => $scope->matches($request->item_request_type_id, $areaId))
+            ->values();
+    }
+
+    /**
+     * Dimemo selama satu request/job: dibaca untuk tiap baris tabel dan tiap aksi.
+     *
+     * @return Collection<int, ItemRequestScope>
+     */
+    private function quantityApproverScopes(): Collection
+    {
+        return once(fn (): Collection => ItemRequestScope::query()->where('approves_quantity', true)->get());
     }
 
     private function approval(ItemRequest $request, ItemRequestApprovalType $type): ItemRequestApproval

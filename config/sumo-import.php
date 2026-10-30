@@ -71,11 +71,16 @@ return [
 
     /*
      * Izin tambahan untuk executor berdasarkan nama divisinya (sumo: aturan
-     * division_id hard-coded). HCM mengelola asuransi, sewa, master, pengaturan;
-     * AUDIT mengisi catatan audit; MIS-IT melihat semua pengajuan.
+     * division_id hard-coded). HCM mengelola asuransi, sewa, master, pengaturan,
+     * user dan divisi, serta melihat widget kontrak di beranda; AUDIT mengisi
+     * catatan audit; MIS-IT melihat semua pengajuan.
      */
     'division_permissions' => [
         'HCM' => [
+            'view_any_user', 'view_user', 'create_user', 'update_user',
+            'view_any_division', 'view_division', 'create_division', 'update_division',
+            'view_any_business::entity', 'view_business::entity',
+            'widget_InsuranceCostChart', 'widget_ExpiringInsurancesTable', 'widget_ExpiringRentsTable',
             ...$crud('insurance', 'export', 'import'),
             ...$crud('insurance::provider'),
             ...$crud('insurance::category'),
@@ -106,17 +111,20 @@ return [
 
     /*
      * Cakupan pengajuan per divisi (item_request_scopes): divisions.id (sumo) =>
-     * daftar [request_type_id|null, area_id|null]. null = semua.
+     * daftar [request_type_id|null, area_id|null, menyetujui_jumlah?]. null = semua.
+     * Elemen ketiga true = divisi ini menyetujui jumlah (tahap Manager) untuk cakupan
+     * itu dan executor menunggu persetujuannya (sumo: ATK dari area TOP, MKLI-DEPO,
+     * MKLI-4S, MKLI-HO menunggu WHM/MKLI-HO; NOTA menunggu AUDIT).
      * Tipe: 1 ASSET/NONASSET, 2 ATK, 3 NOTA. Area: 4 TOP, 5 MKLI-DEPO, 6 MKLI-4S,
      * 11 MKLI-HO, 14 CV MAJU TECNOLOGI, 19 PT MEDIA SELULAR INDONESIA.
      */
     'scopes' => [
-        6 => [[null, null]],                         // HCM: semua
-        11 => [[null, null]],                        // MIS-IT: semua
-        12 => [[3, null]],                           // AUDIT: NOTA
-        9 => [[2, 4], [2, 5], [2, 14], [2, 19]],     // WHM: ATK area tertentu
-        80 => [[2, 6], [2, 11]],                     // MKLI-HO: ATK area MKLI
-        1 => [[null, 14], [null, 4]],                // divisi "-": area tertentu
+        6 => [[null, null]],                                     // HCM: semua
+        11 => [[null, null]],                                    // MIS-IT: semua
+        12 => [[3, null, true]],                                 // AUDIT: menyetujui jumlah NOTA
+        9 => [[2, 4, true], [2, 5, true], [2, 14], [2, 19]],     // WHM: ATK; menyetujui jumlah untuk TOP dan MKLI-DEPO
+        80 => [[2, 6, true], [2, 11, true]],                     // MKLI-HO: menyetujui jumlah ATK area MKLI
+        1 => [[null, 14], [null, 4]],                            // divisi "-": area tertentu
     ],
 
     /*

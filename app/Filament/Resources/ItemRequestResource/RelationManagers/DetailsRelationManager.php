@@ -6,6 +6,7 @@ use App\Enums\ItemRequestClientStatus;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestDetail;
 use App\Models\Product;
+use App\Services\ItemRequestWorkflow;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -121,6 +122,10 @@ class DetailsRelationManager extends RelationManager
 
     private function canApproveQty(): bool
     {
-        return ! $this->isFinal() && (auth()->user()?->can('approveManager', ItemRequest::class) ?? false);
+        $user = auth()->user();
+
+        return ! $this->isFinal()
+            && ($user?->can('approveManager', ItemRequest::class) ?? false)
+            && app(ItemRequestWorkflow::class)->canApproveQuantity($user, $this->request());
     }
 }

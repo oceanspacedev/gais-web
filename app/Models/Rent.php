@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\ContractStatus;
+use App\Models\Concerns\ComputesRentBilling;
+use App\Support\ContractDue;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -12,11 +14,14 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Perjanjian sewa (sumo: rents) dengan riwayat perpanjangan.
+ * Perjanjian sewa (sumo: rents) dengan riwayat perpanjangan. Kode RENT#### dibuat
+ * otomatis bila kosong, seperti di sumo.
  */
 class Rent extends Model
 {
-    use HasFactory, SoftDeletes;
+    use ComputesRentBilling, HasFactory, SoftDeletes;
+
+    public const CODE_PREFIX = 'RENT';
 
     protected $fillable = [
         'rent_code', 'rented_address', 'rented_detail', 'first_party', 'second_party', 'rent_per_year', 'cvcs_fund',
@@ -35,6 +40,30 @@ class Rent extends Model
     ];
 
     protected $attributes = ['status' => 'BERJALAN'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $rent): void {
+            if (blank($rent->rent_code)) {
+                $rent->rent_code = static::nextCode();
+            }
+        });
+    }
+
+    /**
+     * Kode berikutnya (sumo: "RENT" + urutan empat digit dari jumlah data), dilewati
+     * bila kodenya sudah dipakai.
+     */
+    public static function nextCode(): string
+    {
+        $number = static::withTrashed()->count();
+
+        do {
+            $code = self::CODE_PREFIX.str_pad((string) (++$number), 4, '0', STR_PAD_LEFT);
+        } while (static::withTrashed()->where('rent_code', $code)->exists());
+
+        return $code;
+    }
 
     public function user(): BelongsTo
     {
@@ -58,9 +87,35 @@ class Rent extends Model
             ->whereDoesntHave('updates', fn (Builder $updates) => $updates->whereIn('status', ContractStatus::endedValues()));
     }
 
+    /**
+     * Sewa yang jatuh tempo efektifnya (perpanjangan terakhir, atau kontrak itu
+     * sendiri) sampai sekian hari ke depan, termasuk yang sudah lewat.
+     */
+    public function scopeDueWithin(Builder $query, int $days): Builder
+    {
+        return $query->whereRaw(
+            'COALESCE((SELECT MAX(u.expired_date) FROM rent_updates u WHERE u.rent_id = rents.id AND u.deleted_at IS NULL), rents.expired_date) <= ?',
+            [today()->addDays($days)->toDateString()],
+        );
+    }
+
     public function latestUpdate(): ?RentUpdate
     {
         return $this->updates->first();
+    }
+
+    /**
+     * Baris yang berlaku sekarang: perpanjangan terakhir bila ada, kalau tidak
+     * kontrak ini sendiri (sumo: daftar sewa menampilkan nilai perpanjangan terakhir).
+     */
+    public function effectiveRow(): Rent|RentUpdate
+    {
+        return $this->latestUpdate() ?? $this;
+    }
+
+    public function effective(string $attribute): mixed
+    {
+        return $this->effectiveRow()->{$attribute};
     }
 
     public function effectiveExpiredDate(): ?CarbonInterface
@@ -73,30 +128,24 @@ class Rent extends Model
         return $this->latestUpdate()?->status ?? $this->status;
     }
 
+    public function effectiveReminderDate(): ?CarbonInterface
+    {
+        return ContractDue::reminderDate($this->effectiveExpiredDate(), $this->effective('month_before_reminder'));
+    }
+
+    public function effectiveDueColor(): ?string
+    {
+        return ContractDue::rentColor($this->effectiveExpiredDate(), $this->effective('month_before_reminder'), $this->effectiveStatus());
+    }
+
     /**
-     * Ringkasan tagihan kontrak awal (sumo: rents/show): jumlah tahun dibulatkan ke
-     * atas per 366 hari, total = tahun x sewa per tahun, dibayar = dana CVCS + online.
-     * Status LUNAS bila sisa 0, LEBIH bila pembayaran melebihi, KURANG bila masih ada sisa.
+     * Tagihan baris yang berlaku sekarang (sumo: kolom Total/Sisa/Status Tagihan di daftar).
      *
      * @return array{years: int, total: int, paid: int, remaining: int, status: string}
      */
-    public function billingSummary(): array
+    public function effectiveBillingSummary(): array
     {
-        $days = $this->join_date !== null && $this->expired_date !== null
-            ? max(1, (int) $this->join_date->diffInDays($this->expired_date))
-            : 0;
-        $years = $days > 0 ? (int) ceil($days / 366) : 0;
-        $total = $years * (int) ($this->rent_per_year ?? 0);
-        $paid = (int) ($this->cvcs_fund ?? 0) + (int) ($this->online_fund ?? 0);
-        $remaining = $total - $paid;
-
-        return [
-            'years' => $years,
-            'total' => $total,
-            'paid' => $paid,
-            'remaining' => $remaining,
-            'status' => $remaining < 0 ? 'LEBIH' : ($remaining === 0 ? 'LUNAS' : 'KURANG'),
-        ];
+        return $this->effectiveRow()->billingSummary();
     }
 
     public function isAccessibleBy(User $user): bool

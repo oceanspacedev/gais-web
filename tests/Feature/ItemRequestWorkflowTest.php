@@ -6,7 +6,10 @@ use App\Enums\ItemRequestApprovalType;
 use App\Enums\ItemRequestClientStatus;
 use App\Enums\ItemRequestExecutorDecision;
 use App\Exceptions\ItemRequestException;
+use App\Models\Area;
+use App\Models\Division;
 use App\Models\ItemRequest;
+use App\Models\ItemRequestScope;
 use App\Models\ItemRequestType;
 use App\Models\Product;
 use App\Models\User;
@@ -157,6 +160,62 @@ class ItemRequestWorkflowTest extends TestCase
 
         $this->expectException(ItemRequestException::class);
         $this->workflow->approveManager($request, $this->staff);
+    }
+
+    public function test_executor_waits_for_the_division_that_approves_quantities(): void
+    {
+        $top = Area::create(['name' => 'TOP-wf']);
+        $ho = Area::create(['name' => 'HO-wf']);
+        $warehouse = Division::create(['name' => 'WHM-wf', 'area_id' => $ho->id]);
+        $store = Division::create(['name' => 'TOKO-wf', 'area_id' => $top->id]);
+        ItemRequestScope::create(['division_id' => $warehouse->id, 'item_request_type_id' => $this->atk->id, 'area_id' => $top->id, 'approves_quantity' => true]);
+
+        $manager = User::factory()->create(['division_id' => $warehouse->id]);
+        $storeRequester = User::factory()->create(['division_id' => $store->id]);
+
+        $gated = $this->workflow->create($storeRequester, [
+            'item_request_type_id' => $this->atk->id,
+            'items' => [['product_id' => $this->product->id, 'qty_request' => 5]],
+        ]);
+        $free = $this->createAtk();
+
+        $this->assertTrue($this->workflow->requiresManagerApproval($gated));
+        $this->assertFalse($this->workflow->requiresManagerApproval($free));
+        $this->assertSame(ItemRequestApprovalType::Manager, $this->workflow->pendingStageBeforeExecutor($gated));
+        $this->assertNull($this->workflow->pendingStageBeforeExecutor($free));
+        $this->assertFalse($this->workflow->executorMayProcess($gated));
+        $this->assertTrue($this->workflow->executorMayProcess($free));
+        $awaiting = fn (): array => $this->workflow->scopeAwaitingExecutor(ItemRequest::query()->whereKey([$gated->id, $free->id]))->orderBy('id')->pluck('id')->all();
+        $this->assertSame([$free->id], $awaiting());
+
+        try {
+            $this->workflow->process($gated, $this->staff, ItemRequestExecutorDecision::Processed);
+            $this->fail('Executor seharusnya menunggu tahap Manager.');
+        } catch (ItemRequestException $exception) {
+            $this->assertStringContainsString('Manager', $exception->getMessage());
+        }
+
+        // Jumlah pengajuan di cakupan itu hanya disetujui divisi WHM; pengajuan lain bebas.
+        $this->assertFalse($this->workflow->canApproveQuantity($this->staff, $gated));
+        $this->assertTrue($this->workflow->canApproveQuantity($manager, $gated));
+        $this->assertTrue($this->workflow->canApproveQuantity($this->staff, $free));
+
+        try {
+            $this->workflow->approveManager($gated, $this->staff);
+            $this->fail('Staf di luar divisi WHM tidak boleh menyetujui jumlah.');
+        } catch (ItemRequestException $exception) {
+            $this->assertStringContainsString('divisi', $exception->getMessage());
+        }
+
+        $this->workflow->approveManager($gated, $manager);
+        $gated->refresh();
+        $this->assertTrue($gated->isApproved(ItemRequestApprovalType::Manager));
+        $this->assertTrue($this->workflow->executorMayProcess($gated));
+        $this->assertSame([$gated->id, $free->id], $awaiting());
+
+        $this->workflow->process($gated, $this->staff, ItemRequestExecutorDecision::Processed, 'dibeli');
+        $this->assertSame(ItemRequestClientStatus::Processed, $gated->refresh()->client_status);
+        $this->assertSame([$free->id], $awaiting());
     }
 
     private function createAtk(): ItemRequest

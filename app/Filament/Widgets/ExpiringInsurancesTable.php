@@ -38,7 +38,7 @@ class ExpiringInsurancesTable extends TableWidget
             ->columns([
                 TextColumn::make('policy_number')->label('Polis')->weight('bold')->url(fn (Insurance $record): string => InsuranceResource::getUrl('view', ['record' => $record])),
                 TextColumn::make('insured_name')->label('Tertanggung'),
-                TextColumn::make('effective_expired_date')->label('Jatuh Tempo')->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->format('d/m/Y'))->color(fn (Insurance $record): ?string => InsuranceResource::dueColor($record->effectiveExpiredDate())),
+                TextColumn::make('effective_expired_date')->label('Jatuh Tempo')->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->format('d/m/Y'))->color(fn (Insurance $record): ?string => $record->effectiveDueColor()),
                 TextColumn::make('effective_status')->label('Status')->state(fn (Insurance $record) => $record->effectiveStatus())->badge(),
             ]);
     }

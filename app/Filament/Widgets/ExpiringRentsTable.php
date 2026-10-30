@@ -2,7 +2,6 @@
 
 namespace App\Filament\Widgets;
 
-use App\Filament\Resources\InsuranceResource;
 use App\Filament\Resources\RentResource;
 use App\Models\Rent;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
@@ -39,7 +38,7 @@ class ExpiringRentsTable extends TableWidget
             ->columns([
                 TextColumn::make('rent_code')->label('Kode')->weight('bold')->url(fn (Rent $record): string => RentResource::getUrl('view', ['record' => $record])),
                 TextColumn::make('rented_detail')->label('Objek Sewa')->limit(30),
-                TextColumn::make('effective_expired_date')->label('Jatuh Tempo')->state(fn (Rent $record): ?string => $record->effectiveExpiredDate()?->format('d/m/Y'))->color(fn (Rent $record): ?string => InsuranceResource::dueColor($record->effectiveExpiredDate())),
+                TextColumn::make('effective_expired_date')->label('Jatuh Tempo')->state(fn (Rent $record): ?string => $record->effectiveExpiredDate()?->format('d/m/Y'))->color(fn (Rent $record): ?string => $record->effectiveDueColor()),
                 TextColumn::make('effective_status')->label('Status')->state(fn (Rent $record) => $record->effectiveStatus())->badge(),
             ]);
     }

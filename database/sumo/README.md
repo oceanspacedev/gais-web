@@ -119,7 +119,11 @@ Yang hilang karena restore: perubahan pada 7 tabel itu antara tanggal backup dan
 4. **Akun sumo.** 87 akun aktif dibuat sebagai user GAIS dengan password lamanya. Role: ADMIN ->
    `pengajuan_admin`, ACCOUNTING -> `accounting`, EXECUTOR -> `executor`, USER -> `requester`.
    Izin tambahan per divisi (HCM, AUDIT, MIS-IT) dan cakupan pengajuan per divisi ada di
-   `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu.
+   `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu. Cakupan WHM (ATK area
+   TOP dan MKLI-DEPO), MKLI-HO (ATK area MKLI-4S dan MKLI-HO), dan AUDIT (NOTA) ditandai
+   "menyetujui jumlah": executor menunggu persetujuan divisi itu, seperti tombol Check di sumo.
+   Cakupan hanya diisi pada impor pertama; bila impor pertama sudah terjadi sebelum tanda ini
+   ada, centang "Menyetujui jumlah" pada cakupan tersebut lewat menu Divisi.
 5. **Pemetaan badan usaha.** Periksa `config/sumo-import.php` bagian `business_entities`
    (mis. CV.CS dan PT. RISM punya kandidat lebih dari satu) sebelum impor di server; jalankan
    `php artisan sumo:import --dry-run` dulu dan baca peringatannya.

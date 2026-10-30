@@ -663,6 +663,7 @@
                         <li>Atasan (kolom "approver" di user) melihat pengajuan bawahannya.</li>
                         <li>Accounting melihat semua pengajuan dari tipe yang butuh Accounting.</li>
                         <li>Executor, manager, dan auditor melihat sesuai cakupan divisi, tipe, dan area (tabel <code>item_request_scopes</code>). Cakupan kosong berarti semua.</li>
+                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT.</li>
                         <li>Izin <code>view_all</code> melihat semuanya.</li>
                     </ul>
                 </div>

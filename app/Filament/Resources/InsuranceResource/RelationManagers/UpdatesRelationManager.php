@@ -4,6 +4,8 @@ namespace App\Filament\Resources\InsuranceResource\RelationManagers;
 
 use App\Enums\ContractStatus;
 use App\Models\Insurance;
+use App\Models\InsuranceUpdate;
+use App\Support\ContractDue;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
@@ -18,7 +20,8 @@ use Filament\Tables\Table;
 
 /**
  * Pembaharuan polis (sumo: insurance_updates). Pembaharuan terakhir menentukan
- * jatuh tempo dan status efektif polis.
+ * jatuh tempo dan status efektif polis. Baris baru berstatus BERJALAN seperti di
+ * sumo; PEMBAHARUAN dipakai untuk menandai baris yang sudah digantikan.
  */
 class UpdatesRelationManager extends RelationManager
 {
@@ -44,7 +47,7 @@ class UpdatesRelationManager extends RelationManager
             ->columns(2)
             ->schema([
                 TextInput::make('policy_number')->label('Nomor Polis')->default($insurance->policy_number)->required()->maxLength(255),
-                Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Renewed->value)->required(),
+                Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
                 DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                 DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
                 Select::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name')->default($insurance->stock_provider_id)->preload()->searchable(),
@@ -63,14 +66,23 @@ class UpdatesRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with(['stockProvider', 'buildingProvider', 'user']))
             ->columns([
                 TextColumn::make('policy_number')->label('Nomor Polis')->weight('bold'),
                 TextColumn::make('join_date')->label('Mulai')->date('d/m/Y'),
-                TextColumn::make('expired_date')->label('Berakhir')->date('d/m/Y'),
+                TextColumn::make('expired_date')->label('Berakhir')->date('d/m/Y')->weight('bold')
+                    // Sumo: baris pembaharuan merah bila 14 hari atau kurang, kuning 15-30 hari.
+                    ->color(fn (InsuranceUpdate $record): ?string => ContractDue::insuranceColor($record->expired_date)),
                 TextColumn::make('status')->label('Status')->badge(),
+                TextColumn::make('stockProvider.name')->label('Asuransi Stok')->placeholder('-')->toggleable(),
+                TextColumn::make('stock_worth')->label('Nilai Stok')->money('IDR', decimalPlaces: 0)->placeholder('-')->toggleable(),
                 TextColumn::make('stock_premium')->label('Premi Stok')->money('IDR', decimalPlaces: 0)->placeholder('-'),
+                TextColumn::make('actual_stock_worth')->label('Aktual Stok')->money('IDR', decimalPlaces: 0)->placeholder('-')->toggleable(),
+                TextColumn::make('stock_difference')->label('Selisih')->state(fn (InsuranceUpdate $record): ?int => $record->stockDifference())->money('IDR', decimalPlaces: 0)->color('danger')->placeholder('-')->toggleable(),
+                TextColumn::make('buildingProvider.name')->label('Asuransi Bangunan')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
+                TextColumn::make('building_worth')->label('Nilai Bangunan')->money('IDR', decimalPlaces: 0)->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('building_premium')->label('Premi Bangunan')->money('IDR', decimalPlaces: 0)->placeholder('-'),
-                TextColumn::make('user.name')->label('Diinput Oleh')->placeholder('-'),
+                TextColumn::make('user.name')->label('Diinput Oleh')->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('notes')->label('Catatan')->limit(40)->placeholder('-'),
             ])
             ->defaultSort('expired_date', 'desc')

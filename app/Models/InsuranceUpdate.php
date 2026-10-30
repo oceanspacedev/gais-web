@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\ContractStatus;
+use App\Models\Concerns\ComputesInsuranceStock;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -13,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class InsuranceUpdate extends Model
 {
-    use HasFactory, SoftDeletes;
+    use ComputesInsuranceStock, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'insurance_id', 'policy_number', 'stock_provider_id', 'building_provider_id', 'stock_worth', 'building_worth',

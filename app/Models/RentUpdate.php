@@ -3,17 +3,21 @@
 namespace App\Models;
 
 use App\Enums\ContractStatus;
+use App\Models\Concerns\ComputesRentBilling;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
- * Perpanjangan perjanjian sewa (sumo: rent_updates).
+ * Perpanjangan perjanjian sewa (sumo: rent_updates). Kode RENTUP#### dibuat
+ * otomatis bila kosong, seperti di sumo.
  */
 class RentUpdate extends Model
 {
-    use HasFactory, SoftDeletes;
+    use ComputesRentBilling, HasFactory, SoftDeletes;
+
+    public const CODE_PREFIX = 'RENTUP';
 
     protected $fillable = [
         'rent_id', 'rent_code', 'first_party', 'second_party', 'rent_per_year', 'cvcs_fund', 'online_fund',
@@ -31,6 +35,26 @@ class RentUpdate extends Model
     ];
 
     protected $attributes = ['status' => 'BERJALAN'];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $update): void {
+            if (blank($update->rent_code)) {
+                $update->rent_code = static::nextCode();
+            }
+        });
+    }
+
+    public static function nextCode(): string
+    {
+        $number = static::withTrashed()->count();
+
+        do {
+            $code = self::CODE_PREFIX.str_pad((string) (++$number), 4, '0', STR_PAD_LEFT);
+        } while (static::withTrashed()->where('rent_code', $code)->exists());
+
+        return $code;
+    }
 
     public function rent(): BelongsTo
     {

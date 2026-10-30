@@ -40,9 +40,10 @@ class SumoQrLabelController extends Controller
 
         return view('qr.sumo-labels', [
             'heading' => 'QR Barang',
+            // Sumo menampilkan harga di label QR barang.
             'labels' => [[
                 'title' => $product->name,
-                'subtitle' => $product->item_code ?? '',
+                'subtitle' => trim(($product->item_code ?? '').' · Rp '.number_format((float) ($product->price ?? 0), 0, ',', '.'), ' ·'),
                 'code' => (string) $product->id,
                 'png' => $this->png((string) $product->id),
             ]],

@@ -7,6 +7,7 @@ use App\Filament\Resources\ItemRequestResource;
 use App\Filament\Resources\ItemRequestResource\Pages\CreateItemRequest;
 use App\Filament\Resources\ItemRequestResource\Pages\ListItemRequests;
 use App\Filament\Resources\ItemRequestResource\Pages\ViewItemRequest;
+use App\Models\Area;
 use App\Models\Division;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestScope;
@@ -98,6 +99,38 @@ class ItemRequestResourceTest extends TestCase
             ->assertNotified();
 
         $this->assertSame(1, $request->refresh()->client_status->value);
+    }
+
+    public function test_process_action_waits_for_the_division_that_approves_quantities(): void
+    {
+        $top = Area::create(['name' => 'TOP-ui']);
+        $hcm = Division::create(['name' => 'HCM-ui']);
+        $warehouse = Division::create(['name' => 'WHM-ui']);
+        $store = Division::create(['name' => 'TOKO-ui', 'area_id' => $top->id]);
+        ItemRequestScope::create(['division_id' => $hcm->id]);
+        ItemRequestScope::create(['division_id' => $warehouse->id, 'item_request_type_id' => $this->atk->id, 'area_id' => $top->id, 'approves_quantity' => true]);
+
+        $executor = $this->userWithRole('executor', ['division_id' => $hcm->id]);
+        $warehouseStaff = $this->userWithRole('executor', ['division_id' => $warehouse->id]);
+        $request = $this->request($this->userWithRole('requester', ['division_id' => $store->id]));
+
+        $this->actingAs($executor);
+        Livewire::test(ViewItemRequest::class, ['record' => $request->getRouteKey()])
+            ->assertOk()
+            ->assertActionHidden('process')
+            ->assertActionHidden('approveManager');
+
+        $this->actingAs($warehouseStaff);
+        Livewire::test(ViewItemRequest::class, ['record' => $request->getRouteKey()])
+            ->assertOk()
+            ->assertActionVisible('approveManager')
+            ->callAction('approveManager')
+            ->assertNotified();
+
+        $this->actingAs($executor);
+        Livewire::test(ViewItemRequest::class, ['record' => $request->getRouteKey()])
+            ->assertOk()
+            ->assertActionVisible('process');
     }
 
     private function userWithRole(string $role, array $attributes = []): User

@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Enums\ContractStatus;
+use App\Models\Concerns\ComputesInsuranceStock;
+use App\Support\ContractDue;
 use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -17,7 +19,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Insurance extends Model
 {
-    use HasFactory, SoftDeletes;
+    use ComputesInsuranceStock, HasFactory, SoftDeletes;
 
     protected $fillable = [
         'policy_number', 'insured_name', 'warehouse_code', 'insured_address', 'insured_detail', 'risk_address',
@@ -86,9 +88,35 @@ class Insurance extends Model
             ->whereDoesntHave('updates', fn (Builder $updates) => $updates->whereIn('status', ContractStatus::endedValues()));
     }
 
+    /**
+     * Polis yang jatuh tempo efektifnya (pembaharuan terakhir, atau polis itu
+     * sendiri) sampai sekian hari ke depan, termasuk yang sudah lewat.
+     */
+    public function scopeDueWithin(Builder $query, int $days): Builder
+    {
+        return $query->whereRaw(
+            'COALESCE((SELECT MAX(u.expired_date) FROM insurance_updates u WHERE u.insurance_id = insurances.id AND u.deleted_at IS NULL), insurances.expired_date) <= ?',
+            [today()->addDays($days)->toDateString()],
+        );
+    }
+
     public function latestUpdate(): ?InsuranceUpdate
     {
         return $this->updates->first();
+    }
+
+    /**
+     * Baris yang berlaku sekarang: pembaharuan terakhir bila ada, kalau tidak polis
+     * ini sendiri (sumo: daftar asuransi menampilkan nilai pembaharuan terakhir).
+     */
+    public function effectiveRow(): Insurance|InsuranceUpdate
+    {
+        return $this->latestUpdate() ?? $this;
+    }
+
+    public function effective(string $attribute): mixed
+    {
+        return $this->effectiveRow()->{$attribute};
     }
 
     public function effectiveExpiredDate(): ?CarbonInterface
@@ -99,6 +127,11 @@ class Insurance extends Model
     public function effectiveStatus(): ?ContractStatus
     {
         return $this->latestUpdate()?->status ?? $this->status;
+    }
+
+    public function effectiveDueColor(): ?string
+    {
+        return ContractDue::insuranceColor($this->effectiveExpiredDate(), $this->effectiveStatus());
     }
 
     public function isAccessibleBy(User $user): bool

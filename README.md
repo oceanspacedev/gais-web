@@ -117,7 +117,7 @@ Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`Asset::s
 
 ### Visibilitas Pengajuan Barang dan Lapor Gangguan
 
-Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). `ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`.
+Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). Cakupan yang ditandai **menyetujui jumlah** (`approves_quantity`) menjadikan tahap Manager wajib untuk pengajuan di dalamnya: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya (sumo: ATK dari area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT). `ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`; awalan `!` berarti semua jenis kecuali yang disebut (HCM hanya UMUM, MIS-IT selain UMUM).
 
 ### Role
 
@@ -126,9 +126,9 @@ Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibilit
 | `super_admin` | Seeder (`shield:super-admin`) | Akses penuh; satu-satunya yang boleh mengubah akses badan usaha user |
 | `general_affair` | Manual | Pihak GA pada BA/BAPEB, penentu jenis dokumen BA, aksi perbaikan aset |
 | `admin` | Manual | Target permission `export_asset` (bersama `general_affair`) dan `manage_stock_asset::transfer`; migrasi hanya memberi permission bila role sudah ada |
-| `pengajuan_admin` | Migrasi `2026_10_13_000007` | Semua permission modul sumo (dulu ADMIN) |
+| `pengajuan_admin` | Migrasi `2026_10_13_000007` | Semua permission modul sumo (dulu ADMIN), plus lihat/buat/ubah user dan divisi serta lihat badan usaha (migrasi `2026_10_30_000002`); penugasan role tetap butuh `manage_access_user` |
 | `accounting` | Migrasi `2026_10_13_000007` | Lihat dan setujui tahap Accounting pengajuan, export, widget biaya |
-| `executor` | Migrasi `2026_10_13_000007` | Proses pengajuan dan laporan gangguan, setujui sebagai manager, scan QR, semua widget |
+| `executor` | Migrasi `2026_10_13_000007` | Proses pengajuan dan laporan gangguan, setujui sebagai manager (bila divisinya menyetujui jumlah), scan QR, widget pengajuan dan gangguan; widget asuransi/sewa hanya lewat izin divisi HCM (`config/sumo-import.php`) |
 | `requester` | Migrasi `2026_10_13_000007` | Buat dan lihat pengajuan dan laporan sendiri (dulu USER) |
 
 Impor sumo memetakan role lama ke empat role terakhir dan menambahkan permission per divisi (HCM mengelola asuransi/sewa/master, AUDIT mengisi catatan audit, MIS-IT melihat semua pengajuan) sesuai `config/sumo-import.php`.
@@ -189,8 +189,8 @@ Logikanya ada di `app/Services/ItemRequestWorkflow.php`:
 1. Pemohon memilih tipe pengajuan, mengisi barang dan jumlah, dan mengunggah lampiran bila tipenya mewajibkan. Kode otomatis `REQ{id}`. Maksimal dua pengajuan terbuka per tipe per pemohon (`ITEM_REQUEST_MAX_OPEN_PER_TYPE`).
 2. Empat baris approval dibuat otomatis: Accounting, Manager, Executor, Pemohon. Status awal **Menunggu**.
 3. **Accounting** (bila tipe mensyaratkannya) mengisi status dan nomor PO lalu menyetujui.
-4. **Manager** (atasan di `users.approver_user_id`) menyetujui; jumlah disetujui bisa diubah per barang.
-5. **Executor** memutuskan: Diproses, Selesai, Dibatalkan, atau kembali ke antrean.
+4. **Manager** (pemegang izin Setujui Jumlah) menyetujui; jumlah disetujui bisa diubah per barang. Bila pengajuan masuk cakupan divisi yang **menyetujui jumlah** (menu Divisi), hanya divisi itu yang boleh, dan tahap ini wajib.
+5. **Executor** memproses setelah tahap Accounting dan Manager yang wajib lewat (tombol Proses dan filter "Belum diproses executor" mengikuti ini): Diproses, Selesai, Dibatalkan, atau kembali ke antrean.
 6. **Pemohon** mengonfirmasi penerimaan; status menjadi Diterima dan pengajuan tertutup.
 
 Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan mengatur tanggal buka/tutup per bulan; cutoff-nya ikut diingatkan lewat WhatsApp. QR pengajuan dan QR barang dicetak dari resource dan dipindai lewat halaman **Scan QR Pengajuan** / **Scan QR Barang**.
@@ -201,7 +201,7 @@ Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan m
 
 ### 6. Asuransi, sewa, dan pengingat WhatsApp (sumo-web)
 
-Asuransi dan sewa menyimpan kontrak per badan usaha beserta riwayat perubahannya (tab Updates). Menu **Pengaturan > Notifikasi WA** mengatur nomor tujuan global, jam kirim, hari-hari pengingat sebelum jatuh tempo, saklar per jenis (sewa, asuransi, cutoff pengajuan), uji kirim, dan ganti nomor massal. `reminder:whatsapp` dijadwalkan tiap jam tetapi mengirim sekali sehari setelah jam kirim terlewati; `wa_notification_logs` mencegah satu nomor menerima pengingat ganda untuk referensi yang sama di hari yang sama. Opsi `--dry-run` menampilkan tanpa mengirim, `--force` mengabaikan jam kirim.
+Asuransi dan sewa menyimpan kontrak per badan usaha beserta riwayat perubahannya (tab Updates). Seperti di sumo, daftar menampilkan nilai pembaharuan/perpanjangan terakhir (nomor, provider, nilai, status, catatan), mengurutkan berdasarkan jatuh tempo efektif, menyembunyikan kontrak TUTUP/REFUND kecuali filter "Masih berjalan" dimatikan, dan mewarnai jatuh tempo (asuransi: kuning 15-30 hari, merah 14 hari atau kurang; sewa: dari tanggal reminder = berakhir dikurangi "bulan sebelum"). Daftar asuransi punya kolom Selisih dan Status Stok (Overlimit/Underlimit/OK, ambang 30%); daftar sewa punya Total, Sisa, dan Status Tagihan (LUNAS/LEBIH/BELUM LUNAS, tahun = hari/366 dibulatkan ke atas). Kode sewa `RENT####` dan perpanjangan `RENTUP####` dibuat otomatis bila dikosongkan. Baris pembaharuan baru berstatus BERJALAN; status PEMBAHARUAN menandai baris yang sudah digantikan dan tidak ikut dihitung di chart biaya premi (per bulan jatuh tempo). Menu **Pengaturan > Notifikasi WA** mengatur nomor tujuan global, jam kirim, hari-hari pengingat sebelum jatuh tempo, saklar per jenis (sewa, asuransi, cutoff pengajuan), uji kirim, dan ganti nomor massal. `reminder:whatsapp` dijadwalkan tiap jam tetapi mengirim sekali sehari setelah jam kirim terlewati; `wa_notification_logs` mencegah satu nomor menerima pengingat ganda untuk referensi yang sama di hari yang sama. Opsi `--dry-run` menampilkan tanpa mengirim, `--force` mengabaikan jam kirim.
 
 ### 7. QR aset (Shelf)
 
@@ -578,6 +578,9 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
 11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
 12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.
+13. **Impor/ekspor baris pembaharuan asuransi dan perpanjangan sewa belum ada.** sumo punya `importUpdate`/`exportUpdate` per polis dan per sewa (template `no_polis_induk` / `kode_sewa_induk`); di GAIS baris pembaharuan diisi lewat tab Riwayat. Ekspor Excel daftar memakai kolom tabel, bukan format template impor seperti ekspor sumo.
+14. **Rekap pengajuan per divisi dan ekspor master QR sumo belum ada.** Ekspor pengajuan di GAIS adalah ekspor tabel; rekap pivot barang x divisi per area/tipe/periode (`RequestExport` sumo) dan daftar id detail untuk cetak QR massal (`RequestMasterQRExport`) belum dibangun ulang.
+15. **Foto profil user dan ekspor Excel user/barang sumo tidak dibawa.** Folder `profile` tidak dipakai; ekspor user diganti data Talenta, ekspor barang memakai ekspor tabel.
 
 ## Troubleshooting
 
@@ -646,7 +649,7 @@ Kuota pengajuan terbuka per tipe (default dua) sudah habis, atau tipe pengajuan 
 
 ### Pengajuan tidak terlihat oleh executor atau manager
 
-Periksa `users.approver_user_id` pemohon (untuk manager) dan cakupan divisi executor di tabel `item_request_scopes` (diisi dari `config/sumo-import.php` saat impor; ubah lewat menu Divisi). Pengajuan juga dibatasi badan usaha.
+Periksa `users.approver_user_id` pemohon (untuk atasan) dan cakupan divisi executor di tabel `item_request_scopes` (diisi dari `config/sumo-import.php` saat impor; ubah lewat menu Divisi). Tombol Proses executor baru muncul setelah tahap Accounting (tipe yang mensyaratkannya) dan tahap Manager (bila ada cakupan "menyetujui jumlah" yang mengenai pengajuan itu) lewat; kolom Tahap menandai tahap yang ditunggu dengan ⏳. Pengajuan juga dibatasi badan usaha.
 
 ### Pengingat sewa, asuransi, atau cutoff tidak terkirim
 

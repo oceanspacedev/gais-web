@@ -44,7 +44,7 @@ class SumoImportTest extends TestCase
 
         config([
             'sumo-import.business_entities' => [self::B + 1 => null, self::B + 2 => $this->entity->id],
-            'sumo-import.scopes' => [self::B + 6 => [[null, null]], self::B + 9 => [[self::B + 2, self::B + 4]]],
+            'sumo-import.scopes' => [self::B + 6 => [[null, null]], self::B + 9 => [[self::B + 2, self::B + 4, true]]],
             'sumo-import.division_permissions' => ['HCM-UJI' => ['view_any_insurance', 'view_insurance', 'import_insurance']],
             'sumo-import.legacy_user_permissions' => [self::B + 4 => ['export_item::request']],
         ]);
@@ -112,6 +112,8 @@ class SumoImportTest extends TestCase
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 1)->value('requires_accounting_approval'));
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('requires_products'));
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
+        $this->assertTrue(ItemRequestScope::query()->where('division_id', self::B + 9)->firstOrFail()->approves_quantity, 'WHM menyetujui jumlah ATK area TOP.');
+        $this->assertFalse(ItemRequestScope::query()->where('division_id', self::B + 6)->firstOrFail()->approves_quantity);
 
         // Perubahan di GAIS sesudah impor pertama tidak boleh ditimpa impor ulang.
         DB::table('problem_reports')->where('id', self::B + 20)->update(['status' => 'CANCELLED', 'result_desc' => 'diubah di GAIS']);

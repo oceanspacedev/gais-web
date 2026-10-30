@@ -201,7 +201,7 @@ class UserResource extends Resource
         $canManageAccess = Auth::user()->can('manageAccess', User::class);
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'businessEntity', 'accessibleBusinessEntities']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'businessEntity', 'accessibleBusinessEntities', 'approver']))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -223,6 +223,10 @@ class UserResource extends Resource
                 TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable(query: RelationSearch::on('jobTitle', 'title'))->toggleable(),
                 TextColumn::make('division.name')
                     ->label('Divisi')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('approver.name')
+                    ->label('Atasan')
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('employee_id')
