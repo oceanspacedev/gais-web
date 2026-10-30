@@ -3,6 +3,9 @@
 namespace App\Filament\Resources\InsuranceResource\RelationManagers;
 
 use App\Enums\ContractStatus;
+use App\Exports\InsuranceUpdateExport;
+use App\Filament\Actions\ContractUpdateExcelActions;
+use App\Imports\InsuranceUpdateImport;
 use App\Models\Insurance;
 use App\Models\InsuranceUpdate;
 use App\Support\ContractDue;
@@ -65,6 +68,9 @@ class UpdatesRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        /** @var Insurance $insurance */
+        $insurance = $this->getOwnerRecord();
+
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with(['stockProvider', 'buildingProvider', 'user']))
             ->columns([
@@ -91,6 +97,20 @@ class UpdatesRelationManager extends RelationManager
                     ->label('Tambah Pembaharuan')
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
+                // Sumo: importUpdate/templateUpdate/exportUpdate per polis.
+                ContractUpdateExcelActions::import(
+                    name: 'importUpdates',
+                    label: 'Impor Pembaharuan',
+                    importClass: InsuranceUpdateImport::class,
+                    owner: $insurance,
+                    templateFileName: 'template-pembaharuan-asuransi.xlsx',
+                    description: 'Unggah Excel berkolom template. Kolom no_polis_induk harus berisi nomor polis ini; baris dengan no_polis yang sudah ada diperbarui dan sel kosong dibiarkan seperti semula. Baris baru wajib punya tanggal mulai dan akhir; status kosong dianggap BERJALAN.',
+                )->visible(fn (): bool => auth()->user()?->can('import', Insurance::class) ?? false),
+                ContractUpdateExcelActions::export(
+                    name: 'exportUpdates',
+                    label: 'Ekspor Pembaharuan',
+                    export: fn (): InsuranceUpdateExport => new InsuranceUpdateExport($insurance),
+                )->visible(fn (): bool => auth()->user()?->can('export', Insurance::class) ?? false),
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => $this->canManage()),

@@ -147,7 +147,8 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 | `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
 | `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
 | `Policies` | 39 policy hasil `shield:generate` |
-| `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan. User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
+| `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan, serta baris pembaharuan/perpanjangan per kontrak (`InsuranceUpdateImport`, `RentUpdateImport`). User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
+| `Exports` | Ekspor Maatwebsite berkolom template impor: `InsuranceUpdateExport`, `RentUpdateExport` (baris pembaharuan satu kontrak). Exporter antrean Filament ada di `Filament/Exports` |
 | `Jobs`, `Mail` | Kirim notifikasi aset via WhatsApp dan email; `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`) untuk Impor Data Sumo; `Jobs/Filament` menimpa job export/import Filament |
 | `Queue` | `RestoresQueuedModels`: job export tidak gagal bila baris `exports` belum terlihat |
 | `Console/Commands` | Pengingat, auto-confirm, import sumo, migrasi S3, generate QR |
@@ -235,6 +236,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 
 - **Resource:** `InsuranceResource`, `InsuranceCategoryResource`, `InsuranceProviderResource`, `InsuranceScopeResource`, `RentResource`
 - **Logika:** `ContractReminderService`, command `reminder:whatsapp`
+- **Impor/ekspor pembaharuan:** header action tab Riwayat (`Filament/Actions/ContractUpdateExcelActions`) memakai `InsuranceUpdateImport`/`RentUpdateImport` dan `InsuranceUpdateExport`/`RentUpdateExport`. Kolom mengikuti template sumo (`no_polis_induk` / `kode_sewa_induk` wajib sama dengan kontrak yang dibuka); baris lama dicocokkan per (kontrak, `no_polis`/`kode`), sel kosong tidak mengubah baris lama, baris baru wajib bertanggal, status kosong = BERJALAN, `kode` kosong = `RentUpdate::nextCode()`. Kesalahan dilempar sebagai `ImportStoppedException` agar tampil sebagai notifikasi dan seluruh file dibatalkan. Izin: `import_*` dan `export_*` kontrak
 - **Asal:** sumo-web
 
 ### Organisasi

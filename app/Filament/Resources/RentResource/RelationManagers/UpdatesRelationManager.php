@@ -3,7 +3,10 @@
 namespace App\Filament\Resources\RentResource\RelationManagers;
 
 use App\Enums\ContractStatus;
+use App\Exports\RentUpdateExport;
+use App\Filament\Actions\ContractUpdateExcelActions;
 use App\Filament\Resources\RentResource;
+use App\Imports\RentUpdateImport;
 use App\Models\Rent;
 use App\Models\RentUpdate;
 use App\Support\LegacyUpload;
@@ -71,6 +74,9 @@ class UpdatesRelationManager extends RelationManager
 
     public function table(Table $table): Table
     {
+        /** @var Rent $rent */
+        $rent = $this->getOwnerRecord();
+
         return $table
             ->modifyQueryUsing(fn ($query) => $query->with('user'))
             ->columns([
@@ -109,6 +115,20 @@ class UpdatesRelationManager extends RelationManager
                     ->label('Tambah Perpanjangan')
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
+                // Sumo: importUpdate/templateUpdate/exportUpdate per sewa.
+                ContractUpdateExcelActions::import(
+                    name: 'importUpdates',
+                    label: 'Impor Perpanjangan',
+                    importClass: RentUpdateImport::class,
+                    owner: $rent,
+                    templateFileName: 'template-perpanjangan-sewa.xlsx',
+                    description: 'Unggah Excel berkolom template. Kolom kode_sewa_induk harus berisi kode sewa ini; baris dengan kode yang sudah ada diperbarui dan sel kosong dibiarkan seperti semula. Kode kosong dibuat otomatis (RENTUP####), baris baru wajib punya tanggal mulai dan akhir; status kosong dianggap BERJALAN.',
+                )->visible(fn (): bool => auth()->user()?->can('import', Rent::class) ?? false),
+                ContractUpdateExcelActions::export(
+                    name: 'exportUpdates',
+                    label: 'Ekspor Perpanjangan',
+                    export: fn (): RentUpdateExport => new RentUpdateExport($rent),
+                )->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
             ])
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => $this->canManage()),
