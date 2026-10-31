@@ -390,7 +390,7 @@ class ListObChecksheets extends ListRecords
      */
     private function todayTasks(string $status): Builder
     {
-        return ObChecksheet::query()
+        return ObChecksheetResource::scopeToViewer(ObChecksheet::query(), auth()->user())
             ->where('user_id', auth()->id())
             ->where('status', $status)
             ->whereDate('scheduled_date', today())
@@ -405,7 +405,7 @@ class ListObChecksheets extends ListRecords
      */
     private function startableTasks(): Builder
     {
-        return ObChecksheet::query()
+        return ObChecksheetResource::scopeToViewer(ObChecksheet::query(), auth()->user())
             ->where('status', ObChecksheet::STATUS_PENDING)
             ->where(function (Builder $query): void {
                 $query

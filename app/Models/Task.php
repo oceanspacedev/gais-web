@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,7 +13,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Task extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'code',
@@ -27,7 +31,7 @@ class Task extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function user(): BelongsTo
@@ -37,7 +41,7 @@ class Task extends Model
 
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Vendor::class)->withTrashed();
     }
 
     // Use this to automatically handle the 'code' generation before creating a task
@@ -67,7 +71,8 @@ class Task extends Model
         $businessEntityCode = strtoupper($task->businessEntity->name); // Asumsikan kolom 'name' di 'business_entities'
 
         // Cari task terakhir berdasarkan tahun dan business entity yang sama
-        $lastTaskForYear = Task::where('business_entity_id', $task->business_entity_id)
+        // Termasuk pekerjaan di Sampah: kode unik dan tidak boleh terpakai ulang.
+        $lastTaskForYear = Task::withTrashed()->where('business_entity_id', $task->business_entity_id)
             ->whereYear('created_at', $year)
             ->orderBy('code', 'desc')
             ->first();
@@ -83,5 +88,16 @@ class Task extends Model
 
         // Buat format kode dengan nomor urut 3 digit
         return sprintf('%03d/BAP/%s/GA/%s', $nextOrder, $businessEntityCode, $year);
+    }
+
+    /**
+     * Semua pemegang izin melihat record di badan usaha yang bisa ia akses;
+     * record tanpa badan usaha terlihat oleh semua.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new BusinessEntityRule)
+            ->grant(new EveryoneGrant);
     }
 }

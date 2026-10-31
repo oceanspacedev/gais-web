@@ -142,10 +142,10 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 
 | Folder | Isi |
 | --- | --- |
-| `Models` | 52 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha |
+| `Models` | 53 model. `Concerns/HasBusinessEntityAccess` = scope akses per badan usaha; `HasVisibility` dari `app/Access` di setiap model fitur |
 | `Enums` | Enum status. Trait `Concerns/Utilities` untuk label dan opsi |
 | `Services` | Workflow, rekonsiliasi, QR, notifikasi, WhatsApp, ekspor rekap pengajuan (`ItemRequestRecapExport`, `ItemRequestMasterQrExport`), `TalentaUserImportService`, `Sumo/` (`SumoImporter`, `SumoDumpLoader`, `SqlDumpReader`) |
-| `Support` | Helper kecil: normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
+| `Support` | Helper kecil: normalizer, `StoredFile`, `LegacyUpload`, `RelationSearch` (pencarian relasi cepat), `IndexedPermissionRegistrar` (cek permission ter-indeks) |
 | `Policies` | 39 policy hasil `shield:generate` |
 | `Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan, serta baris pembaharuan/perpanjangan per kontrak (`InsuranceUpdateImport`, `RentUpdateImport`). User **tidak** lewat Excel: hanya JSON Talenta (`TalentaUserImportService`) |
 | `Exports` | Ekspor Maatwebsite berkolom template impor (sumo: export + template per modul), diunduh lewat `Filament/Actions/DownloadExcelAction`: `ProductExport`, `InsuranceExport`, `RentExport` (semua baris yang boleh dilihat), `InsuranceUpdateExport`, `RentUpdateExport` (baris pembaharuan satu kontrak), `UserExport` (kolom sumo, izin `export_user`), `ProblemReportExport` (rentang tanggal pelaporan, kolom sumo). Exporter antrean Filament ada di `Filament/Exports` |
@@ -158,8 +158,8 @@ Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/A
 
 | Folder | Isi |
 | --- | --- |
-| `config/` | Konfigurasi domain: `item-request.php`, `problem-report.php`, `asset-transfer.php`, `asset-reconciliation.php`, `sumo-import.php` |
-| `database/migrations` | 110 migration |
+| `config/` | Konfigurasi domain: `item-request.php`, `asset-transfer.php`, `asset-reconciliation.php`, `sumo-import.php` |
+| `database/migrations` | 117 migration |
 | `database/sumo` | README import dan pemulihan data sumo |
 | `tests/` | `Feature`, `Unit`, dan `Support/SumoLegacyFixture.php` |
 | `docs/` | Dokumen ini dan dokumen pendukung lain |
@@ -223,14 +223,14 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 
 - **Resource:** `ItemRequestResource`, `ItemRequestLogResource`, `ItemRequestSettingResource`, `ItemRequestTypeResource`, `ProductResource`, `ProductCategoryResource`, `UnitTypeResource`
 - **Page:** `ScanItemRequestQr`, `ScanProductQr`
-- **Logika:** `ItemRequestWorkflow` (persetujuan atasan, accounting, executor), `ItemRequestVisibility`, `config/item-request.php`, `SumoQrLabelController`
+- **Logika:** `ItemRequestWorkflow` (persetujuan atasan, accounting, executor), `ItemRequest::visibility()` (rule di `app/Access/ItemRequests`), `config/item-request.php`, `SumoQrLabelController`
 - **Ekspor:** `ItemRequestRecapExport` (Rekap per Divisi: pivot barang x divisi per area, tipe, rentang `requested_at`, dan filter status `ItemRequestRecapStatus`; jumlah = `COALESCE(qty_approved, qty_request)`) dan `ItemRequestMasterQrExport` (`id` detail, `nama_barang`, `pemohon` untuk cetak QR massal). Keduanya aksi header `ListItemRequests` dengan izin `export_item::request`, ditulis lewat maatwebsite/excel, dan memakai `ItemRequestResource::scopeToViewer()` supaya angkanya sama dengan daftar.
 - **Asal:** sumo-web. Setiap perubahan status dicatat di `item_request_logs`.
 
 ### Lapor Gangguan
 
 - **Resource:** `ProblemReportResource`, `ProblemReportCategoryResource`
-- **Logika:** `ProblemReportWorkflow` (dibuka, dikerjakan, dikonfirmasi otomatis bila pelapor diam), `ProblemReportVisibility`, command `problem-reports:auto-confirm`
+- **Logika:** `ProblemReportWorkflow` (dibuka, dikerjakan, dikonfirmasi otomatis bila pelapor diam), `ProblemReport::visibility()` (rule di `app/Access/ProblemReports`, cakupan jenis per divisi di `problem_report_scopes`), command `problem-reports:auto-confirm`
 - **Asal:** sumo-web
 
 ### Asuransi & Sewa
@@ -256,7 +256,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ## Database
 <!-- desc: Peta tabel, kolom kunci, dan relasi Eloquent -->
 
-MySQL `db_gais`, dibangun dari 110 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
+MySQL `db_gais`, dibangun dari 117 migration. Dua tabel jadi poros: `users` dan `business_entities`. Nama tabel mengikuti konvensi Laravel (jamak, snake_case).
 
 ### Peta tabel
 
@@ -284,7 +284,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | --- | --- |
 | `BusinessEntity` | hasMany `User`, `Asset`, `AssetTransfer`; belongsToMany `User` via `business_entity_user` |
 | `User` | belongsTo `BusinessEntity`, `JobTitle`, `Division`, `User` (approver) |
-| `Area` / `Division` | `Area` hasMany `Division`; `Division` hasMany `User`, `DivisionApprover`, `ItemRequestScope` |
+| `Area` / `Division` | `Area` hasMany `Division`; `Division` hasMany `User`, `DivisionApprover`, `ItemRequestScope`, `ProblemReportScope` |
 | `Asset` | belongsTo `BusinessEntity`, `Category`, `Brand`, `AssetLocation`, `AssetCatalogItem`, `User` (`recipient_id`, `nbh_responsible_user_id`); hasMany `AssetAttribute`, `AssetService`, `AssetTransferDetail`, `VehicleChecksheet`; hasOne `AssetQr` |
 | `AssetQr` | hasMany `AssetQrScan` |
 | `Category` | hierarki lewat `parent_id`; hasMany `Asset` |
@@ -311,7 +311,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 
 - **Spatie:** `roles`, `permissions`, `model_has_roles`, `model_has_permissions`, `role_has_permissions`.
 - **Paket lain:** `activity_log`, `settings`, `pulse_*`, `filament_exceptions_table`, `jobs`, `failed_jobs`, `exports`, `personal_access_tokens`.
-- **Soft delete:** model modul sumo, OB, `Task`, dan `VehicleChecksheet`. Hapus dari panel hanya mengisi `deleted_at`.
+- **Soft delete:** semua model fitur kecuali `users` dan `asset_qr_label_histories` (lihat bab Akses). Hapus dari panel hanya mengisi `deleted_at`; filter Sampah memulihkannya.
 
 ## Akses & permission
 <!-- desc: Login, role, permission Shield, dan batas badan usaha -->
@@ -322,7 +322,7 @@ Akses ditentukan **permission** Shield, bukan nama role. Setelah itu dipersempit
 
 1. **Masuk panel.** `User::canAccessPanel()` hanya mengizinkan user yang punya minimal satu role. Login lewat username/email, OTP WhatsApp (`PhoneLogin`), atau kode/magic link email (`EmailLogin`). Registrasi, reset password, dan profil default dimatikan.
 2. **Permission per aksi.** Policy di `app/Policies` hasil `shield:generate`, format `view_any_asset`, `create_item::request`, dst. Permission custom dibuat lewat migration, misalnya `manage_stock_asset::transfer`, `export_asset`, `view_all_item::request`.
-3. **Badan usaha.** `HasBusinessEntityAccess` + `scopeAccessibleBy`: `super_admin` dan user dengan `access_all_business_entities` melihat semua; user lain melihat badan usaha asal + yang dicentang di `business_entity_user`.
+3. **Badan usaha.** `HasBusinessEntityAccess` + `BusinessEntityRule` (aset: `AssetBusinessEntityRule`) di `visibility()` model: user dengan `access_all_business_entities` melihat semua; user lain melihat badan usaha asal + yang dicentang di `business_entity_user`.
 
 ### Daftar role
 
@@ -333,18 +333,44 @@ Akses ditentukan **permission** Shield, bukan nama role. Setelah itu dipersempit
 | `admin` | Dibuat manual | `export_asset`, `manage_stock_asset::transfer` |
 | `pengajuan_admin`, `accounting`, `executor`, `requester` | `sumo:import` | Peran modul Pengajuan Barang dan Lapor Gangguan |
 
+### Lapisan visibilitas (`app/Access`)
+
+Aturan "siapa melihat apa" dirangkai per model, bukan ditulis ulang per resource:
+
+- `Visibility::make()->require(...)->grant(...)`: pembatas (AND, mis. `Rules\BusinessEntityRule`) dan pemberi akses (OR, mis. `Rules\OwnerGrant`, `Rules\ApproverOfOwnerGrant`, `Rules\PermissionGrant`, plus rule modul di `ItemRequests/` dan `ProblemReports/`).
+- Setiap `Rule` punya dua wajah yang harus sepakat: `apply()` membatasi query daftar, `allows()` memutuskan satu record dari relasi yang sudah dimuat (null = jatuh ke query). `Grant::grantsEverything()` melewati grup OR bila user melihat semua.
+- Model memakai trait `HasVisibility` (`visibleTo()`, `isVisibleTo()`), resource `ScopesVisibleRecords` (mengisi `getEloquentQuery()`; ganti `baseVisibleQuery()` bila perlu, jangan timpa `getEloquentQuery()`), policy `AuthorizesVisibleRecords` (`visible()`).
+- `VisibilityArchitectureTest` memastikan ketiganya terpasang untuk setiap model ber-`HasVisibility`; `Tests\Support\AssertsVisibilityContract` membandingkan query dengan keputusan per record (relasi dimuat dan tidak).
+
+Semua model fitur memakainya. Rule khusus: `Assets\AssetBusinessEntityRule` (badan usaha pemilik, penerima, atau pemegang), `Users\HidesSuperAdminsRule` + `Users\BusinessEntityMemberGrant` + `Rules\SelfGrant`, `ObChecksheets\UnclaimedPoolGrant` (kolam tugas bersama), servis aset lewat dua `OwnerGrant` (`created_by`, `serviced_by_user_id`); model lain `Rules\EveryoneGrant`, dibatasi `BusinessEntityRule` bila punya `business_entity_id`. `VisibilityArchitectureTest` menolak resource baru yang modelnya tidak memakai `HasVisibility`, kecuali yang didaftar eksplisit di test itu: Roles dan Exceptions (vendor), Impor Data Sumo dan Rekonsiliasi Aset (alat impor dengan izin sendiri).
+
+### Soft delete sebagai standar
+
+- Semua model fitur memakai `SoftDeletes`; pengecualian eksplisit di `VisibilityArchitectureTest`: `User` (kolom unik identitas, sinkron Talenta/sumo) dan `AssetQrLabelHistory` (log hanya-baca).
+- Resource: `TrashedFilter` ("Sampah"), `RestoreAction` per baris, `RestoreBulkAction` dan `ForceDeleteBulkAction` (label Indonesia lewat `configureUsing` di `AppServiceProvider`); test arsitektur merender tiap halaman daftar untuk memastikannya. `getEloquentQuery()` tetap menyembunyikan record terhapus (badge, widget, ekspor), filter yang memunculkannya, dan `getRecordRouteBindingEloquentQuery()` memakai `withTrashed()` supaya halaman view record terhapus bisa dibuka. Record di Sampah hanya-baca: `ScopesVisibleRecords::canEdit()`/`canReplicate()` menolak, policy memakai `editable()` (visible dan tidak terhapus) untuk `update`/`delete`/`replicate`, dan satu aturan global di `AppServiceProvider` (`Action::configureUsing`) menyembunyikan setiap aksi ber-record pada record di Sampah kecuali Lihat, Pulihkan, dan Hapus permanen, sehingga aksi alur kerja (pengajuan, laporan, kondisi aset, gabung, servis, OB, vendor) otomatis menunggu pemulihan. `config/filament-shield.php` mencantumkan `restore`/`forceDelete` di `policies.methods` supaya izinnya tampil dan bertahan di form Role.
+- Policy: dua belas metode standar Shield (`viewAny`, `view`, `create`, `update`, `delete`, `deleteAny`, `replicate`, `reorder`, `restore`, `restoreAny`, `forceDelete`, `forceDeleteAny`), dan setiap metode per record memanggil `visible()` atau `editable()`. Izin `restore_*`/`force_delete_*` dibuat migrasi `2026_10_31_000003`: role dan user dengan `delete_*` (termasuk izin langsung dari impor sumo, yang `$crud`-nya kini ikut `restore`) mendapat `restore_*`; `force_delete_*` hanya ke role super admin, karena super admin di proyek ini tidak mem-bypass Gate. Hapus permanen record anak memakai `force_delete_*` induknya.
+- Aturan lihat tidak membedakan status terhapus (`Visibility::allows()` menilai record terhapus dengan aturan yang sama).
+- Relasi `belongsTo` ke model soft delete memakai `withTrashed()` (riwayat utuh) dan subquery scope yang lewat tabel itu juga (`Division::withTrashed()` di `DivisionScopeGrant`), supaya query dan policy sepakat; select dan filter relasi memakai `modifyQueryUsing` `withoutTrashed()` (tidak bisa memilih yang terhapus). Generator nomor unik (`AssetTransfer::generateLetterNumber`, `AssetService::generateServiceNumber`, `Task::generateTaskCode`, `VehicleChecksheetResource::generateReferenceNumber`, `GeneratesSequentialCode`) menghitung termasuk record terhapus, dan impor yang mencari nilai unik (nama badan usaha, kode gudang) memulihkan baris di Sampah alih-alih menggandakannya.
+- Record anak yang soft delete (`InsuranceUpdate`, `RentUpdate`, `ItemRequestDetail`) tidak punya resource: policy-nya memakai `visibleParent()` atau mendelegasikan ke policy induk, punya `restore`/`forceDelete`, dan relation manager yang bisa mengubahnya punya `TrashedFilter`, `RestoreAction`, `ForceDeleteAction`.
+
+### Titik masuk query
+
+Daftar yang dilihat viewer selalu lewat `Resource::getEloquentQuery()` (badge navigasi, widget, ekspor) atau `Resource::scopeToViewer()` (relation manager, halaman scan, service ekspor, exporter Filament); `visibleTo()` tidak dipanggil langsung di luar `app/Access` dan `app/Models`, dan test arsitektur menolaknya. Satu record diperiksa lewat policy (`$this->authorize('view', $record)`, `can('view', ...)`), yang sudah memanggil `visible()`. Kode yang berjalan tanpa user (QR publik `qr/{qr}`, integrasi WhatsApp, pengingat terjadwal, importer sumo/Talenta) sengaja tidak dibatasi aturan lihat, tetapi tetap mengabaikan record di Sampah (QR aset terhapus menjawab 404, pengingat dan WhatsApp hanya aset dan definisi dokumen yang hidup, BA terhapus bukan riwayat terakhir); daftar opsi form (mis. calon pemegang aset) memakai `HasBusinessEntityAccess` langsung karena bukan daftar record.
+
+
 ### Visibilitas modul sumo
 
-Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa:
+Tidak ada role hard-coded seperti di sumo-web. `ItemRequest::visibility()` menentukan siapa melihat pengajuan apa:
 
 - pemilik pengajuan;
 - atasannya (`users.approver_user_id`);
-- pemegang izin Accounting;
-- executor sesuai cakupan di `item_request_scopes` (per tipe dan/atau area).
+- pemegang izin Accounting (`AccountingTypeGrant`, tipe yang lewat tahap Accounting);
+- executor/manager/audit sesuai cakupan di `item_request_scopes` (`DivisionScopeGrant`, per tipe dan/atau area);
+- pemegang `view_all_item::request` melihat semua.
 
 Cakupan dengan `approves_quantity` menjadikan tahap Manager wajib: hanya divisi itu yang menyetujui jumlah (`ItemRequestWorkflow::canApproveQuantity`), dan executor baru boleh memproses setelah tahap Accounting/Manager yang wajib lewat (`executorMayProcess`, `pendingStageBeforeExecutor`, `scopeAwaitingExecutor`). Importer mengisinya dari elemen ketiga `sumo-import.scopes`.
 
-`ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`; nilai berawalan `!` mengecualikan jenis itu (sumo: executor non-HCM melihat selain UMUM).
+`ProblemReport::visibility()` serupa: pelapor melihat miliknya; pemegang `view_all_problem::report` melihat semua, kecuali divisinya punya cakupan jenis di `problem_report_scopes` (`DivisionCategoryGrant`; kolom `excluded` = semua jenis kecuali yang disebut; sumo: HCM hanya UMUM, MIS-IT selain UMUM). Cakupan diatur di menu Divisi dan diisi importer dari `sumo-import.problem_report_scopes`.
 
 ### Catatan
 
@@ -398,18 +424,18 @@ Ikuti urutan yang dipakai modul sumo saat menambah fitur, dan cek daftar jebakan
 
 ### Menambah modul atau menu baru
 
-1. **Migration** baru di `database/migrations` (`YYYY_MM_DD_00000N_...`). Tambah `softDeletes()` untuk data operasional.
-2. **Model** di `app/Models`: `$fillable`, `casts()`, relasi, dan `HasBusinessEntityAccess` bila data per badan usaha. Status sebagai enum di `app/Enums`.
-3. **Resource**: `php artisan make:filament-resource NamaModel --view`, isi `$navigationGroup`. Grup baru didaftarkan di `navigationGroups()` dan `NavigationGroupsTest`.
-4. **Permission**: `php artisan shield:generate --resource=NamaModelResource`. Permission tambahan dibuat lewat migration (contoh: `2026_10_13_000007_create_sumo_module_permissions_and_roles.php`).
-5. **Logika**: workflow di `app/Services/NamaWorkflow.php`, aturan siapa-melihat-apa di `app/Support/NamaVisibility.php`.
-6. **Test** feature untuk resource, policy, dan workflow.
+1. **Migration** baru di `database/migrations` (`YYYY_MM_DD_00000N_...`) dengan `softDeletes()` (wajib; `VisibilityArchitectureTest` menolak model fitur tanpa soft delete).
+2. **Model** di `app/Models`: `$fillable`, `casts()`, relasi (`->withTrashed()` untuk `belongsTo` ke model soft delete), trait `HasVisibility` + `SoftDeletes`, dan `visibility()` (`BusinessEntityRule` bila punya `business_entity_id`). Status sebagai enum di `app/Enums`.
+3. **Resource**: `php artisan make:filament-resource NamaModel --view`, isi `$navigationGroup`, pasang `ScopesVisibleRecords`, `TrashedFilter`, `RestoreAction`, `RestoreBulkAction`, `ForceDeleteBulkAction`; select relasi ke model soft delete memakai `withoutTrashed()`. Grup baru didaftarkan di `navigationGroups()` dan `NavigationGroupsTest`.
+4. **Permission**: `php artisan shield:generate --resource=NamaModelResource`, lalu buat `restore_*`/`force_delete_*` lewat migration seperti `2026_10_31_000003`. Permission tambahan juga lewat migration (contoh: `2026_10_13_000007_create_sumo_module_permissions_and_roles.php`). Policy memakai `AuthorizesVisibleRecords` dan `visible()` di setiap aksi per record.
+5. **Logika**: workflow di `app/Services/NamaWorkflow.php`; aturan siapa-melihat-apa lewat `visibility()` di model (trait `HasVisibility`, rule di `app/Access/NamaModul`), `ScopesVisibleRecords` di resource, dan `AuthorizesVisibleRecords` di policy. `VisibilityArchitectureTest` menolak bila salah satunya terlewat.
+6. **Test** feature untuk resource, policy, dan workflow; aturan lihat diuji dengan `AssertsVisibilityContract`.
 7. **Dokumentasi**: tambah bab di `Guide.php` (rekam ulang dengan `tools/guide-capture`) dan perbarui file ini.
 
 ### Hal yang perlu diwaspadai
 
 - **Invarian stok aset:** aset Tersedia selalu tanpa `recipient_id`. Pindah pemegang hanya lewat `AssetTransfer::applyLifecycleToAssets`.
-- **Badan usaha:** query baru wajib ikut `accessibleBy`, dan policy wajib menolak record di luar akses.
+- **Badan usaha:** data per badan usaha dibatasi lewat `BusinessEntityRule` di `visibility()` model; jangan menulis query badan usaha manual di resource.
 - **File upload:** pakai `StoredFile` dan disk yang dikonfigurasi; production memakai bucket S3 privat.
 - **Queue:** tanpa Redis + Horizon, notifikasi dan export menumpuk diam-diam. Impor Data Sumo memakai koneksi `redis-long` dan queue `long-running` (supervisor terpisah di `config/horizon.php`); setelah deploy jalankan `php artisan horizon:terminate`.
 - **Data user dari Talenta:** jangan menambah cara lain untuk mengubah field yang dikunci untuk user ber-Employee ID; perubahan harus lewat import JSON Talenta.

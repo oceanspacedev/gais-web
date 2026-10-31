@@ -36,6 +36,6 @@ class AssetServiceItem extends Model
 
     public function service(): BelongsTo
     {
-        return $this->belongsTo(AssetService::class, 'asset_service_id');
+        return $this->belongsTo(AssetService::class, 'asset_service_id')->withTrashed();
     }
 }

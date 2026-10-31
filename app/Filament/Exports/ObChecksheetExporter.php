@@ -2,6 +2,7 @@
 
 namespace App\Filament\Exports;
 
+use App\Filament\Resources\ObChecksheetResource;
 use App\Models\ObChecksheet;
 use App\Support\StoredFile;
 use Filament\Actions\Exports\Enums\ExportFormat;
@@ -101,11 +102,8 @@ class ObChecksheetExporter extends Exporter
 
         $query = $query->with(['user', 'assigner']);
 
-        if ($user && ! $user->can('viewAll', ObChecksheet::class)) {
-            $query->visibleTo($user);
-        }
-
-        return $query;
+        // Job ekspor Filament berjalan sebagai user pemilik ekspor; aturan lihatnya sama dengan daftar.
+        return ObChecksheetResource::scopeToViewer($query, $user);
     }
 
     public function getFormats(): array
@@ -131,15 +129,15 @@ class ObChecksheetExporter extends Exporter
 
     public function getFileName(Export $export): string
     {
-        return 'export_ob_checksheet_' . now()->format('Y-m-d_His');
+        return 'export_ob_checksheet_'.now()->format('Y-m-d_His');
     }
 
     public static function getCompletedNotificationBody(Export $export): string
     {
-        $body = 'Export OB Checksheet selesai: ' . Number::format($export->successful_rows) . ' baris berhasil diexport.';
+        $body = 'Export OB Checksheet selesai: '.Number::format($export->successful_rows).' baris berhasil diexport.';
 
         if ($failedRowsCount = $export->getFailedRowsCount()) {
-            $body .= ' ' . Number::format($failedRowsCount) . ' baris gagal.';
+            $body .= ' '.Number::format($failedRowsCount).' baris gagal.';
         }
 
         return $body;

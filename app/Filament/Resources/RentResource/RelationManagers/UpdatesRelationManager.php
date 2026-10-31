@@ -13,6 +13,8 @@ use App\Support\LegacyUpload;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -20,6 +22,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 /**
@@ -110,6 +113,9 @@ class UpdatesRelationManager extends RelationManager
                 TextColumn::make('notes')->label('Catatan')->limit(30)->placeholder('-')->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('expired_date', 'desc')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah Perpanjangan')
@@ -123,7 +129,7 @@ class UpdatesRelationManager extends RelationManager
                     owner: $rent,
                     templateFileName: 'template-perpanjangan-sewa.xlsx',
                     description: 'Unggah Excel berkolom template. Kolom kode_sewa_induk harus berisi kode sewa ini; baris dengan kode yang sudah ada diperbarui dan sel kosong dibiarkan seperti semula. Kode kosong dibuat otomatis (RENTUP####), baris baru wajib punya tanggal mulai dan akhir; status kosong dianggap BERJALAN.',
-                )->visible(fn (): bool => auth()->user()?->can('import', Rent::class) ?? false),
+                )->visible(fn (): bool => $this->canManage() && (auth()->user()?->can('import', Rent::class) ?? false)),
                 ContractUpdateExcelActions::export(
                     name: 'exportUpdates',
                     label: 'Ekspor Perpanjangan',
@@ -133,6 +139,8 @@ class UpdatesRelationManager extends RelationManager
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
+                RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
+                ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),
             ]);
     }
 

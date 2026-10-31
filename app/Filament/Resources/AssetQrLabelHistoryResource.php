@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\AssetQrLabelHistoryResource\Pages;
 use App\Models\AssetQrLabelHistory;
 use App\Services\AssetQrLabelHistoryService;
@@ -21,6 +22,8 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AssetQrLabelHistoryResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetQrLabelHistory::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';

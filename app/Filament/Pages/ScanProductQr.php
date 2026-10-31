@@ -2,7 +2,7 @@
 
 namespace App\Filament\Pages;
 
-use App\Models\Product;
+use App\Filament\Resources\ProductResource;
 use App\Support\LegacyUpload;
 use Filament\Pages\Page;
 
@@ -40,7 +40,7 @@ class ScanProductQr extends Page
         $this->error = null;
 
         $id = (int) preg_replace('/[^0-9]/', '', $this->code);
-        $product = $id > 0 ? Product::query()->with(['category', 'unitType'])->find($id) : null;
+        $product = $id > 0 ? ProductResource::getEloquentQuery()->with(['category', 'unitType'])->find($id) : null;
 
         if ($product === null) {
             $this->error = 'Barang tidak ditemukan.';

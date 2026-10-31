@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use App\Enums\ContractStatus;
 use App\Models\Concerns\ComputesInsuranceStock;
 use App\Support\ContractDue;
@@ -19,7 +23,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Insurance extends Model
 {
-    use ComputesInsuranceStock, HasFactory, SoftDeletes;
+    use ComputesInsuranceStock, HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'policy_number', 'insured_name', 'warehouse_code', 'insured_address', 'insured_detail', 'risk_address',
@@ -69,7 +73,7 @@ class Insurance extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function updates(): HasMany
@@ -134,8 +138,14 @@ class Insurance extends Model
         return ContractDue::insuranceColor($this->effectiveExpiredDate(), $this->effectiveStatus());
     }
 
-    public function isAccessibleBy(User $user): bool
+    /**
+     * Semua pemegang izin melihat record di badan usaha yang bisa ia akses;
+     * record tanpa badan usaha terlihat oleh semua.
+     */
+    public static function visibility(): Visibility
     {
-        return $this->business_entity_id === null || $user->canAccessBusinessEntity($this->business_entity_id);
+        return Visibility::make()
+            ->require(new BusinessEntityRule)
+            ->grant(new EveryoneGrant);
     }
 }

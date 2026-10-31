@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\User;
 use App\Models\Vendor;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class VendorPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class VendorPolicy
      */
     public function view(User $user, Vendor $vendor): bool
     {
-        return $user->can('view_vendor');
+        return $user->can('view_vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -39,7 +40,7 @@ class VendorPolicy
      */
     public function update(User $user, Vendor $vendor): bool
     {
-        return $user->can('update_vendor');
+        return $user->can('update_vendor') && $this->editable($user, $vendor);
     }
 
     /**
@@ -47,7 +48,7 @@ class VendorPolicy
      */
     public function delete(User $user, Vendor $vendor): bool
     {
-        return $user->can('delete_vendor');
+        return $user->can('delete_vendor') && $this->editable($user, $vendor);
     }
 
     /**
@@ -63,7 +64,7 @@ class VendorPolicy
      */
     public function forceDelete(User $user, Vendor $vendor): bool
     {
-        return $user->can('force_delete_vendor');
+        return $user->can('force_delete_vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -79,7 +80,7 @@ class VendorPolicy
      */
     public function restore(User $user, Vendor $vendor): bool
     {
-        return $user->can('restore_vendor');
+        return $user->can('restore_vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -95,7 +96,7 @@ class VendorPolicy
      */
     public function replicate(User $user, Vendor $vendor): bool
     {
-        return $user->can('replicate_vendor');
+        return $user->can('replicate_vendor') && $this->editable($user, $vendor);
     }
 
     /**

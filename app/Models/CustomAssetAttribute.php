@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class CustomAssetAttribute extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     public const TYPE_TEXT = 'text';
 
@@ -244,12 +248,20 @@ class CustomAssetAttribute extends Model
     // Relasi ke kategori
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     // Relasi ke asset_attributes
     public function assetAttributes()
     {
         return $this->hasMany(AssetAttribute::class, 'custom_attribute_id');
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

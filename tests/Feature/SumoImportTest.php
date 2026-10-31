@@ -6,6 +6,7 @@ use App\Models\BusinessEntity;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestScope;
 use App\Models\ProblemReport;
+use App\Models\ProblemReportScope;
 use App\Models\User;
 use App\Services\Sumo\SumoImporter;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -45,6 +46,7 @@ class SumoImportTest extends TestCase
         config([
             'sumo-import.business_entities' => [self::B + 1 => null, self::B + 2 => $this->entity->id],
             'sumo-import.scopes' => [self::B + 6 => [[null, null]], self::B + 9 => [[self::B + 2, self::B + 4, true]]],
+            'sumo-import.problem_report_scopes' => [self::B + 6 => [[self::B + 7, false]], self::B + 15 => [[self::B + 7, true]]],
             'sumo-import.division_permissions' => ['HCM-UJI' => ['view_any_insurance', 'view_insurance', 'import_insurance']],
             'sumo-import.legacy_user_permissions' => [self::B + 4 => ['export_item::request']],
         ]);
@@ -114,6 +116,9 @@ class SumoImportTest extends TestCase
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
         $this->assertTrue(ItemRequestScope::query()->where('division_id', self::B + 9)->firstOrFail()->approves_quantity, 'WHM menyetujui jumlah ATK area TOP.');
         $this->assertFalse(ItemRequestScope::query()->where('division_id', self::B + 6)->firstOrFail()->approves_quantity);
+        $this->assertSame(2, ProblemReportScope::query()->where('division_id', '>=', self::B)->count());
+        $this->assertFalse(ProblemReportScope::query()->where('division_id', self::B + 6)->firstOrFail()->excluded, 'HCM hanya UMUM.');
+        $this->assertTrue(ProblemReportScope::query()->where('division_id', self::B + 15)->firstOrFail()->excluded, 'DEPO selain UMUM.');
 
         // Perubahan di GAIS sesudah impor pertama tidak boleh ditimpa impor ulang.
         DB::table('problem_reports')->where('id', self::B + 20)->update(['status' => 'CANCELLED', 'result_desc' => 'diubah di GAIS']);
@@ -123,6 +128,7 @@ class SumoImportTest extends TestCase
         DB::table('users')->where('id', $requester->id)->update(['approver_user_id' => $admin->id]);
         $requester->removeRole('requester');
         ItemRequestScope::query()->where('division_id', self::B + 9)->delete();
+        ProblemReportScope::query()->where('division_id', self::B + 15)->delete();
 
         $usersBefore = User::count();
         $rerun = (new SumoImporter)->run();
@@ -137,6 +143,7 @@ class SumoImportTest extends TestCase
         $this->assertEquals($admin->id, DB::table('users')->where('id', $requester->id)->value('approver_user_id'));
         $this->assertFalse($requester->fresh()->hasRole('requester'), 'Role yang dicabut di GAIS tidak dipasang lagi.');
         $this->assertSame(0, ItemRequestScope::query()->where('division_id', self::B + 9)->count(), 'Cakupan yang dihapus di GAIS tidak diisi lagi.');
+        $this->assertSame(0, ProblemReportScope::query()->where('division_id', self::B + 15)->count(), 'Cakupan gangguan yang dihapus di GAIS tidak diisi lagi.');
         $this->assertSame(0, $rerun->count('item_requests'));
         $this->assertSame(2, $rerun->count('item_requests.existing'));
         $this->assertSame(0, $rerun->count('users.created'));

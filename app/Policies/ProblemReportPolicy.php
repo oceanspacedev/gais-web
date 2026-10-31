@@ -2,14 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\ProblemReport;
 use App\Models\User;
-use App\Support\ProblemReportVisibility;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ProblemReportPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -18,7 +18,7 @@ class ProblemReportPolicy
 
     public function view(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('view_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('view_problem::report') && $this->visible($user, $problemReport);
     }
 
     public function create(User $user): bool
@@ -28,12 +28,12 @@ class ProblemReportPolicy
 
     public function update(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('update_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('update_problem::report') && $this->editable($user, $problemReport);
     }
 
     public function delete(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('delete_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('delete_problem::report') && $this->editable($user, $problemReport);
     }
 
     public function deleteAny(User $user): bool
@@ -43,7 +43,7 @@ class ProblemReportPolicy
 
     public function forceDelete(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('force_delete_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('force_delete_problem::report') && $this->visible($user, $problemReport);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -53,7 +53,7 @@ class ProblemReportPolicy
 
     public function restore(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('restore_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('restore_problem::report') && $this->visible($user, $problemReport);
     }
 
     public function restoreAny(User $user): bool
@@ -63,7 +63,7 @@ class ProblemReportPolicy
 
     public function replicate(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('replicate_problem::report') && $this->isVisibleTo($user, $problemReport);
+        return $user->can('replicate_problem::report') && $this->editable($user, $problemReport);
     }
 
     public function reorder(User $user): bool
@@ -93,14 +93,5 @@ class ProblemReportPolicy
     public function process(User $user): bool
     {
         return $user->can('process_problem::report');
-    }
-
-    /**
-     * Record yang tidak termasuk cakupan user (visibleTo) atau badan usahanya
-     * ditolak. Model yang belum tersimpan, yaitu cek izin saja, tidak dibatasi.
-     */
-    private function isVisibleTo(User $user, ProblemReport $problemReport): bool
-    {
-        return ! $problemReport->exists || ProblemReportVisibility::allows($user, $problemReport);
     }
 }

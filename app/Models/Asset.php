@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Access\Assets\AssetBusinessEntityRule;
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use App\Enums\AssetCondition;
 use App\Enums\NbhStatus;
 use App\Services\AssetQrService;
@@ -14,11 +18,12 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Schema;
 
 class Asset extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected static function booted(): void
     {
@@ -269,13 +274,13 @@ class Asset extends Model
     // Relasi ke tabel business_entities
     public function businessEntity()
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     // Relasi ke tabel categories
     public function category()
     {
-        return $this->belongsTo(Category::class);
+        return $this->belongsTo(Category::class)->withTrashed();
     }
 
     public function catalogItem(): BelongsTo
@@ -291,13 +296,13 @@ class Asset extends Model
     // Relasi ke tabel brands
     public function brand()
     {
-        return $this->belongsTo(Brand::class);
+        return $this->belongsTo(Brand::class)->withTrashed();
     }
 
     // Relasi ke tabel asset_locations
     public function assetLocation()
     {
-        return $this->belongsTo(AssetLocation::class);
+        return $this->belongsTo(AssetLocation::class)->withTrashed();
     }
 
     // Relasi ke tabel asset_transfers
@@ -319,7 +324,9 @@ class Asset extends Model
 
     public function latestTransferDetail(): ?AssetTransferDetail
     {
+        // BA di Sampah bukan riwayat yang berlaku; rinciannya masih ada karena BA hanya soft delete.
         return $this->assetTransferDetails()
+            ->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed())
             ->with(['assetTransfer.toUser'])
             ->latest('created_at')
             ->latest('id')
@@ -424,39 +431,12 @@ class Asset extends Model
     // Relasi ke tabel business_entities untuk recipient_business_entity_id
     public function recipientBusinessEntity()
     {
-        return $this->belongsTo(BusinessEntity::class, 'recipient_business_entity_id');
+        return $this->belongsTo(BusinessEntity::class, 'recipient_business_entity_id')->withTrashed();
     }
 
     public function nbhResponsible(): BelongsTo
     {
         return $this->belongsTo(User::class, 'nbh_responsible_user_id');
-    }
-
-    /**
-     * Aset yang boleh dilihat $user: badan usaha pemilik, badan usaha penerima
-     * (BA terakhir / penanda stok), atau badan usaha pemegangnya termasuk akses
-     * user, supaya aset yang dipakai lintas badan usaha tetap terlihat oleh
-     * semua pihak yang mengurusnya.
-     */
-    public function scopeAccessibleBy(Builder $query, User $user): Builder
-    {
-        if ($user->hasUnrestrictedBusinessEntityAccess()) {
-            return $query;
-        }
-
-        $ids = $user->accessibleBusinessEntityIds();
-
-        return $query->where(fn (Builder $scoped): Builder => $scoped
-            ->whereIn($query->qualifyColumn('business_entity_id'), $ids)
-            ->orWhereIn($query->qualifyColumn('recipient_business_entity_id'), $ids)
-            ->orWhereHas('recipient', fn (Builder $holder): Builder => $holder->whereIn('business_entity_id', $ids)));
-    }
-
-    public function isAccessibleBy(User $user): bool
-    {
-        return $user->canAccessBusinessEntity($this->business_entity_id)
-            || $user->canAccessBusinessEntity($this->recipient_business_entity_id)
-            || ($this->recipient_id !== null && $user->canAccessBusinessEntity($this->recipient?->business_entity_id));
     }
 
     private function formatDiff($value, $unit)
@@ -686,5 +666,16 @@ class Asset extends Model
     public function vehicleChecksheets(): HasMany
     {
         return $this->hasMany(VehicleChecksheet::class, 'asset_id');
+    }
+
+    /**
+     * Semua pemegang izin melihat aset di badan usaha pemilik, penerima, atau
+     * pemegangnya (AssetBusinessEntityRule).
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new AssetBusinessEntityRule)
+            ->grant(new EveryoneGrant);
     }
 }

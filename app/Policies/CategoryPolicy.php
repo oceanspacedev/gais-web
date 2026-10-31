@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Category;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class CategoryPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class CategoryPolicy
      */
     public function view(User $user, Category $category): bool
     {
-        return $user->can('view_category');
+        return $user->can('view_category') && $this->visible($user, $category);
     }
 
     /**
@@ -39,7 +40,7 @@ class CategoryPolicy
      */
     public function update(User $user, Category $category): bool
     {
-        return $user->can('update_category');
+        return $user->can('update_category') && $this->editable($user, $category);
     }
 
     /**
@@ -47,7 +48,7 @@ class CategoryPolicy
      */
     public function delete(User $user, Category $category): bool
     {
-        return $user->can('delete_category');
+        return $user->can('delete_category') && $this->editable($user, $category);
     }
 
     /**
@@ -63,7 +64,7 @@ class CategoryPolicy
      */
     public function forceDelete(User $user, Category $category): bool
     {
-        return $user->can('force_delete_category');
+        return $user->can('force_delete_category') && $this->visible($user, $category);
     }
 
     /**
@@ -79,7 +80,7 @@ class CategoryPolicy
      */
     public function restore(User $user, Category $category): bool
     {
-        return $user->can('restore_category');
+        return $user->can('restore_category') && $this->visible($user, $category);
     }
 
     /**
@@ -95,7 +96,7 @@ class CategoryPolicy
      */
     public function replicate(User $user, Category $category): bool
     {
-        return $user->can('replicate_category');
+        return $user->can('replicate_category') && $this->editable($user, $category);
     }
 
     /**

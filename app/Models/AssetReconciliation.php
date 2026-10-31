@@ -73,7 +73,7 @@ class AssetReconciliation extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function parent(): BelongsTo

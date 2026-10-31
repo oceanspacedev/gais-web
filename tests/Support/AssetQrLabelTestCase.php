@@ -29,10 +29,12 @@ abstract class AssetQrLabelTestCase extends TestCase
         Storage::fake('local');
 
         Schema::create('asset_locations', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
         });
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->foreignId('asset_location_id')->nullable()->constrained();

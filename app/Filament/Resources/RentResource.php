@@ -2,17 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ContractStatus;
 use App\Filament\Resources\RentResource\Pages;
 use App\Filament\Resources\RentResource\RelationManagers\UpdatesRelationManager;
 use App\Models\BusinessEntity;
 use App\Models\Rent;
-use App\Models\User;
 use App\Support\LegacyUpload;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -27,6 +30,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -39,6 +43,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
  */
 class RentResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Rent::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-home';
@@ -64,20 +70,6 @@ class RentResource extends Resource
     public static function getPluralModelLabel(): string
     {
         return __('Perjanjian Sewa');
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        if ($viewer instanceof User && ! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('rents.business_entity_id')
-                ->orWhereIn('rents.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
     }
 
     public static function form(Schema $form): Schema
@@ -234,6 +226,7 @@ class RentResource extends Resource
             ])
             ->defaultSort(fn (Builder $query, string $direction): Builder => static::orderByEffectiveExpiry($query, $direction))
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options(ContractStatus::class)
@@ -255,12 +248,15 @@ class RentResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->activeContracts()->dueWithin(30)),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([ExcelExport::make('sewa')->fromTable()->withFilename('perjanjian-sewa-'.now()->format('Ymd-His'))])

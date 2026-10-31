@@ -10,11 +10,14 @@ use App\Services\ItemRequestWorkflow;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -79,6 +82,9 @@ class DetailsRelationManager extends RelationManager
                 TextColumn::make('line_total')->label('Subtotal')->state(fn (ItemRequestDetail $record): string => 'Rp '.number_format($record->lineTotal(), 0, ',', '.')),
                 TextColumn::make('description')->label('Keterangan')->wrap()->placeholder('-'),
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah Barang')
@@ -89,6 +95,10 @@ class DetailsRelationManager extends RelationManager
                     ->visible(fn (): bool => $this->canEditItems() || $this->canApproveQty()),
                 DeleteAction::make()
                     ->visible(fn (): bool => $this->canEditItems()),
+                RestoreAction::make()
+                    ->hidden(fn (): bool => ! $this->canEditItems()),
+                ForceDeleteAction::make()
+                    ->hidden(fn (): bool => ! $this->canEditItems()),
             ]);
     }
 
@@ -116,6 +126,7 @@ class DetailsRelationManager extends RelationManager
         $user = auth()->user();
 
         return $user !== null
+            && ! $this->request()->trashed()
             && $this->request()->client_status === ItemRequestClientStatus::Waiting
             && ($this->request()->isOwnedBy($user) || $user->can('update', $this->request()));
     }
@@ -125,6 +136,7 @@ class DetailsRelationManager extends RelationManager
         $user = auth()->user();
 
         return ! $this->isFinal()
+            && ! $this->request()->trashed()
             && ($user?->can('approveManager', ItemRequest::class) ?? false)
             && app(ItemRequestWorkflow::class)->canApproveQuantity($user, $this->request());
     }

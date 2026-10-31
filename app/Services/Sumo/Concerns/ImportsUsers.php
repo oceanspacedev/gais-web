@@ -3,6 +3,7 @@
 namespace App\Services\Sumo\Concerns;
 
 use App\Models\ItemRequestScope;
+use App\Models\ProblemReportScope;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -182,6 +183,46 @@ trait ImportsUsers
                 ], ['approves_quantity' => (bool) ($entry[2] ?? false)]);
 
                 $this->report->add($scope->wasRecentlyCreated ? 'scopes.created' : 'scopes.existing');
+            }
+        }
+
+        $this->seedProblemReportScopes();
+    }
+
+    /**
+     * Cakupan jenis gangguan per divisi (problem_report_scopes), seperti cakupan
+     * pengajuan: hanya pada impor pertama, sesudahnya diatur di menu Divisi.
+     */
+    protected function seedProblemReportScopes(): void
+    {
+        foreach (config('sumo-import.problem_report_scopes', []) as $divisionId => $entries) {
+            if (! $this->has('divisions', $divisionId)) {
+                $this->report->warn("Cakupan gangguan untuk divisi #{$divisionId} dilewati: divisi tidak ada.");
+
+                continue;
+            }
+
+            if (! $this->firstImport || ProblemReportScope::query()->where('division_id', (int) $divisionId)->exists()) {
+                $this->report->add('problem_report_scopes.existing', count($entries));
+
+                continue;
+            }
+
+            foreach ($entries as $entry) {
+                $categoryId = $entry[0] ?? null;
+
+                if (! $this->has('problem_report_categories', $categoryId)) {
+                    $this->report->warn("Cakupan gangguan divisi #{$divisionId} dilewati: jenis gangguan #{$categoryId} tidak ada.");
+
+                    continue;
+                }
+
+                $scope = ProblemReportScope::query()->firstOrCreate([
+                    'division_id' => (int) $divisionId,
+                    'problem_report_category_id' => (int) $categoryId,
+                ], ['excluded' => (bool) ($entry[1] ?? false)]);
+
+                $this->report->add($scope->wasRecentlyCreated ? 'problem_report_scopes.created' : 'problem_report_scopes.existing');
             }
         }
     }

@@ -2,20 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\AssetLocationResource\Pages;
 use App\Models\AssetLocation;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class AssetLocationResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetLocation::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-map-pin';
@@ -54,9 +61,10 @@ class AssetLocationResource extends Resource
                 TextColumn::make('description')->translateLabel(),
             ])
             ->filters([
-                //
+                TrashedFilter::make(),
             ])
             ->actions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
@@ -64,6 +72,8 @@ class AssetLocationResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

@@ -138,6 +138,7 @@ class WhatsappAssetQueryController extends Controller
             ->whereNotNull('attribute_value')
             ->whereHas('customAttribute', function (Builder $custom) use ($documentName, $notifiableOnly): void {
                 $custom
+                    ->withoutTrashed()
                     ->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)
                     ->where('is_active', true)
                     ->when($notifiableOnly, fn (Builder $q) => $q
@@ -145,7 +146,7 @@ class WhatsappAssetQueryController extends Controller
                         ->where('notification_type', 'relative_date'))
                     ->when($documentName !== '', fn (Builder $q) => $q->where('name', 'like', '%'.$documentName.'%'));
             })
-            ->whereHas('asset', fn (Builder $asset) => $this->applyAssetFilters($asset, $query))
+            ->whereHas('asset', fn (Builder $asset) => $this->applyAssetFilters($asset->withoutTrashed(), $query))
             ->with([
                 'customAttribute:id,name,type,is_notifiable,notification_type,notification_offset',
                 'asset:id,name,category_id,brand_id,asset_location_id,recipient_id,business_entity_id,condition_status,nbh_status,is_available,qty,updated_at',
@@ -339,6 +340,7 @@ class WhatsappAssetQueryController extends Controller
 
                     if ($customAttributeNames !== []) {
                         $which->orWhereHas('customAttribute', fn (Builder $custom) => $custom
+                            ->withoutTrashed()
                             ->whereIn('name', $customAttributeNames)
                             ->where('is_active', true));
                     }
@@ -571,7 +573,7 @@ class WhatsappAssetQueryController extends Controller
     private function transferDetails(Asset $asset): Collection
     {
         return $asset->assetTransferDetails
-            ->filter(fn ($detail) => $detail->assetTransfer !== null)
+            ->filter(fn ($detail) => $detail->assetTransfer !== null && ! $detail->assetTransfer->trashed())
             ->sortByDesc(function ($detail): int {
                 $date = $detail->assetTransfer?->transfer_date ?: $detail->created_at;
 
@@ -645,7 +647,7 @@ class WhatsappAssetQueryController extends Controller
             $customAttribute = $attribute->customAttribute;
             $value = $this->text($attribute->attribute_value);
 
-            if (! $customAttribute?->is_active || $value === '' || $this->isPlaceholderIdentifier($value)) {
+            if (! $customAttribute?->is_active || $customAttribute->trashed() || $value === '' || $this->isPlaceholderIdentifier($value)) {
                 continue;
             }
 

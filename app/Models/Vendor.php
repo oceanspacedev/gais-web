@@ -2,12 +2,16 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Vendor extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = ['name', 'contact_person', 'location', 'last_price'];
 
@@ -15,5 +19,12 @@ class Vendor extends Model
     {
         return $this->hasMany(AssetService::class);
     }
-}
 
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
+    }
+}

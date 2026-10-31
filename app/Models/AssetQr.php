@@ -21,7 +21,7 @@ class AssetQr extends Model
 
     public function asset(): BelongsTo
     {
-        return $this->belongsTo(Asset::class);
+        return $this->belongsTo(Asset::class)->withTrashed();
     }
 
     public function scans(): HasMany

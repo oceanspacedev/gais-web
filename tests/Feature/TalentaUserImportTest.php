@@ -36,11 +36,13 @@ class TalentaUserImportTest extends TestCase
             $table->timestamps();
         });
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
         Schema::create('job_titles', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('title');
             $table->timestamps();

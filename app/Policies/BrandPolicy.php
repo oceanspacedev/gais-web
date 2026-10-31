@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Brand;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BrandPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class BrandPolicy
      */
     public function view(User $user, Brand $brand): bool
     {
-        return $user->can('view_brand');
+        return $user->can('view_brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -39,7 +40,7 @@ class BrandPolicy
      */
     public function update(User $user, Brand $brand): bool
     {
-        return $user->can('update_brand');
+        return $user->can('update_brand') && $this->editable($user, $brand);
     }
 
     /**
@@ -47,7 +48,7 @@ class BrandPolicy
      */
     public function delete(User $user, Brand $brand): bool
     {
-        return $user->can('delete_brand');
+        return $user->can('delete_brand') && $this->editable($user, $brand);
     }
 
     /**
@@ -63,7 +64,7 @@ class BrandPolicy
      */
     public function forceDelete(User $user, Brand $brand): bool
     {
-        return $user->can('force_delete_brand');
+        return $user->can('force_delete_brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -79,7 +80,7 @@ class BrandPolicy
      */
     public function restore(User $user, Brand $brand): bool
     {
-        return $user->can('restore_brand');
+        return $user->can('restore_brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -95,7 +96,7 @@ class BrandPolicy
      */
     public function replicate(User $user, Brand $brand): bool
     {
-        return $user->can('replicate_brand');
+        return $user->can('replicate_brand') && $this->editable($user, $brand);
     }
 
     /**

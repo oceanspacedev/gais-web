@@ -2,8 +2,12 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\ProblemReports\DivisionCategoryGrant;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\OwnerGrant;
+use App\Access\Visibility;
 use App\Enums\ProblemReportStatus;
-use App\Support\ProblemReportVisibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -16,7 +20,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ProblemReport extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     public const CLIENT_WAITING = 0;
 
@@ -63,6 +67,22 @@ class ProblemReport extends Model
         });
     }
 
+    /**
+     * Pelapor melihat laporannya sendiri; pemegang "Lihat Data Semua User"
+     * melihat semua laporan, dibatasi cakupan jenis gangguan divisinya
+     * (problem_report_scopes) bila ada. Semuanya dibatasi badan usaha laporan
+     * (kosong = semua).
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new BusinessEntityRule)
+            ->grant(
+                new OwnerGrant,
+                new DivisionCategoryGrant('view_all_problem::report'),
+            );
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -75,17 +95,12 @@ class ProblemReport extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function closedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'closed_by_user_id');
-    }
-
-    public function scopeVisibleTo(Builder $query, User $user): Builder
-    {
-        return ProblemReportVisibility::apply($query, $user);
     }
 
     /**
@@ -104,10 +119,5 @@ class ProblemReport extends Model
     public function isOwnedBy(?User $user): bool
     {
         return $user !== null && (int) $this->user_id === (int) $user->id;
-    }
-
-    public function isAccessibleBy(User $user): bool
-    {
-        return $this->business_entity_id === null || $user->canAccessBusinessEntity($this->business_entity_id);
     }
 }

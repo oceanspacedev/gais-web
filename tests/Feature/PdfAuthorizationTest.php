@@ -142,6 +142,7 @@ class PdfAuthorizationTest extends TestCase
         }
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('format')->nullable();
@@ -150,6 +151,7 @@ class PdfAuthorizationTest extends TestCase
         });
 
         Schema::create('vendors', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('contact_person')->nullable();
@@ -174,6 +176,7 @@ class PdfAuthorizationTest extends TestCase
         });
 
         Schema::create('asset_transfers', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('document_type', 32)->nullable();
@@ -212,6 +215,7 @@ class PdfAuthorizationTest extends TestCase
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('name');

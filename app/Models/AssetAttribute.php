@@ -38,13 +38,13 @@ class AssetAttribute extends Model
     // Relasi ke aset
     public function asset()
     {
-        return $this->belongsTo(Asset::class);
+        return $this->belongsTo(Asset::class)->withTrashed();
     }
 
     // Relasi ke custom attribute
     public function customAttribute()
     {
-        return $this->belongsTo(CustomAssetAttribute::class, 'custom_attribute_id');
+        return $this->belongsTo(CustomAssetAttribute::class, 'custom_attribute_id')->withTrashed();
     }
 
     public static function documentValue(array $value): string

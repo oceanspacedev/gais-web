@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Exports\ObChecksheetExporter;
 use App\Filament\Resources\ObChecksheetResource\Pages;
 use App\Forms\Components\CameraCapture;
@@ -19,6 +20,9 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\DateTimePicker;
@@ -44,6 +48,7 @@ use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Carbon;
@@ -52,6 +57,8 @@ use Illuminate\Support\Str;
 
 class ObChecksheetResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ObChecksheet::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clipboard-document-check';
@@ -349,6 +356,7 @@ class ObChecksheetResource extends Resource
             ->defaultPaginationPageOption(12)
             ->defaultSort(fn (Builder $query): Builder => $query->orderByDesc('scheduled_date')->orderByDesc('id'))
             ->filters([
+                TrashedFilter::make(),
                 Filter::make('scheduled_date')
                     ->label('Tanggal')
                     ->schema([
@@ -388,14 +396,14 @@ class ObChecksheetResource extends Resource
 
                 SelectFilter::make('ob_room_id')
                     ->label('Ruangan')
-                    ->relationship('obRoom', 'name', fn (Builder $query): Builder => $query->with('location')->orderBy('name'))
+                    ->relationship('obRoom', 'name', fn (Builder $query): Builder => $query->withoutTrashed()->with('location')->orderBy('name'))
                     ->getOptionLabelFromRecordUsing(fn (ObRoom $record): string => $record->label())
                     ->searchable()
                     ->preload(),
 
                 SelectFilter::make('ob_shift_id')
                     ->label('Shift')
-                    ->relationship('obShift', 'name', fn (Builder $query): Builder => $query->with('location')->orderBy('name'))
+                    ->relationship('obShift', 'name', fn (Builder $query): Builder => $query->withoutTrashed()->with('location')->orderBy('name'))
                     ->getOptionLabelFromRecordUsing(fn (ObShift $record): string => $record->label())
                     ->searchable()
                     ->preload(),
@@ -408,6 +416,7 @@ class ObChecksheetResource extends Resource
                     ->visible(fn (): bool => auth()->user()?->can('viewAll', ObChecksheet::class) ?? false),
             ])
             ->actions([
+                RestoreAction::make(),
                 Action::make('start')
                     ->label('Foto Sebelum')
                     ->icon('heroicon-o-play')
@@ -500,6 +509,8 @@ class ObChecksheetResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     // Atasan memindahkan tugas yang belum selesai ke OB lain (mis. petugas berhalangan).
                     BulkAction::make('reassign')
                         ->label('Ganti Petugas')
@@ -551,24 +562,6 @@ class ObChecksheetResource extends Resource
                         ->authorizeIndividualRecords('delete'),
                 ]),
             ]);
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $user = auth()->user();
-
-        if (! $user) {
-            return $query;
-        }
-
-        // Pengawas / Admin dapat melihat seluruh checksheet dari semua OB
-        if ($user->can('viewAll', ObChecksheet::class)) {
-            return $query;
-        }
-
-        // Petugas OB melihat checksheet miliknya dan tugas kolam bersama yang belum diambil
-        return $query->visibleTo($user);
     }
 
     public static function getRelations(): array
@@ -644,6 +637,7 @@ class ObChecksheetResource extends Resource
         $user = auth()->user();
 
         return $user !== null
+            && ! $record->trashed()
             && ($user->can('updateAll', ObChecksheet::class) || $record->user_id === $user->id);
     }
 

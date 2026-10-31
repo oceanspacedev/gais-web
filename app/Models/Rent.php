@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use App\Enums\ContractStatus;
 use App\Models\Concerns\ComputesRentBilling;
 use App\Models\Concerns\GeneratesSequentialCode;
@@ -20,7 +24,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class Rent extends Model
 {
-    use ComputesRentBilling, GeneratesSequentialCode, HasFactory, SoftDeletes;
+    use ComputesRentBilling, GeneratesSequentialCode, HasFactory, HasVisibility, SoftDeletes;
 
     public const CODE_PREFIX = 'RENT';
 
@@ -49,7 +53,7 @@ class Rent extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function updates(): HasMany
@@ -125,8 +129,14 @@ class Rent extends Model
         return $this->effectiveRow()->billingSummary();
     }
 
-    public function isAccessibleBy(User $user): bool
+    /**
+     * Semua pemegang izin melihat record di badan usaha yang bisa ia akses;
+     * record tanpa badan usaha terlihat oleh semua.
+     */
+    public static function visibility(): Visibility
     {
-        return $this->business_entity_id === null || $user->canAccessBusinessEntity($this->business_entity_id);
+        return Visibility::make()
+            ->require(new BusinessEntityRule)
+            ->grant(new EveryoneGrant);
     }
 }

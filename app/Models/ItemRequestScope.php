@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -27,17 +28,28 @@ class ItemRequestScope extends Model
 
     public function division(): BelongsTo
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsTo(Division::class)->withTrashed();
     }
 
     public function type(): BelongsTo
     {
-        return $this->belongsTo(ItemRequestType::class, 'item_request_type_id');
+        return $this->belongsTo(ItemRequestType::class, 'item_request_type_id')->withTrashed();
     }
 
     public function area(): BelongsTo
     {
-        return $this->belongsTo(Area::class);
+        return $this->belongsTo(Area::class)->withTrashed();
+    }
+
+    /**
+     * Cakupan sebuah divisi, dimemo selama satu request/job: dibaca untuk badge
+     * navigasi, tabel, widget, dan setiap baris.
+     *
+     * @return Collection<int, self>
+     */
+    public static function forDivision(int $divisionId): Collection
+    {
+        return once(fn (): Collection => self::query()->where('division_id', $divisionId)->get());
     }
 
     public function coversEverything(): bool

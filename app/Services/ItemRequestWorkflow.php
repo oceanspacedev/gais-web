@@ -273,7 +273,7 @@ class ItemRequestWorkflow
             return $query;
         }
 
-        // Subquery tanpa korelasi (whereIn) seperti ItemRequestVisibility, supaya
+        // Subquery tanpa korelasi (whereIn) seperti DivisionScopeGrant, supaya
         // MySQL cukup menghitungnya sekali.
         return $query->where(function (Builder $ready) use ($scopes): void {
             $ready->whereHas('approvals', fn (Builder $approvals) => $approvals
@@ -296,7 +296,7 @@ class ItemRequestWorkflow
                         if ($scope->area_id !== null) {
                             $inside->whereIn('item_requests.user_id', User::query()->select('users.id')->whereIn(
                                 'division_id',
-                                Division::query()->select('divisions.id')->where('area_id', $scope->area_id),
+                                Division::withTrashed()->select('divisions.id')->where('area_id', $scope->area_id),
                             ));
                         }
                     });

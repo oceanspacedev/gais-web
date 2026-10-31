@@ -8,10 +8,11 @@ use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource;
 use App\Models\Asset;
 use App\Models\AssetAttribute;
+use App\Models\AssetQrLabelHistory;
+use App\Models\AssetService;
 use App\Models\AssetTransferDetail;
 use App\Models\User;
 use App\Models\VehicleChecksheet;
-use App\Models\AssetQrLabelHistory;
 use App\Services\AssetQrLabelHistoryService;
 use App\Services\AssetQrService;
 use Carbon\Carbon;
@@ -35,7 +36,7 @@ class ViewAsset extends ViewRecord
 
     protected function getActions(): array
     {
-        return [
+        $actions = [
             Actions\ActionGroup::make([
                 Actions\Action::make('updateAttributeDocument')
                     ->label('Perbarui Dokumen (STNK/KIR)')
@@ -43,7 +44,7 @@ class ViewAsset extends ViewRecord
                     ->color('warning')
                     ->visible(fn (): bool => AssetResource::hasDocumentExpiryAttributes($this->record))
                     ->modalWidth('lg')
-                    ->modalHeading(fn (): string => 'Perbarui Dokumen: ' . $this->record->name)
+                    ->modalHeading(fn (): string => 'Perbarui Dokumen: '.$this->record->name)
                     ->modalSubmitActionLabel('Simpan Pembaruan')
                     ->form(fn (): array => AssetResource::attributeDocumentUpdateFormSchema($this->record))
                     ->action(function (array $data): void {
@@ -196,7 +197,7 @@ class ViewAsset extends ViewRecord
                             ->live()
                             ->afterStateUpdated(function (callable $set, $state) {
                                 if ($state) {
-                                    $allIds = AssetTransferDetail::where('asset_id', $state)->pluck('id')->toArray();
+                                    $allIds = $this->liveTransferDetails($state)->pluck('id')->toArray();
                                     $conflicts = $this->detectConflictingTransferDetails((int) $this->record->id, (int) $state);
                                     $conflictIds = $conflicts['source'] ?? [];
                                     $safeIds = array_values(array_diff($allIds, $conflictIds));
@@ -214,7 +215,7 @@ class ViewAsset extends ViewRecord
                                 }
 
                                 $source = $this->mergeableAssets()
-                                    ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+                                    ->withCount(['attributes', 'assetTransferDetails' => fn ($details) => $details->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed()), 'vehicleChecksheets'])
                                     ->find($sourceId);
 
                                 if (! $source) {
@@ -240,7 +241,7 @@ class ViewAsset extends ViewRecord
                                 $conflicts = $this->detectConflictingTransferDetails((int) $this->record->id, (int) $sourceId);
                                 $conflictIds = $conflicts['source'] ?? [];
 
-                                return AssetTransferDetail::where('asset_id', $sourceId)
+                                return $this->liveTransferDetails($sourceId)
                                     ->with(['assetTransfer' => fn ($q) => $q->with('fromUser', 'toUser')])
                                     ->get()
                                     ->mapWithKeys(function (AssetTransferDetail $detail) use ($conflictIds) {
@@ -263,7 +264,7 @@ class ViewAsset extends ViewRecord
                             ->helperText('Transfer bertanda ⚠️ KONFLIK otomatis tidak terpilih.')
                             ->columns(1)
                             ->visible(fn (callable $get): bool => filled($get('source_asset_id'))
-                                && AssetTransferDetail::where('asset_id', $get('source_asset_id'))->exists()),
+                                && $this->liveTransferDetails($get('source_asset_id'))->exists()),
                         Placeholder::make('target_conflicts_preview')
                             ->label('Transfer Aset Target yang Akan Dihapus (Konflik)')
                             ->content(function (callable $get): string {
@@ -363,6 +364,8 @@ class ViewAsset extends ViewRecord
                 }),
             Actions\EditAction::make(),
         ];
+
+        return $actions;
     }
 
     /**
@@ -377,7 +380,7 @@ class ViewAsset extends ViewRecord
      */
     protected function detectConflictingTransferDetails(int $targetAssetId, int $sourceAssetId): array
     {
-        $targetDetails = AssetTransferDetail::where('asset_id', $targetAssetId)
+        $targetDetails = $this->liveTransferDetails($targetAssetId)
             ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
@@ -389,7 +392,7 @@ class ViewAsset extends ViewRecord
                 'date' => $d->assetTransfer?->transfer_date,
             ]);
 
-        $sourceDetails = AssetTransferDetail::where('asset_id', $sourceAssetId)
+        $sourceDetails = $this->liveTransferDetails($sourceAssetId)
             ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
@@ -485,9 +488,7 @@ class ViewAsset extends ViewRecord
     {
         $user = auth()->user();
 
-        return Asset::query()
-            ->whereKeyNot($this->record->getKey())
-            ->when($user instanceof User, fn (Builder $query): Builder => $query->accessibleBy($user), fn (Builder $query): Builder => $query->whereRaw('1 = 0'));
+        return AssetResource::scopeToViewer(Asset::query()->whereKeyNot($this->record->getKey()), $user);
     }
 
     protected function performMerge(int $sourceAssetId, array $transferDetailIdsToMove = []): void
@@ -496,7 +497,7 @@ class ViewAsset extends ViewRecord
         $target = $this->record;
 
         $source = $this->mergeableAssets()
-            ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+            ->withCount(['attributes', 'assetTransferDetails' => fn ($details) => $details->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed()), 'vehicleChecksheets'])
             ->findOrFail($sourceAssetId);
 
         if ($source->id === $target->id) {
@@ -531,20 +532,23 @@ class ViewAsset extends ViewRecord
 
             // 3. Pindahkan asset_transfer_details yang dipilih (non-konflik)
             if (! empty($transferDetailIdsToMove)) {
-                AssetTransferDetail::where('asset_id', $source->id)
+                $this->liveTransferDetails($source->id)
                     ->whereIn('id', $transferDetailIdsToMove)
                     ->update(['asset_id' => $target->id]);
             }
 
             // Hapus transfer details yang konflik (tidak dipilih)
-            AssetTransferDetail::where('asset_id', $source->id)->delete();
+            $this->liveTransferDetails($source->id)->delete();
 
-            // 4. Pindahkan vehicle_checksheets
+            // 4. Pindahkan vehicle_checksheets dan riwayat servis
             VehicleChecksheet::where('asset_id', $source->id)
                 ->update(['asset_id' => $target->id]);
+            AssetService::withTrashed()->where('asset_id', $source->id)
+                ->update(['asset_id' => $target->id]);
 
-            // 5. Hapus aset sumber
-            $source->delete();
+            // 5. Hapus aset sumber permanen (QR-nya ikut lewat cascade): atribut, BA, checksheet,
+            //    dan servis sudah pindah, pemulihan hanya akan membuat aset kosong.
+            $source->forceDelete();
         });
 
         Notification::make()
@@ -654,5 +658,17 @@ class ViewAsset extends ViewRecord
 
         $asset->sale_notes = $data['sale_notes'] ?? null;
         $asset->save();
+    }
+
+    /**
+     * Rincian BA yang masih berlaku: BA di Sampah bukan riwayat aset.
+     *
+     * @return Builder<AssetTransferDetail>
+     */
+    private function liveTransferDetails(int|string|null $assetId): Builder
+    {
+        return AssetTransferDetail::query()
+            ->where('asset_id', $assetId)
+            ->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed());
     }
 }

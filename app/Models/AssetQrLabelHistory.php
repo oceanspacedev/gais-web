@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Storage;
@@ -10,6 +13,8 @@ use League\Flysystem\FilesystemException;
 
 class AssetQrLabelHistory extends Model
 {
+    use HasVisibility;
+
     public const ACTION_PRINT = 'print';
 
     public const ACTION_DOWNLOAD_PDF = 'download_pdf';
@@ -70,5 +75,13 @@ class AssetQrLabelHistory extends Model
 
             return false;
         }
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

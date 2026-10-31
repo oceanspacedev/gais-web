@@ -172,10 +172,11 @@
                 </div>
 
                 <div class="pg-block">
-                    <h3>Tiga hal yang perlu dipahami dulu</h3>
+                    <h3>Empat hal yang perlu dipahami dulu</h3>
                     <ul class="pg-list">
-                        <li><strong>Semua dibatasi per badan usaha.</strong> Kecuali super admin dan user dengan flag "Akses semua badan usaha", Anda hanya melihat data badan usaha Anda sendiri.</li>
+                        <li><strong>Semua dibatasi per badan usaha.</strong> Kecuali user dengan flag "Akses semua badan usaha", Anda hanya melihat data badan usaha Anda sendiri.</li>
                         <li><strong>Akses ditentukan permission, bukan nama role.</strong> Role hanyalah kumpulan permission yang diatur lewat Shield.</li>
+                        <li><strong>Hapus berarti masuk Sampah.</strong> Data yang dihapus tidak hilang: buka filter <strong>Sampah</strong> di setiap daftar untuk melihatnya lagi, lalu <strong>Pulihkan</strong> atau <strong>Hapus permanen</strong> sesuai izin Anda. Pengecualian: akun pengguna dihapus permanen.</li>
                         <li><strong>Pekerjaan lama tidak hilang.</strong> Data dari sumo-web diimpor lewat menu <strong>Pengaturan, Impor Data Sumo</strong> (atau <code>sumo:import</code>), dan kode lama seperti <code>REQ123</code> tetap dipakai.</li>
                     </ul>
                 </div>
@@ -692,7 +693,7 @@
                     <h3>Aturan penting</h3>
                     <ul class="pg-list">
                         <li>Pelapor melihat laporannya sendiri. Izin <code>view_all</code> melihat semua.</li>
-                        <li>Divisi HCM hanya melihat kategori UMUM (diatur di <code>config/problem-report.php</code>).</li>
+                        <li>Divisi bisa dibatasi ke jenis gangguan tertentu lewat menu Divisi, bagian Cakupan Laporan Gangguan (dari sumo: HCM hanya UMUM, MIS-IT selain UMUM).</li>
                         <li>Kategori dikelola di menu Lapor Gangguan, Kategori.</li>
                     </ul>
                 </div>
@@ -847,7 +848,7 @@
                                 <tr><td><code>app/Models</code>, <code>app/Policies</code></td><td>Data dan otorisasi</td></tr>
                                 <tr><td><code>app/Console/Commands</code></td><td><code>sumo:import</code>, <code>reminder:whatsapp</code>, <code>problem-reports:auto-confirm</code></td></tr>
                                 <tr><td><code>routes/web.php</code>, <code>routes/console.php</code></td><td>Route PDF dan QR, jadwal scheduler</td></tr>
-                                <tr><td><code>config/item-request.php</code>, <code>problem-report.php</code>, <code>sumo-import.php</code></td><td>Aturan modul sumo</td></tr>
+                                <tr><td><code>config/item-request.php</code>, <code>sumo-import.php</code></td><td>Aturan modul sumo</td></tr>
                                 <tr><td><code>database/migrations</code></td><td>Skema, permission, dan role (role sumo dibuat lewat migration, bukan seeder)</td></tr>
                                 <tr><td><code>docs/</code></td><td>Catatan teknis tambahan</td></tr>
                             </tbody>

@@ -33,21 +33,25 @@ class VehicleAssetAuditWorkbookExporterTest extends TestCase
         DB::purge('sqlite');
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name')->unique();
             $table->timestamps();
         });
         Schema::create('categories', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
         Schema::create('brands', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
         Schema::create('custom_asset_attributes', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('type')->default('text');
@@ -61,11 +65,13 @@ class VehicleAssetAuditWorkbookExporterTest extends TestCase
             $table->timestamps();
         });
         Schema::create('asset_locations', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('name');

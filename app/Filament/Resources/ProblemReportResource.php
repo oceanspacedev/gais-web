@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ProblemReportStatus;
 use App\Exceptions\ItemRequestException;
 use App\Filament\Resources\ProblemReportResource\Pages;
@@ -16,6 +17,9 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -33,6 +37,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -44,6 +49,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
  */
 class ProblemReportResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ProblemReport::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
@@ -71,33 +78,6 @@ class ProblemReportResource extends Resource
         return $count > 0 ? (string) $count : null;
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-
-        return static::scopeToViewer($query, auth()->user());
-    }
-
-    /**
-     * Aturan lihat yang sama dengan menu ini, juga dipakai tab di halaman user.
-     */
-    public static function scopeToViewer(Builder $query, mixed $viewer): Builder
-    {
-        if (! $viewer instanceof User) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        $query->visibleTo($viewer);
-
-        if (! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('problem_reports.business_entity_id')
-                ->orWhereIn('problem_reports.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
-    }
-
     public static function form(Schema $form): Schema
     {
         $viewer = auth()->user();
@@ -118,7 +98,7 @@ class ProblemReportResource extends Resource
                             ->visible($onBehalf),
                         Select::make('problem_report_category_id')
                             ->label('Jenis Gangguan')
-                            ->relationship('category', 'name')
+                            ->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->preload()
                             ->required(),
                         TextInput::make('title')
@@ -198,7 +178,8 @@ class ProblemReportResource extends Resource
             ])
             ->defaultSort('reported_at', 'desc')
             ->filters([
-                SelectFilter::make('problem_report_category_id')->label('Jenis')->relationship('category', 'name')->preload(),
+                TrashedFilter::make(),
+                SelectFilter::make('problem_report_category_id')->label('Jenis')->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
                 SelectFilter::make('status')->label('Status')->options(ProblemReportStatus::class),
                 SelectFilter::make('client_status')->label('Konfirmasi')->options([0 => 'Menunggu', 1 => 'Selesai']),
                 Filter::make('reported_at')
@@ -211,6 +192,7 @@ class ProblemReportResource extends Resource
                         ->when($data['until'] ?? null, fn (Builder $q, string $until) => $q->whereDate('reported_at', '<=', $until))),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 ActionGroup::make([
                     ...static::workflowActions(),
@@ -219,6 +201,8 @@ class ProblemReportResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([
@@ -238,7 +222,7 @@ class ProblemReportResource extends Resource
         $workflow = app(ProblemReportWorkflow::class);
         $user = fn (): ?User => auth()->user();
 
-        return [
+        $actions = [
             Action::make('process')
                 ->label('Proses (Executor)')
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -281,6 +265,8 @@ class ProblemReportResource extends Resource
                     'Terima kasih, laporan ditandai selesai.',
                 )),
         ];
+
+        return $actions;
     }
 
     public static function getPages(): array

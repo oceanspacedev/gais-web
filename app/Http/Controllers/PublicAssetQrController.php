@@ -24,9 +24,13 @@ class PublicAssetQrController extends Controller
         ]);
 
         $asset = $qr->asset;
-        if (! $asset) {
+
+        // Aset di Sampah (atau sumber penggabungan) diperlakukan seperti label yang tidak berlaku.
+        if (! $asset || $asset->trashed()) {
             return response()->view('qr.invalid', [], 404);
         }
+
+        $asset->setRelation('attributes', $asset->attributes->filter(fn ($attribute) => $attribute->customAttribute !== null && ! $attribute->customAttribute->trashed())->values());
 
         $lastSeenScan = AssetQrScan::query()
             ->where('asset_qr_id', $qr->id)
@@ -53,6 +57,8 @@ class PublicAssetQrController extends Controller
 
     public function storeLocation(Request $request, AssetQr $qr, AssetQrScanService $scanService): JsonResponse
     {
+        abort_if($qr->asset === null || $qr->asset->trashed(), 404);
+
         $data = $request->validate([
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],

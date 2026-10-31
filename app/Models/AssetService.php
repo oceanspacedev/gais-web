@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\OwnerGrant;
+use App\Access\Rules\PermissionGrant;
+use App\Access\Visibility;
 use App\Enums\AssetServiceStatus;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class AssetService extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'service_number',
@@ -55,8 +60,9 @@ class AssetService extends Model
 
     public static function generateServiceNumber(): string
     {
-        $prefix = 'SRV-' . Carbon::now()->format('Ym') . '-';
-        $latest = static::where('service_number', 'like', "{$prefix}%")
+        $prefix = 'SRV-'.Carbon::now()->format('Ym').'-';
+        // Termasuk servis terhapus: nomor servis unik dan tidak boleh terpakai ulang.
+        $latest = static::withTrashed()->where('service_number', 'like', "{$prefix}%")
             ->orderByDesc('id')
             ->value('service_number');
 
@@ -65,12 +71,12 @@ class AssetService extends Model
             $nextNumber = ((int) $matches[1]) + 1;
         }
 
-        return $prefix . str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $nextNumber, 4, '0', STR_PAD_LEFT);
     }
 
     public function asset(): BelongsTo
     {
-        return $this->belongsTo(Asset::class);
+        return $this->belongsTo(Asset::class)->withTrashed();
     }
 
     public function servicedByUser(): BelongsTo
@@ -80,7 +86,7 @@ class AssetService extends Model
 
     public function vendor(): BelongsTo
     {
-        return $this->belongsTo(Vendor::class);
+        return $this->belongsTo(Vendor::class)->withTrashed();
     }
 
     public function creator(): BelongsTo
@@ -100,6 +106,7 @@ class AssetService extends Model
         }
 
         $vendorName = $this->vendor?->name ?? $this->technician_name ?? 'Vendor Luar';
+
         return "Eksternal ({$vendorName})";
     }
 
@@ -109,5 +116,18 @@ class AssetService extends Model
         if ($itemsTotal > 0 || $this->items()->exists()) {
             $this->update(['total_cost' => $itemsTotal]);
         }
+    }
+
+    /**
+     * Pembuat dan teknisi yang ditugaskan melihat servisnya; pemegang
+     * "Lihat Data Semua User" melihat semua servis.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(
+            new PermissionGrant('view_all_asset::service'),
+            new OwnerGrant('created_by'),
+            new OwnerGrant('serviced_by_user_id'),
+        );
     }
 }

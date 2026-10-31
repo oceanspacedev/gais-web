@@ -111,13 +111,22 @@ Hak akses ditentukan **permission Filament Shield** pada role, lalu dipersempit 
 
 ### Batas badan usaha
 
-`super_admin` melihat semua; user dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah yang dicentang di form user (`business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin.
+User dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah yang dicentang di form user (`business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin.
 
-Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`Asset::scopeAccessibleBy`: badan usaha pemilik, penerima BA terakhir, atau pemegang), BA termasuk unduhan PDF (`AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya), serta modul sumo lewat trait `HasBusinessEntityAccess`. Impor sumo memetakan badan usaha lama ke badan usaha GAIS dan tidak pernah membuat yang baru.
+Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`AssetBusinessEntityRule`: badan usaha pemilik, penerima BA terakhir, atau pemegang), BA termasuk unduhan PDF (`AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya), pekerjaan vendor, serta modul sumo, semuanya lewat `BusinessEntityRule` di `visibility()` model (lihat [Lapisan visibilitas](#lapisan-visibilitas)). Impor sumo memetakan badan usaha lama ke badan usaha GAIS dan tidak pernah membuat yang baru.
 
 ### Visibilitas Pengajuan Barang dan Lapor Gangguan
 
-Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). Cakupan yang ditandai **menyetujui jumlah** (`approves_quantity`) menjadikan tahap Manager wajib untuk pengajuan di dalamnya: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya (sumo: ATK dari area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT). `ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`; awalan `!` berarti semua jenis kecuali yang disebut (HCM hanya UMUM, MIS-IT selain UMUM).
+Tidak ada role hard-coded seperti di sumo-web. Aturan siapa melihat apa dirangkai per model di `app/Access` (lihat [Lapisan visibilitas](#lapisan-visibilitas)); `ItemRequest::visibility()` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). Cakupan yang ditandai **menyetujui jumlah** (`approves_quantity`) menjadikan tahap Manager wajib untuk pengajuan di dalamnya: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya (sumo: ATK dari area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT). `ProblemReport::visibility()` serupa, dengan cakupan jenis gangguan per divisi di `problem_report_scopes` (menu Divisi, bagian Cakupan Laporan Gangguan): jenis yang disebut, atau dengan centang **Kecualikan** semua jenis kecuali yang disebut (sumo: HCM hanya UMUM, MIS-IT selain UMUM).
+
+### Lapisan visibilitas
+
+Aturan "siapa melihat apa" per model dirangkai di `app/Access`, bukan ditulis ulang di tiap resource. `Visibility::make()->require(...)->grant(...)` menggabungkan pembatas (AND, mis. `BusinessEntityRule`) dan pemberi akses (OR, mis. `OwnerGrant`, `ApproverOfOwnerGrant`, `PermissionGrant`, serta rule modul di `app/Access/ItemRequests` dan `app/Access/ProblemReports`). Setiap rule punya dua wajah yang harus sepakat: `apply()` membatasi query daftar dan `allows()` memutuskan satu record dari relasi yang sudah dimuat (null = jatuh ke query). Model memakai trait `HasVisibility` (`visibleTo()`, `isVisibleTo()`), resource memakai `ScopesVisibleRecords` (mengisi `getEloquentQuery()`; ganti `baseVisibleQuery()` bila perlu), policy memakai `AuthorizesVisibleRecords` (`visible()`). `VisibilityArchitectureTest` memastikan ketiganya terpasang untuk setiap model ber-`HasVisibility`, dan `tests/Support/AssertsVisibilityContract.php` membandingkan query dengan keputusan per record. Semua model fitur memakainya (`VisibilityArchitectureTest` menolak resource baru yang tidak), dengan rule khusus untuk aset (`AssetBusinessEntityRule`: badan usaha pemilik, penerima, atau pemegang), user (`HidesSuperAdminsRule`, `BusinessEntityMemberGrant`, `SelfGrant`), checksheet OB (`UnclaimedPoolGrant`), dan servis aset (pembuat atau teknisi); master data memakai `EveryoneGrant`. Pengecualian yang disengaja: Roles dan Exceptions (model vendor), Impor Data Sumo dan Rekonsiliasi Aset (alat impor dengan izin sendiri).
+
+### Soft delete
+
+Semua model fitur memakai `SoftDeletes` (migrasi `2026_10_31_000002` melengkapi aset, BA, servis aset, master aset, badan usaha, jabatan, vendor, dan cutoff pengajuan). Hapus dari panel hanya mengisi `deleted_at`; setiap daftar punya filter **Sampah** (`TrashedFilter`), aksi **Pulihkan** per baris dan massal, serta **Hapus permanen** massal, dan halaman view bisa membuka record terhapus (`ScopesVisibleRecords::getRecordRouteBindingEloquentQuery`). Record di Sampah hanya-baca: ubah, hapus, replikasi, dan semua aksi kustom ditolak (policy `editable()`, `ScopesVisibleRecords::canEdit()`, dan aturan global `Action::configureUsing` di `AppServiceProvider`) sampai dipulihkan. `getEloquentQuery()` tetap menyembunyikan record terhapus, jadi badge navigasi, widget, dan ekspor tidak menghitungnya. Aturan lihat tidak membedakan status terhapus: siapa yang boleh melihat record, boleh melihatnya di Sampah dan memulihkannya. Izin `restore_*`, `restore_any_*`, `force_delete_*`, `force_delete_any_*` dibuat migrasi `2026_10_31_000003`; role dan user yang boleh menghapus otomatis boleh memulihkan, hapus permanen hanya role super admin kecuali diberikan lewat Pengaturan > Roles (form Role menampilkan izin ini karena `restore`/`forceDelete` ada di `policies.methods` Shield). Hapus permanen record anak (pembaharuan kontrak, barang pengajuan) memakai izin hapus permanen induknya. Relasi `belongsTo` ke model yang soft delete memakai `withTrashed()` supaya riwayat (BA, servis, atribut aset) tetap utuh, sedangkan select dan filter relasi memakai `withoutTrashed()` supaya record terhapus tidak bisa dipilih lagi. Nomor unik (nomor BA, nomor servis, kode sewa, nomor checksheet kendaraan) dihitung termasuk record terhapus dan tidak dipakai ulang; nilai unik yang dipakai impor (nama badan usaha, kode gudang) memulihkan baris di Sampah alih-alih menggandakannya. Kode tanpa user (QR publik, pengingat, WhatsApp) mengabaikan record di Sampah, dan penggabungan aset menghapus permanen aset sumbernya. Tanpa soft delete: `users` (identitas login dan sinkron Talenta/sumo memakai kolom unik; butuh desain pulihkan/gabung) dan History Label QR (log hanya-baca).
+
 
 ### Role
 
@@ -255,14 +264,15 @@ flowchart TB
 | `app/Filament/Actions`, `Exports` | Export format audit CSA/kendaraan; exporter aset, BA, servis, checksheet OB |
 | `app/Http/Controllers` | PDF, label QR aset dan sumo, QR publik, upload kamera, unduhan bertanda tangan, `Integrations/WhatsappAssetQueryController`, `GET /api/user` |
 | `app/Models` | Model Eloquent; `Concerns/HasBusinessEntityAccess` untuk scope badan usaha |
+| `app/Access` | Aturan lihat per model: `Visibility`, rule generik (`Rules/`) dan per modul (`ItemRequests/`, `ProblemReports/`), trait `HasVisibility`, `ScopesVisibleRecords`, `AuthorizesVisibleRecords` |
 | `app/Enums` | Status aset, BA, servis, kontrak, pengajuan, laporan gangguan, notifikasi WA |
 | `app/Policies` | Authorization panel dan unduhan PDF (hasil `shield:generate`) |
 | `app/Services` | Workflow pengajuan/gangguan, rekonsiliasi CSA/kendaraan, QR, notifikasi, pengingat kontrak, gateway WhatsApp, `TalentaUserImportService`, `Sumo/` (importer dan loader dump) |
-| `app/Support` | Normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `ObservabilityAccess`, `EnsureAssetExportPermissions` |
+| `app/Support` | Normalizer, `StoredFile`, `LegacyUpload`, `ObservabilityAccess`, `EnsureAssetExportPermissions` |
 | `app/Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan |
 | `app/Jobs`, `app/Mail` | Job notifikasi aset, `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`), job export Filament yang ditimpa |
 | `app/Console/Commands` | `notifications:send-scheduled`, `reminder:whatsapp`, `problem-reports:auto-confirm`, `sumo:import`, `assets:generate-missing-qrs`, `storage:migrate-to-s3`, `storage:check-s3`, `vehicle-audit:validate-masters` |
-| `config/` | Konfigurasi domain: `asset-transfer.php`, `asset-reconciliation.php`, `vehicle-asset-reconciliation.php`, `item-request.php`, `problem-report.php`, `sumo-import.php` |
+| `config/` | Konfigurasi domain: `asset-transfer.php`, `asset-reconciliation.php`, `vehicle-asset-reconciliation.php`, `item-request.php`, `sumo-import.php` |
 | `database/migrations` | Evolusi schema, termasuk permission dan role custom |
 | `database/seeders` | Super Admin Shield plus master kategori/badan usaha/jabatan/merek; `GuideCaptureSeeder` untuk screenshot panduan |
 | `database/sumo` | Aturan impor dan pemulihan data legacy sumo-web |
@@ -514,11 +524,11 @@ Gunakan scope kecil dan satu tujuan per branch.
 | Kebutuhan | Lokasi umum |
 |---|---|
 | Tambah/ubah tabel | `database/migrations` dan `app/Models` |
-| Hak akses panel | `app/Policies`, permission Shield lewat migrasi, `app/Support/*Visibility.php` |
+| Hak akses panel | `app/Policies`, permission Shield lewat migrasi, aturan lihat di `app/Access` |
 | Fitur panel web | `app/Filament/Resources`, `Pages`, atau `Widgets`; grup baru didaftarkan di `AdminPanelProvider` dan `NavigationGroupsTest` |
 | Aset, BA, stok | `app/Models/Asset.php`, `AssetTransfer.php`, `config/asset-transfer.php` |
 | Rekonsiliasi | `app/Services/*Reconciliation*`, `app/Services/*AuditWorkbook*`, `config/*-reconciliation.php` |
-| Pengajuan Barang / Lapor Gangguan | `app/Services/ItemRequestWorkflow.php`, `ProblemReportWorkflow.php`, `app/Support/*Visibility.php`, `config/item-request.php`, `config/problem-report.php` |
+| Pengajuan Barang / Lapor Gangguan | `app/Services/ItemRequestWorkflow.php`, `ProblemReportWorkflow.php`, `app/Access/ItemRequests`, `app/Access/ProblemReports`, `config/item-request.php` |
 | Asuransi, sewa, pengingat WA | `app/Services/ContractReminderService.php`, `app/Filament/Pages/WaNotificationSettings.php` |
 | Impor sumo | `app/Services/Sumo`, `app/Jobs/Sumo`, `config/sumo-import.php`, `tests/Support/SumoLegacyFixture.php` |
 | WhatsApp | `app/Services/WhatsAppGateway.php`, `WhatsappService.php`, `Integrations/WhatsappAssetQueryController` |
@@ -531,7 +541,11 @@ Gunakan scope kecil dan satu tujuan per branch.
 
 - Jangan mengubah schema melalui migration yang sudah pernah berjalan di shared environment; tambahkan migration baru.
 - Akses baru selalu lewat permission Shield (dibuat di migrasi dan diberikan ke role yang memakainya), bukan pengecekan nama role.
-- Query data per badan usaha wajib memakai `accessibleBy`, dan policy wajib menolak record di luar akses.
+- Data per badan usaha dibatasi lewat `BusinessEntityRule` (atau `AssetBusinessEntityRule`) di `visibility()` model, bukan query manual di resource.
+- Setiap model fitur memakai `HasVisibility` dan `SoftDeletes`; resource-nya `ScopesVisibleRecords` plus filter Sampah dan aksi Pulihkan, policy-nya `AuthorizesVisibleRecords` dengan dua belas metode standar Shield yang semua aksi per record-nya memanggil `visible()` (`VisibilityArchitectureTest` memeriksa semuanya), dan aturan lihat diuji dengan `Tests\Support\AssertsVisibilityContract`.
+- Daftar untuk viewer selalu lewat `Resource::getEloquentQuery()` (badge, widget, ekspor) atau `Resource::scopeToViewer()` (relation manager, halaman, service); `visibleTo()` tidak dipanggil langsung di luar `app/Access` dan `app/Models`. Satu record diperiksa lewat policy (`authorize('view', ...)`). Pengecualian yang disengaja: QR publik, integrasi WhatsApp, pengingat, dan importer yang berjalan tanpa user.
+- Record anak (detail pengajuan, pembaharuan kontrak) mengikuti induknya: policy memakai `visibleParent()` atau mendelegasikan ke policy induk, dan relation manager yang bisa mengubahnya punya filter Sampah dan aksi Pulihkan.
+- Relasi `belongsTo` ke model soft delete selalu `withTrashed()` (riwayat utuh), subquery scope yang lewat tabel itu juga `withTrashed()` (query dan policy sepakat), sedangkan select dan filter relasi memakai `withoutTrashed()`.
 - Pindah pemegang aset hanya lewat `AssetTransfer::applyLifecycleToAssets`.
 - Field user yang disinkronkan dari Talenta (`employee_id` terisi) hanya berubah lewat import ulang JSON Talenta.
 - Perubahan konfigurasi wajib diikuti update `.env.example` dan README tanpa memasukkan secret.

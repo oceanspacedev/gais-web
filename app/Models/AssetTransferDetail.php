@@ -17,11 +17,11 @@ class AssetTransferDetail extends Model
 
     public function assetTransfer()
     {
-        return $this->belongsTo(AssetTransfer::class);
+        return $this->belongsTo(AssetTransfer::class)->withTrashed();
     }
 
     public function asset()
     {
-        return $this->belongsTo(Asset::class);
+        return $this->belongsTo(Asset::class)->withTrashed();
     }
 }

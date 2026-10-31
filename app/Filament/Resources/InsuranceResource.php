@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ContractStatus;
 use App\Filament\Resources\InsuranceResource\Pages;
 use App\Filament\Resources\InsuranceResource\RelationManagers\UpdatesRelationManager;
 use App\Models\BusinessEntity;
 use App\Models\Insurance;
-use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
@@ -23,6 +26,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -35,6 +39,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
  */
 class InsuranceResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Insurance::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
@@ -55,20 +61,6 @@ class InsuranceResource extends Resource
         return __('Asuransi');
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        if ($viewer instanceof User && ! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('insurances.business_entity_id')
-                ->orWhereIn('insurances.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
-    }
-
     public static function form(Schema $form): Schema
     {
         return $form
@@ -80,8 +72,8 @@ class InsuranceResource extends Resource
                         TextInput::make('policy_number')->label('Nomor Polis')->required()->maxLength(255),
                         TextInput::make('insured_name')->label('Nama Tertanggung')->required()->maxLength(255),
                         TextInput::make('warehouse_code')->label('Kode Gudang')->maxLength(255),
-                        Select::make('insurance_category_id')->label('Kategori')->relationship('category', 'name')->preload()->searchable()->required(),
-                        Select::make('insurance_scope_id')->label('Cakupan')->relationship('scope', 'name')->preload()->searchable()->required(),
+                        Select::make('insurance_category_id')->label('Kategori')->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable()->required(),
+                        Select::make('insurance_scope_id')->label('Cakupan')->relationship('scope', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable()->required(),
                         Select::make('business_entity_id')
                             ->label('Badan Usaha')
                             ->options(fn (?Insurance $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
@@ -93,8 +85,8 @@ class InsuranceResource extends Resource
                 Section::make('Nilai dan Premi')
                     ->columns(2)
                     ->schema([
-                        Select::make('stock_provider_id')->label('Provider Asuransi Stok')->relationship('stockProvider', 'name')->preload()->searchable(),
-                        Select::make('building_provider_id')->label('Provider Asuransi Bangunan')->relationship('buildingProvider', 'name')->preload()->searchable(),
+                        Select::make('stock_provider_id')->label('Provider Asuransi Stok')->relationship('stockProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable(),
+                        Select::make('building_provider_id')->label('Provider Asuransi Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable(),
                         TextInput::make('stock_worth')->label('Nilai Stok')->numeric()->prefix('Rp'),
                         TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp'),
                         TextInput::make('actual_stock_worth')->label('Nilai Stok Aktual')->numeric()->prefix('Rp'),
@@ -168,6 +160,7 @@ class InsuranceResource extends Resource
             ])
             ->defaultSort(fn (Builder $query, string $direction): Builder => static::orderByEffectiveExpiry($query, $direction))
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('status')
                     ->label('Status')
                     ->options(ContractStatus::class)
@@ -177,8 +170,8 @@ class InsuranceResource extends Resource
                             ->where('insurances.status', $data['value'])
                             ->orWhereHas('updates', fn (Builder $updates) => $updates->where('status', $data['value'])))
                         : $query),
-                SelectFilter::make('insurance_category_id')->label('Kategori')->relationship('category', 'name')->preload(),
-                SelectFilter::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name')->preload(),
+                SelectFilter::make('insurance_category_id')->label('Kategori')->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
+                SelectFilter::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
                 Filter::make('active')
                     ->label('Masih berjalan')
                     ->toggle()
@@ -191,12 +184,15 @@ class InsuranceResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->activeContracts()->dueWithin(30)),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 EditAction::make(),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([ExcelExport::make('asuransi')->fromTable()->withFilename('asuransi-'.now()->format('Ymd-His'))])

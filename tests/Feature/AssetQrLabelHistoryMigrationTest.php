@@ -21,7 +21,7 @@ class AssetQrLabelHistoryMigrationTest extends AssetQrLabelTestCase
             'asset_ids' => $ids,
             'asset_count' => count($ids),
         ]));
-        $deleted->delete();
+        $deleted->forceDelete(); // aset benar-benar hilang (soft delete masih menyimpan barisnya)
 
         (require database_path('migrations/2026_09_24_000004_add_storage_disks_to_asset_files.php'))->down();
         (require database_path('migrations/2026_09_24_000003_add_file_to_asset_qr_label_histories.php'))->down();

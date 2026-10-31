@@ -2,31 +2,39 @@
 
 namespace Tests\Feature;
 
+use App\Models\BusinessEntity;
 use App\Models\Division;
 use App\Models\ProblemReport;
 use App\Models\ProblemReportCategory;
+use App\Models\ProblemReportScope;
 use App\Models\User;
-use App\Support\ProblemReportVisibility;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\AssertsVisibilityContract;
 use Tests\TestCase;
 
 class ProblemReportVisibilityTest extends TestCase
 {
-    use DatabaseTransactions;
+    use AssertsVisibilityContract, DatabaseTransactions;
 
     public function test_policy_check_agrees_with_the_visibility_query(): void
     {
         app(PermissionRegistrar::class)->forgetCachedPermissions();
-        config(['problem-report.division_categories' => ['HCM-test' => ['UMUM'], 'IT-test' => ['!UMUM']]]);
 
-        // Nama beda huruf besar/kecil: whereIn('name') di MySQL tetap cocok.
         $general = ProblemReportCategory::create(['name' => 'Umum']);
         $it = ProblemReportCategory::create(['name' => 'IT-test']);
         $retired = ProblemReportCategory::create(['name' => 'UMUM']);
         $hcm = Division::create(['name' => 'HCM-test']);
         $itDivision = Division::create(['name' => 'IT-test']);
+        $unrestricted = Division::create(['name' => 'FREE-test']);
+
+        // Sumo: HCM hanya UMUM (dua jenis bernama Umum, termasuk yang nanti dihapus),
+        // executor lain selain UMUM.
+        foreach ([$general, $retired] as $category) {
+            ProblemReportScope::create(['division_id' => $hcm->id, 'problem_report_category_id' => $category->id]);
+            ProblemReportScope::create(['division_id' => $itDivision->id, 'problem_report_category_id' => $category->id, 'excluded' => true]);
+        }
 
         $reporter = User::factory()->create();
         $viewAll = Permission::findOrCreate('view_all_problem::report', 'web');
@@ -35,9 +43,15 @@ class ProblemReportVisibilityTest extends TestCase
             'reporter' => $reporter,
             'stranger' => User::factory()->create(),
             'view all' => User::factory()->create()->givePermissionTo($viewAll),
+            'view all, unrestricted division' => User::factory()->create(['division_id' => $unrestricted->id])->givePermissionTo($viewAll),
             'view all, restricted division' => User::factory()->create(['division_id' => $hcm->id])->givePermissionTo($viewAll),
             'view all, excluded category' => User::factory()->create(['division_id' => $itDivision->id])->givePermissionTo($viewAll),
+            'restricted division without permission' => User::factory()->create(['division_id' => $hcm->id]),
         ];
+
+        $otherEntity = BusinessEntity::create(['name' => '__prv_other__']);
+        $restrictedReporter = User::factory()->create(['business_entity_id' => BusinessEntity::create(['name' => '__prv_home__'])->id]);
+        $viewers['restricted reporter'] = $restrictedReporter;
 
         $reports = [
             $this->report($reporter, $general),
@@ -46,34 +60,26 @@ class ProblemReportVisibilityTest extends TestCase
             $this->report(User::factory()->create(), $general),
             $this->report(User::factory()->create(), $retired),
         ];
+        $outside = $this->report($restrictedReporter, $general);
+        $outside->forceFill(['business_entity_id' => $otherEntity->id])->save();
+        $reports[] = $outside;
         $trashed = $this->report($reporter, $general);
         $trashed->delete();
         $retired->delete();
 
         $ids = [...array_map(fn (ProblemReport $report): int => $report->id, $reports), $trashed->id];
 
-        // Sumo: HCM hanya UMUM, executor lain selain UMUM (laporan tanpa jenis ikut tersembunyi).
-        $this->assertSame([$reports[0]->id, $reports[3]->id, $reports[4]->id], ProblemReport::query()->whereKey($ids)->visibleTo($viewers['view all, restricted division'])->orderBy('id')->pluck('id')->all());
-        $this->assertSame([$reports[1]->id], ProblemReport::query()->whereKey($ids)->visibleTo($viewers['view all, excluded category'])->orderBy('id')->pluck('id')->all());
+        // Laporan tanpa jenis ikut tersembunyi bagi divisi yang dibatasi.
+        $this->assertSame([$reports[0]->id, $reports[3]->id, $reports[4]->id], $this->visibleIds($viewers['view all, restricted division'], $ids));
+        $this->assertSame([$reports[1]->id], $this->visibleIds($viewers['view all, excluded category'], $ids));
+        $this->assertSame(array_map(fn (ProblemReport $report): int => $report->id, array_slice($reports, 0, 5)), $this->visibleIds($viewers['view all, unrestricted division'], $ids), 'Lihat semua tetap dibatasi badan usaha.');
+        $this->assertSame([], $this->visibleIds($restrictedReporter, $ids), 'Laporan sendiri di badan usaha lain tetap tersembunyi.');
+        $this->assertSame([$reports[0]->id, $reports[1]->id, $reports[2]->id], $this->visibleIds($viewers['reporter'], $ids));
 
-        foreach ($viewers as $label => $viewer) {
-            $visible = ProblemReport::query()->whereKey($ids)->visibleTo($viewer)->pluck('id')->all();
-
-            $loadings = [
-                'eager' => ProblemReport::withTrashed()->whereKey($ids)->with('category')->get(),
-                'lazy' => ProblemReport::withTrashed()->whereKey($ids)->get(),
-            ];
-
-            foreach ($loadings as $loading => $records) {
-                foreach ($records as $record) {
-                    $this->assertSame(
-                        in_array($record->id, $visible, true),
-                        ProblemReportVisibility::allows($viewer, $record),
-                        "{$label} / {$loading} / laporan #{$record->id}",
-                    );
-                }
-            }
-        }
+        $this->assertQueryAndPolicyAgree(ProblemReport::class, $viewers, $ids, [
+            'eager' => ['category'],
+            'lazy' => [],
+        ]);
     }
 
     private function report(User $user, ?ProblemReportCategory $category): ProblemReport
@@ -83,5 +89,14 @@ class ProblemReportVisibilityTest extends TestCase
             'problem_report_category_id' => $category?->id,
             'reported_at' => now(),
         ]);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     * @return list<int>
+     */
+    private function visibleIds(User $viewer, array $ids): array
+    {
+        return ProblemReport::query()->whereKey($ids)->visibleTo($viewer)->orderBy('id')->pluck('id')->all();
     }
 }

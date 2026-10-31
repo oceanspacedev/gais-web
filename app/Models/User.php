@@ -4,6 +4,11 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\SelfGrant;
+use App\Access\Users\BusinessEntityMemberGrant;
+use App\Access\Users\HidesSuperAdminsRule;
+use App\Access\Visibility;
 use App\Models\Concerns\HasBusinessEntityAccess;
 use App\Support\IndexedPermissionRegistrar;
 use App\Support\PhoneNumber;
@@ -28,7 +33,7 @@ use function Illuminate\Support\enum_value;
 
 class User extends Authenticatable implements FilamentUser, HasName
 {
-    use HasApiTokens, HasBusinessEntityAccess, HasFactory, HasPanelShield, Notifiable;
+    use HasApiTokens, HasBusinessEntityAccess, HasFactory, HasPanelShield, HasVisibility, Notifiable;
     use HasRoles {
         checkPermissionTo as private checkPermissionToUncached;
     }
@@ -234,17 +239,17 @@ class User extends Authenticatable implements FilamentUser, HasName
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function jobTitle(): BelongsTo
     {
-        return $this->belongsTo(JobTitle::class);
+        return $this->belongsTo(JobTitle::class)->withTrashed();
     }
 
     public function division(): BelongsTo
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsTo(Division::class)->withTrashed();
     }
 
     /**
@@ -332,5 +337,17 @@ class User extends Authenticatable implements FilamentUser, HasName
         return User::where('name', $this->name)
             ->where('id', '!=', $this->id)  // Hindari perbandingan dengan dirinya sendiri
             ->exists();
+    }
+
+    /**
+     * Akun super admin hanya terlihat oleh super admin. Selebihnya user melihat
+     * akunnya sendiri dan user di badan usaha yang bisa ia akses (semua user
+     * bila berakses semua badan usaha). Sama dengan UserPolicy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new HidesSuperAdminsRule)
+            ->grant(new BusinessEntityMemberGrant, new SelfGrant);
     }
 }

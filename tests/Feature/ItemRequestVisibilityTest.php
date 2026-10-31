@@ -3,20 +3,21 @@
 namespace Tests\Feature;
 
 use App\Models\Area;
+use App\Models\BusinessEntity;
 use App\Models\Division;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestScope;
 use App\Models\ItemRequestType;
 use App\Models\User;
-use App\Support\ItemRequestVisibility;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
+use Tests\Support\AssertsVisibilityContract;
 use Tests\TestCase;
 
 class ItemRequestVisibilityTest extends TestCase
 {
-    use DatabaseTransactions;
+    use AssertsVisibilityContract, DatabaseTransactions;
 
     private ItemRequestType $atk;
 
@@ -127,8 +128,13 @@ class ItemRequestVisibilityTest extends TestCase
         $hoUser = User::factory()->create(['division_id' => $hoDivision->id]);
         $closedUser = User::factory()->create(['division_id' => $closedDivision->id]);
 
+        // Badan usaha membatasi semua grant, termasuk pemohon dan atasannya.
+        $otherEntity = BusinessEntity::create(['name' => '__irv_other__']);
+        $restrictedRequester = User::factory()->create(['approver_user_id' => $manager->id, 'business_entity_id' => BusinessEntity::create(['name' => '__irv_home__'])->id]);
+
         $viewers = [
             'requester' => $requester,
+            'restricted requester' => $restrictedRequester,
             'manager' => $manager,
             'stranger' => User::factory()->create(),
             'accounting' => $this->userWith(['approve_accounting_item::request']),
@@ -150,6 +156,8 @@ class ItemRequestVisibilityTest extends TestCase
             $this->request($hoUser, $retiredType),
             ItemRequest::create(['user_id' => null, 'item_request_type_id' => $this->asset->id, 'requested_at' => now()]),
             ItemRequest::create(['user_id' => null, 'item_request_type_id' => $this->atk->id, 'requested_at' => now()]),
+            ItemRequest::create(['user_id' => $restrictedRequester->id, 'item_request_type_id' => $this->atk->id, 'requested_at' => now(), 'business_entity_id' => $otherEntity->id]),
+            ItemRequest::create(['user_id' => $restrictedRequester->id, 'item_request_type_id' => $this->atk->id, 'requested_at' => now(), 'business_entity_id' => $restrictedRequester->business_entity_id]),
         ];
         $trashed = $this->request($requester, $this->atk);
         $trashed->delete();
@@ -158,25 +166,13 @@ class ItemRequestVisibilityTest extends TestCase
 
         $ids = [...array_map(fn (ItemRequest $request): int => $request->id, $requests), $trashed->id];
 
-        foreach ($viewers as $label => $viewer) {
-            $visible = ItemRequest::query()->whereKey($ids)->visibleTo($viewer)->pluck('id')->all();
+        $this->assertSame([$requests[9]->id], ItemRequest::query()->whereKey($ids)->where('user_id', $restrictedRequester->id)->visibleTo($restrictedRequester)->pluck('id')->all(), 'Pengajuan sendiri di badan usaha lain tetap tersembunyi.');
 
-            // Seperti di tabel (relasi dimuat) dan seperti halaman view/edit (tanpa relasi).
-            $loadings = [
-                'eager' => ItemRequest::withTrashed()->whereKey($ids)->with(['user.division', 'type'])->get(),
-                'lazy' => ItemRequest::withTrashed()->whereKey($ids)->get(),
-            ];
-
-            foreach ($loadings as $loading => $records) {
-                foreach ($records as $record) {
-                    $this->assertSame(
-                        in_array($record->id, $visible, true),
-                        ItemRequestVisibility::allows($viewer, $record),
-                        "{$label} / {$loading} / pengajuan #{$record->id}",
-                    );
-                }
-            }
-        }
+        // Seperti di tabel (relasi dimuat) dan seperti halaman view/edit (tanpa relasi).
+        $this->assertQueryAndPolicyAgree(ItemRequest::class, $viewers, $ids, [
+            'eager' => ['user.division', 'type'],
+            'lazy' => [],
+        ]);
     }
 
     /**

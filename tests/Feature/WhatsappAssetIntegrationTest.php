@@ -314,6 +314,7 @@ class WhatsappAssetIntegrationTest extends TestCase
     protected function createSchema(): void
     {
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('format')->nullable();
@@ -322,6 +323,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('job_titles', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('title');
             $table->timestamps();
@@ -339,6 +341,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('categories', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->unsignedBigInteger('parent_id')->nullable();
@@ -346,12 +349,14 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('brands', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
 
         Schema::create('asset_locations', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('address')->nullable();
@@ -360,6 +365,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->date('purchase_date')->nullable();
             $table->unsignedBigInteger('business_entity_id')->nullable();
@@ -388,6 +394,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('asset_transfers', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id');
             $table->string('document_type', 32)->nullable();
@@ -408,6 +415,7 @@ class WhatsappAssetIntegrationTest extends TestCase
         });
 
         Schema::create('custom_asset_attributes', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('type');

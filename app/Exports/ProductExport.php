@@ -3,6 +3,7 @@
 namespace App\Exports;
 
 use App\Exports\Concerns\ExportsTemplateRows;
+use App\Filament\Resources\ProductResource;
 use App\Imports\ProductImport;
 use App\Models\Product;
 use Illuminate\Support\Collection;
@@ -28,7 +29,7 @@ class ProductExport implements FromCollection, WithHeadings, WithMapping
      */
     public function collection(): Collection
     {
-        return Product::query()->with(['category', 'unitType'])->orderBy('name')->orderBy('id')->get();
+        return ProductResource::getEloquentQuery()->with(['category', 'unitType'])->orderBy('name')->orderBy('id')->get();
     }
 
     /**

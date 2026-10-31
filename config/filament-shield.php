@@ -65,6 +65,7 @@ return [
         'generate' => true,
         'methods' => [
             'viewAny', 'view', 'create', 'update', 'delete', 'deleteAny',
+            'restore', 'restoreAny', 'forceDelete', 'forceDeleteAny',
         ],
         'single_parameter_methods' => [
             'viewAny',

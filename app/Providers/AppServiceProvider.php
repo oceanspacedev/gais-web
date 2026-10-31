@@ -70,13 +70,19 @@ use Apriansyahrs\MekayaTheme\Mekaya;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
+use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ExportBulkAction;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Jobs\ExportCompletion;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Exports\Jobs\PrepareCsvExport;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\Imports\Jobs\ImportCsv;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Resources\Resource;
@@ -85,9 +91,11 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Support\Facades\FilamentColor;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Filament\Widgets\Widget;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -159,6 +167,22 @@ class AppServiceProvider extends ServiceProvider
         ExportBulkAction::configureUsing(fn (ExportBulkAction $action) => $action->fileDisk(fn (): string => config('filesystems.default')));
         // Pencarian tabel sudah di bawah ~200 ms, jadi tunggu ketikan lebih singkat dari bawaan 500 ms.
         Table::configureUsing(fn (Table $table) => $table->searchDebounce('300ms'));
+
+        // Record di Sampah hanya-baca: setiap aksi ber-record disembunyikan kecuali Lihat, Pulihkan, dan Hapus permanen.
+        Action::configureUsing(function (Action $action): void {
+            if ($action instanceof ViewAction || $action instanceof RestoreAction || $action instanceof ForceDeleteAction) {
+                return;
+            }
+
+            $action->hidden(fn (?Model $record): bool => $record instanceof Model && method_exists($record, 'trashed') && $record->trashed());
+        });
+
+        // Soft delete adalah standar semua fitur; istilahnya sama di panel, panduan, dan dokumentasi.
+        TrashedFilter::configureUsing(fn (TrashedFilter $filter) => $filter->label('Sampah'));
+        RestoreAction::configureUsing(fn (RestoreAction $action) => $action->label('Pulihkan'));
+        RestoreBulkAction::configureUsing(fn (RestoreBulkAction $action) => $action->label('Pulihkan yang dipilih'));
+        ForceDeleteAction::configureUsing(fn (ForceDeleteAction $action) => $action->label('Hapus permanen'));
+        ForceDeleteBulkAction::configureUsing(fn (ForceDeleteBulkAction $action) => $action->label('Hapus permanen yang dipilih'));
 
         LanguageSwitch::configureUsing(function (LanguageSwitch $switch) {
             $switch

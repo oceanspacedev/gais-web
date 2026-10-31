@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\TaskResource\Pages;
 use App\Models\Task;
 use App\Support\RelationSearch;
@@ -11,6 +12,9 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
@@ -24,9 +28,12 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class TaskResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Task::class;
 
     public static function getModelLabel(): string
@@ -79,7 +86,7 @@ class TaskResource extends Resource
 
                         Select::make('business_entity_id')
                             ->label('Entitas Bisnis')
-                            ->relationship('businessEntity', 'name')
+                            ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->required(),
@@ -100,7 +107,7 @@ class TaskResource extends Resource
                     ->schema([
                         Select::make('vendor_id')
                             ->label('Vendor')
-                            ->relationship('vendor', 'name')
+                            ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->required()
@@ -189,9 +196,10 @@ class TaskResource extends Resource
             ])
             ->defaultSort('id', 'desc')
             ->filters([
-                SelectFilter::make('businessEntity')->preload()->searchable()->relationship('businessEntity', 'name')->translateLabel(),
+                Tables\Filters\TrashedFilter::make(),
+                SelectFilter::make('businessEntity')->preload()->searchable()->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->translateLabel(),
                 SelectFilter::make('vendor')
-                    ->relationship('vendor', 'name')
+                    ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->label('Vendor')
                     ->searchable()
                     ->preload(),
@@ -213,6 +221,7 @@ class TaskResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                RestoreAction::make(),
                 // Group the custom actions together
                 ActionGroup::make([
                     // Edit Action (with pencil icon)
@@ -286,6 +295,8 @@ class TaskResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

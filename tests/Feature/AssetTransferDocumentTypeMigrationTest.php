@@ -34,6 +34,7 @@ class AssetTransferDocumentTypeMigrationTest extends TestCase
             $table->unsignedBigInteger('model_id');
         });
         Schema::create('asset_transfers', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('letter_number')->nullable();
@@ -42,6 +43,7 @@ class AssetTransferDocumentTypeMigrationTest extends TestCase
             $table->timestamps();
         });
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('condition_status');

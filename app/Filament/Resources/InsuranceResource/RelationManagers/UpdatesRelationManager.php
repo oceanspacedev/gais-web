@@ -12,6 +12,8 @@ use App\Support\ContractDue;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -19,7 +21,9 @@ use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Pembaharuan polis (sumo: insurance_updates). Pembaharuan terakhir menentukan
@@ -53,8 +57,8 @@ class UpdatesRelationManager extends RelationManager
                 Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
                 DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                 DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
-                Select::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name')->default($insurance->stock_provider_id)->preload()->searchable(),
-                Select::make('building_provider_id')->label('Provider Bangunan')->relationship('buildingProvider', 'name')->default($insurance->building_provider_id)->preload()->searchable(),
+                Select::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->default($insurance->stock_provider_id)->preload()->searchable(),
+                Select::make('building_provider_id')->label('Provider Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->default($insurance->building_provider_id)->preload()->searchable(),
                 TextInput::make('stock_worth')->label('Nilai Stok')->numeric()->prefix('Rp')->default($insurance->stock_worth),
                 TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp')->default($insurance->building_worth),
                 TextInput::make('actual_stock_worth')->label('Nilai Stok Aktual')->numeric()->prefix('Rp'),
@@ -92,6 +96,9 @@ class UpdatesRelationManager extends RelationManager
                 TextColumn::make('notes')->label('Catatan')->limit(40)->placeholder('-'),
             ])
             ->defaultSort('expired_date', 'desc')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah Pembaharuan')
@@ -105,7 +112,7 @@ class UpdatesRelationManager extends RelationManager
                     owner: $insurance,
                     templateFileName: 'template-pembaharuan-asuransi.xlsx',
                     description: 'Unggah Excel berkolom template. Kolom no_polis_induk harus berisi nomor polis ini; baris dengan no_polis yang sudah ada diperbarui dan sel kosong dibiarkan seperti semula. Baris baru wajib punya tanggal mulai dan akhir; status kosong dianggap BERJALAN.',
-                )->visible(fn (): bool => auth()->user()?->can('import', Insurance::class) ?? false),
+                )->visible(fn (): bool => $this->canManage() && (auth()->user()?->can('import', Insurance::class) ?? false)),
                 ContractUpdateExcelActions::export(
                     name: 'exportUpdates',
                     label: 'Ekspor Pembaharuan',
@@ -115,6 +122,8 @@ class UpdatesRelationManager extends RelationManager
             ->recordActions([
                 EditAction::make()->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
+                RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
+                ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),
             ]);
     }
 

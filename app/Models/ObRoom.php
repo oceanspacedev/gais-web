@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -16,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  */
 class ObRoom extends Model
 {
-    use SoftDeletes;
+    use HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'asset_location_id',
@@ -30,7 +33,7 @@ class ObRoom extends Model
 
     public function location(): BelongsTo
     {
-        return $this->belongsTo(AssetLocation::class, 'asset_location_id');
+        return $this->belongsTo(AssetLocation::class, 'asset_location_id')->withTrashed();
     }
 
     public function shifts(): BelongsToMany
@@ -150,5 +153,13 @@ class ObRoom extends Model
 
             return $sources->count();
         });
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

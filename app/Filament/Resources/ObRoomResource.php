@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ObRoomResource\Pages;
 use App\Models\ObRoom;
 use App\Support\RelationSearch;
@@ -10,6 +11,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -21,12 +25,16 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules\Unique;
 
 class ObRoomResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ObRoom::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-home-modern';
@@ -78,7 +86,7 @@ class ObRoomResource extends Resource
 
             Select::make('asset_location_id')
                 ->label('Lokasi')
-                ->relationship('location', 'name')
+                ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                 ->placeholder('Semua lokasi')
                 ->helperText('Kosongkan bila ruangan ini tidak terikat lokasi tertentu.')
                 ->searchable()
@@ -127,15 +135,17 @@ class ObRoomResource extends Resource
             ])
             ->defaultSort('name')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('asset_location_id')
                     ->label('Lokasi')
-                    ->relationship('location', 'name')
+                    ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload(),
                 TernaryFilter::make('is_active')
                     ->label('Aktif'),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
@@ -143,6 +153,8 @@ class ObRoomResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     self::mergeBulkAction(),
                     DeleteBulkAction::make(),
                 ]),

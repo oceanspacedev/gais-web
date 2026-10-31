@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ItemRequestApprovalType;
 use App\Enums\ItemRequestClientStatus;
 use App\Enums\ItemRequestExecutorDecision;
@@ -21,6 +22,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -43,18 +47,20 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 /**
  * Pengajuan barang (sumo: menu PENGAJUAN). Alur per tahap ada di
- * ItemRequestWorkflow; siapa melihat apa ada di ItemRequestVisibility.
+ * ItemRequestWorkflow; siapa melihat apa ada di ItemRequest::visibility().
  */
 class ItemRequestResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ItemRequest::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
@@ -80,33 +86,6 @@ class ItemRequestResource extends Resource
         $count = static::getEloquentQuery()->where('client_status', ItemRequestClientStatus::Waiting->value)->count();
 
         return $count > 0 ? (string) $count : null;
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-
-        return static::scopeToViewer($query, auth()->user());
-    }
-
-    /**
-     * Aturan lihat yang sama dengan menu ini, juga dipakai tab di halaman user.
-     */
-    public static function scopeToViewer(Builder $query, mixed $viewer): Builder
-    {
-        if (! $viewer instanceof User) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        $query->visibleTo($viewer);
-
-        if (! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('item_requests.business_entity_id')
-                ->orWhereIn('item_requests.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
     }
 
     public static function form(Schema $form): Schema
@@ -258,7 +237,8 @@ class ItemRequestResource extends Resource
             ])
             ->defaultSort('requested_at', 'desc')
             ->filters([
-                SelectFilter::make('item_request_type_id')->label('Tipe')->relationship('type', 'name')->preload(),
+                TrashedFilter::make(),
+                SelectFilter::make('item_request_type_id')->label('Tipe')->relationship('type', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
                 SelectFilter::make('client_status')->label('Status Akhir')->options(ItemRequestClientStatus::options()),
                 Filter::make('awaiting_executor')
                     ->label('Belum diproses executor')
@@ -279,6 +259,7 @@ class ItemRequestResource extends Resource
                     ->visible(fn (): bool => auth()->user()?->can('viewAll', ItemRequest::class) ?? false),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 ActionGroup::make([
                     ...static::workflowActions(),
@@ -295,6 +276,8 @@ class ItemRequestResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([
@@ -316,7 +299,7 @@ class ItemRequestResource extends Resource
         $workflow = app(ItemRequestWorkflow::class);
         $user = fn (): ?User => auth()->user();
 
-        return [
+        $actions = [
             Action::make('statusPo')
                 ->label('Status PO (Accounting)')
                 ->icon('heroicon-o-banknotes')
@@ -430,6 +413,8 @@ class ItemRequestResource extends Resource
                     'Pemohon diubah dan dicatat di log.',
                 )),
         ];
+
+        return $actions;
     }
 
     public static function getRelations(): array

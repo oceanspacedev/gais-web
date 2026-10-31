@@ -37,7 +37,7 @@ class InsuranceUpdate extends Model
 
     public function insurance(): BelongsTo
     {
-        return $this->belongsTo(Insurance::class);
+        return $this->belongsTo(Insurance::class)->withTrashed();
     }
 
     public function stockProvider(): BelongsTo

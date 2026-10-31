@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetServiceStatus;
 use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource\Pages;
@@ -16,6 +17,9 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -36,11 +40,14 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class AssetServiceResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetService::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-wrench-screwdriver';
@@ -77,7 +84,7 @@ class AssetServiceResource extends Resource
 
                         Select::make('asset_id')
                             ->label('Aset yang Diservis')
-                            ->relationship('asset', 'name')
+                            ->relationship('asset', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->getSearchResultsUsing(function (string $search): array {
@@ -150,7 +157,7 @@ class AssetServiceResource extends Resource
 
                         Select::make('vendor_id')
                             ->label('Vendor Terdaftar')
-                            ->relationship('vendor', 'name')
+                            ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->visible(fn (callable $get) => $get('provider_type') === 'vendor'),
@@ -347,6 +354,7 @@ class AssetServiceResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('status')
                     ->label('Status Servis')
                     ->options(AssetServiceStatus::options()),
@@ -359,6 +367,7 @@ class AssetServiceResource extends Resource
                     ]),
             ])
             ->actions([
+                RestoreAction::make(),
                 Action::make('completeService')
                     ->label('Selesaikan')
                     ->icon('heroicon-o-check-circle')
@@ -521,6 +530,8 @@ class AssetServiceResource extends Resource
             ], position: RecordActionsPosition::BeforeColumns)
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->exporter(AssetServiceExporter::class)
                         ->label('Export Dipilih'),
@@ -581,25 +592,13 @@ class AssetServiceResource extends Resource
             ]);
     }
 
-    public static function getEloquentQuery(): Builder
+    /**
+     * Aturan lihat (pembuat, teknisi, "Lihat Data Semua User") ada di
+     * AssetService::visibility(); di sini hanya eager load.
+     */
+    protected static function baseVisibleQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with('asset.attributes');
-        $user = auth()->user();
-
-        if (! $user) {
-            return $query;
-        }
-
-        // Pengawas / Admin dapat melihat seluruh servis aset
-        if ($user->can('viewAll', AssetService::class)) {
-            return $query;
-        }
-
-        // User biasa hanya melihat data servis yang dibuat olehnya atau ditugaskan kepadanya
-        return $query->where(function ($q) use ($user) {
-            $q->where('created_by', $user->id)
-                ->orWhere('serviced_by_user_id', $user->id);
-        });
+        return parent::getEloquentQuery()->with('asset.attributes');
     }
 
     public static function getRelations(): array

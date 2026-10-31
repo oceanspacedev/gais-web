@@ -39,7 +39,7 @@ class RentUpdate extends Model
 
     public function rent(): BelongsTo
     {
-        return $this->belongsTo(Rent::class);
+        return $this->belongsTo(Rent::class)->withTrashed();
     }
 
     public function user(): BelongsTo

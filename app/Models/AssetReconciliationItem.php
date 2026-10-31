@@ -62,7 +62,7 @@ class AssetReconciliationItem extends Model
 
     public function location(): BelongsTo
     {
-        return $this->belongsTo(AssetLocation::class, 'asset_location_id');
+        return $this->belongsTo(AssetLocation::class, 'asset_location_id')->withTrashed();
     }
 
     public function catalogItem(): BelongsTo
@@ -72,11 +72,11 @@ class AssetReconciliationItem extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function matchedAsset(): BelongsTo
     {
-        return $this->belongsTo(Asset::class, 'matched_asset_id');
+        return $this->belongsTo(Asset::class, 'matched_asset_id')->withTrashed();
     }
 }

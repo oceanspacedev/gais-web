@@ -2,12 +2,16 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ItemRequestTypeResource\Pages;
 use App\Models\ItemRequestType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -15,13 +19,17 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Tipe pengajuan (sumo: ASSET/NONASSET, ATK, NOTA) beserta aturan alurnya.
  */
 class ItemRequestTypeResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ItemRequestType::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
@@ -52,7 +60,7 @@ class ItemRequestTypeResource extends Resource
 
                 Select::make('pic_division_id')
                     ->label('Divisi PIC (executor)')
-                    ->relationship('picDivision', 'name')
+                    ->relationship('picDivision', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload(),
 
@@ -87,12 +95,20 @@ class ItemRequestTypeResource extends Resource
                 TextColumn::make('requests_count')->label('Pengajuan')->counts('requests')->badge()->color('gray'),
             ])
             ->defaultSort('id')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()->slideOver()->modalWidth('md'),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([DeleteBulkAction::make()]),
+                BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetCondition;
 use App\Enums\AssetServiceStatus;
 use App\Enums\NbhStatus;
@@ -29,6 +30,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -52,6 +56,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -59,6 +64,8 @@ use Illuminate\Support\Facades\Cache;
 
 class AssetResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Asset::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-archive-box';
@@ -159,7 +166,9 @@ class AssetResource extends Resource
             return null;
         }
 
-        return self::customAttributeDefinitions()->get((int) $customAttributeId);
+        // Definisi di Sampah tetap dikenali untuk nilai yang sudah tersimpan, supaya tidak tertimpa saat aset disimpan.
+        return self::customAttributeDefinitions()->get((int) $customAttributeId)
+            ?? CustomAssetAttribute::withTrashed()->find((int) $customAttributeId);
     }
 
     /**
@@ -379,7 +388,7 @@ class AssetResource extends Resource
 
         // 1. Atribut dokumen yang sudah ada pada aset ini (hanya document_expiry)
         $existing = $record->attributes()
-            ->whereHas('customAttribute', fn ($q) => $q->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)->where('is_active', true))
+            ->whereHas('customAttribute', fn ($q) => $q->withoutTrashed()->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)->where('is_active', true))
             ->with('customAttribute')
             ->get();
 
@@ -1035,14 +1044,15 @@ class AssetResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('businessEntity')
-                    ->relationship('businessEntity', 'name')
+                    ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('category')
-                    ->relationship('category', 'name')
+                    ->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->label('Kategori')
                     ->multiple()
                     ->searchable()
@@ -1056,7 +1066,7 @@ class AssetResource extends Resource
                     ->options(NbhStatus::options())
                     ->multiple(),
                 SelectFilter::make('assetLocation')
-                    ->relationship('assetLocation', 'name')
+                    ->relationship('assetLocation', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
@@ -1104,6 +1114,7 @@ class AssetResource extends Resource
                 ->label('Filter Audit')
                 ->slideOver())
             ->actions([
+                RestoreAction::make(),
                 Action::make('completeRepair')
                     ->label('Selesaikan Perbaikan')
                     ->icon('heroicon-o-check-circle')
@@ -1144,6 +1155,8 @@ class AssetResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     BulkAction::make('printQrLabels')
                         ->label('Print Label QR')
                         ->icon('heroicon-o-printer')
@@ -1169,18 +1182,6 @@ class AssetResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    /**
-     * Pengguna dengan akses badan usaha terbatas hanya melihat aset yang
-     * pemilik atau pemegangnya ada di badan usaha yang bisa diaksesnya.
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query;
     }
 
     public static function getRelations(): array

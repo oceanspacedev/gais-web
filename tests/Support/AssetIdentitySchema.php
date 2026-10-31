@@ -19,6 +19,7 @@ final class AssetIdentitySchema
     {
         if (! Schema::hasTable('custom_asset_attributes')) {
             Schema::create('custom_asset_attributes', function (Blueprint $table): void {
+                $table->softDeletes();
                 $table->id();
                 $table->string('key', 50)->nullable()->unique();
                 $table->string('name');

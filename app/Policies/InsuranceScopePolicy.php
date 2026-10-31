@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\InsuranceScope;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class InsuranceScopePolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -17,7 +18,7 @@ class InsuranceScopePolicy
 
     public function view(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('view_insurance::scope');
+        return $user->can('view_insurance::scope') && $this->visible($user, $insuranceScope);
     }
 
     public function create(User $user): bool
@@ -27,12 +28,12 @@ class InsuranceScopePolicy
 
     public function update(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('update_insurance::scope');
+        return $user->can('update_insurance::scope') && $this->editable($user, $insuranceScope);
     }
 
     public function delete(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('delete_insurance::scope');
+        return $user->can('delete_insurance::scope') && $this->editable($user, $insuranceScope);
     }
 
     public function deleteAny(User $user): bool
@@ -42,7 +43,7 @@ class InsuranceScopePolicy
 
     public function forceDelete(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('force_delete_insurance::scope');
+        return $user->can('force_delete_insurance::scope') && $this->visible($user, $insuranceScope);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -52,7 +53,7 @@ class InsuranceScopePolicy
 
     public function restore(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('restore_insurance::scope');
+        return $user->can('restore_insurance::scope') && $this->visible($user, $insuranceScope);
     }
 
     public function restoreAny(User $user): bool
@@ -62,7 +63,7 @@ class InsuranceScopePolicy
 
     public function replicate(User $user, InsuranceScope $insuranceScope): bool
     {
-        return $user->can('replicate_insurance::scope');
+        return $user->can('replicate_insurance::scope') && $this->editable($user, $insuranceScope);
     }
 
     public function reorder(User $user): bool

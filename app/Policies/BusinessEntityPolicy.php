@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\BusinessEntity;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class BusinessEntityPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class BusinessEntityPolicy
      */
     public function view(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('view_business::entity');
+        return $user->can('view_business::entity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -39,7 +40,7 @@ class BusinessEntityPolicy
      */
     public function update(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('update_business::entity');
+        return $user->can('update_business::entity') && $this->editable($user, $businessEntity);
     }
 
     /**
@@ -47,7 +48,7 @@ class BusinessEntityPolicy
      */
     public function delete(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('delete_business::entity');
+        return $user->can('delete_business::entity') && $this->editable($user, $businessEntity);
     }
 
     /**
@@ -63,7 +64,7 @@ class BusinessEntityPolicy
      */
     public function forceDelete(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('force_delete_business::entity');
+        return $user->can('force_delete_business::entity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -79,7 +80,7 @@ class BusinessEntityPolicy
      */
     public function restore(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('restore_business::entity');
+        return $user->can('restore_business::entity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -95,7 +96,7 @@ class BusinessEntityPolicy
      */
     public function replicate(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('replicate_business::entity');
+        return $user->can('replicate_business::entity') && $this->editable($user, $businessEntity);
     }
 
     /**

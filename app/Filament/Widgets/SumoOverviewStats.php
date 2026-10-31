@@ -6,10 +6,10 @@ use App\Enums\ItemRequestClientStatus;
 use App\Filament\Resources\InsuranceResource;
 use App\Filament\Resources\ItemRequestResource;
 use App\Filament\Resources\ProblemReportResource;
+use App\Filament\Resources\ProductResource;
 use App\Filament\Resources\RentResource;
 use App\Models\ItemRequestSetting;
 use App\Models\ProblemReport;
-use App\Models\Product;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget;
@@ -65,7 +65,7 @@ class SumoOverviewStats extends StatsOverviewWidget
             Stat::make('Laporan Gangguan', number_format($totalReports))
                 ->description("{$confirmedReports} selesai · ".($totalReports - $confirmedReports).' menunggu')
                 ->color('warning'),
-            Stat::make('Barang', number_format(Product::query()->count()))
+            Stat::make('Barang', number_format(ProductResource::getEloquentQuery()->count()))
                 ->description($periodLabel)
                 ->color('gray'),
             Stat::make('Asuransi & Sewa Aktif', number_format(InsuranceResource::getEloquentQuery()->activeContracts()->count()).' / '.number_format(RentResource::getEloquentQuery()->activeContracts()->count()))

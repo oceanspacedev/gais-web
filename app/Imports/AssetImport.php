@@ -227,7 +227,13 @@ class AssetImport extends DefaultValueBinder implements ToCollection, WithChunkR
             return $this->businessEntityCache[$name];
         }
 
-        $entity = BusinessEntity::firstOrCreate(['name' => $name]);
+        // Nama badan usaha unik di database termasuk baris di Sampah: yang terhapus dipulihkan, bukan digandakan.
+        $entity = BusinessEntity::withTrashed()->firstOrCreate(['name' => $name]);
+
+        if ($entity->trashed()) {
+            $entity->restore();
+        }
+
         $this->businessEntityCache[$name] = $entity->id;
 
         return $entity->id;

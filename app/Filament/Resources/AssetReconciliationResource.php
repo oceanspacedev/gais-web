@@ -21,6 +21,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class AssetReconciliationResource extends Resource
 {
@@ -73,7 +74,7 @@ class AssetReconciliationResource extends Resource
                         ->columnSpanFull(),
                     Select::make('business_entity_id')
                         ->label('Badan Usaha Default')
-                        ->relationship('businessEntity', 'name')
+                        ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                         ->searchable()
                         ->preload()
                         ->required()

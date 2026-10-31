@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\CustomAssetAttribute;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class CustomAssetAttributePolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class CustomAssetAttributePolicy
      */
     public function view(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('view_custom::asset::attribute');
+        return $user->can('view_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -39,7 +40,7 @@ class CustomAssetAttributePolicy
      */
     public function update(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('update_custom::asset::attribute');
+        return $user->can('update_custom::asset::attribute') && $this->editable($user, $customAssetAttribute);
     }
 
     /**
@@ -47,7 +48,7 @@ class CustomAssetAttributePolicy
      */
     public function delete(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('delete_custom::asset::attribute') && ! $customAssetAttribute->isIdentity();
+        return $user->can('delete_custom::asset::attribute') && $this->editable($user, $customAssetAttribute) && ! $customAssetAttribute->isIdentity();
     }
 
     /**
@@ -63,7 +64,7 @@ class CustomAssetAttributePolicy
      */
     public function forceDelete(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('force_delete_custom::asset::attribute');
+        return $user->can('force_delete_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -79,7 +80,7 @@ class CustomAssetAttributePolicy
      */
     public function restore(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('restore_custom::asset::attribute');
+        return $user->can('restore_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -95,7 +96,7 @@ class CustomAssetAttributePolicy
      */
     public function replicate(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('replicate_custom::asset::attribute');
+        return $user->can('replicate_custom::asset::attribute') && $this->editable($user, $customAssetAttribute);
     }
 
     /**

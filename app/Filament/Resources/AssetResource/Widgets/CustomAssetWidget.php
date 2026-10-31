@@ -3,8 +3,8 @@
 namespace App\Filament\Resources\AssetResource\Widgets;
 
 use App\Enums\AssetCondition;
+use App\Filament\Resources\AssetResource;
 use App\Models\Asset;
-use App\Models\User;
 use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Facades\Filament;
 use Filament\Widgets\StatsOverviewWidget as BaseWidget;
@@ -34,7 +34,7 @@ class CustomAssetWidget extends BaseWidget
     {
         // Angka mengikuti akses badan usaha pengguna, sama seperti tabel aset.
         $viewer = Filament::auth()?->user();
-        $assets = fn () => Asset::query()->when($viewer instanceof User, fn ($query) => $query->accessibleBy($viewer));
+        $assets = fn () => AssetResource::scopeToViewer(Asset::query(), $viewer);
 
         $availableUnits = $assets()->where('condition_status', AssetCondition::Available->value)->count();
         $transferredUnits = $assets()->where('condition_status', AssetCondition::Transferred->value)->count();

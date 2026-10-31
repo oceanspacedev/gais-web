@@ -2,12 +2,13 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class UserPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -22,7 +23,7 @@ class UserPolicy
      */
     public function view(User $user, ?User $model = null): bool
     {
-        return $user->can('view_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('view_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -38,7 +39,7 @@ class UserPolicy
      */
     public function update(User $user, ?User $model = null): bool
     {
-        return $user->can('update_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('update_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -46,7 +47,7 @@ class UserPolicy
      */
     public function delete(User $user, ?User $model = null): bool
     {
-        return $user->can('delete_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('delete_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -62,7 +63,7 @@ class UserPolicy
      */
     public function forceDelete(User $user, ?User $model = null): bool
     {
-        return $user->can('force_delete_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('force_delete_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -78,7 +79,7 @@ class UserPolicy
      */
     public function restore(User $user, ?User $model = null): bool
     {
-        return $user->can('restore_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('restore_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -94,7 +95,7 @@ class UserPolicy
      */
     public function replicate(User $user, ?User $model = null): bool
     {
-        return $user->can('replicate_user') && $this->withinBusinessEntityScope($user, $model);
+        return $user->can('replicate_user') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -146,16 +147,12 @@ class UserPolicy
     }
 
     /**
-     * A record is in scope when it is the user themself or belongs to one of
-     * the business entities the user may access. Permission-only checks
-     * (no record, or an unsaved one) fall through to the permission alone.
+     * Cakupan lihat user (User::visibility): akun sendiri, user di badan usaha
+     * yang bisa diakses, dan akun super admin hanya untuk super admin. Cek izin
+     * saja (tanpa record) tidak dibatasi.
      */
-    private function withinBusinessEntityScope(User $user, ?User $model): bool
+    private function visibleUser(User $user, ?User $model): bool
     {
-        if ($model === null || ! $model->exists || $user->is($model)) {
-            return true;
-        }
-
-        return $user->canAccessBusinessEntity($model->business_entity_id);
+        return $model === null || $this->visible($user, $model);
     }
 }

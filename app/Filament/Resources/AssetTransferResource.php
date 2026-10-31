@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetCondition;
 use App\Enums\AssetTransferDocumentType;
 use App\Filament\Resources\AssetTransferResource\Pages;
@@ -18,6 +19,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -37,6 +41,7 @@ use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +52,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AssetTransferResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetTransfer::class;
 
     /**
@@ -294,8 +301,9 @@ class AssetTransferResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('businessEntity')
-                    ->relationship('businessEntity', 'name')
+                    ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
@@ -355,6 +363,7 @@ class AssetTransferResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                RestoreAction::make(),
                 Action::make('download')
                     ->label('Template')
                     ->url(fn (AssetTransfer $record): string => route('asset-transfer.download', $record))
@@ -385,21 +394,11 @@ class AssetTransferResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    /**
-     * Pengguna dengan akses badan usaha terbatas hanya melihat BA dari badan
-     * usaha yang bisa diaksesnya.
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query;
     }
 
     public static function getRelations(): array
@@ -599,8 +598,7 @@ class AssetTransferResource extends Resource
     protected static function assetQuery(AssetTransferDocumentType $type, mixed $fromUserId): Builder
     {
         $viewer = Auth::user();
-        $query = Asset::query()
-            ->when($viewer instanceof User, fn (Builder $query): Builder => $query->accessibleBy($viewer));
+        $query = AssetResource::scopeToViewer(Asset::query(), $viewer);
 
         if ($type->dispatchesFromStock()) {
             return $query

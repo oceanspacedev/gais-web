@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -15,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ObShift extends Model
 {
-    use SoftDeletes;
+    use HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'asset_location_id',
@@ -32,7 +35,7 @@ class ObShift extends Model
 
     public function location(): BelongsTo
     {
-        return $this->belongsTo(AssetLocation::class, 'asset_location_id');
+        return $this->belongsTo(AssetLocation::class, 'asset_location_id')->withTrashed();
     }
 
     public function shiftRooms(): HasMany
@@ -103,5 +106,13 @@ class ObShift extends Model
             ->get()
             ->mapWithKeys(fn (ObRoom $room): array => [$room->id => $room->name])
             ->all();
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

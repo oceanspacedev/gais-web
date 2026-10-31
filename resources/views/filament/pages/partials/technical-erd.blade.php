@@ -90,6 +90,7 @@
             <text x="278" y="480" font-size="13" font-weight="600">Lapor Gangguan</text>
             <text x="278" y="496" font-weight="600">problem_reports</text>
             <text x="278" y="512">problem_report_categories</text>
+            <text x="278" y="528">problem_report_scopes</text>
 
             <text x="520" y="480" font-size="13" font-weight="600">Asuransi dan Sewa</text>
             <text x="520" y="496" font-weight="600">insurances</text>

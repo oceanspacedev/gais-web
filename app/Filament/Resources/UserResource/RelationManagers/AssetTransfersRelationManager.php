@@ -44,7 +44,7 @@ class AssetTransfersRelationManager extends RelationManager
             ->where('asset_transfers.from_user_id', $owner->getKey())
             ->orWhere('asset_transfers.to_user_id', $owner->getKey()));
 
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query->whereRaw('1 = 0');
+        return AssetTransferResource::scopeToViewer($query, $viewer);
     }
 
     public function isReadOnly(): bool

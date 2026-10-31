@@ -6,9 +6,10 @@
  * dan badan usaha yang dipetakan ke record GAIS.
  */
 
+// Role yang boleh menghapus juga boleh memulihkan dari Sampah (restore mengikuti delete).
 $crud = fn (string $subject, string ...$extra): array => array_map(
     fn (string $action): string => "{$action}_{$subject}",
-    ['view_any', 'view', 'create', 'update', 'delete', 'delete_any', ...$extra],
+    ['view_any', 'view', 'create', 'update', 'delete', 'delete_any', 'restore', 'restore_any', ...$extra],
 );
 
 return [
@@ -125,6 +126,16 @@ return [
         9 => [[2, 4, true], [2, 5, true], [2, 14], [2, 19]],     // WHM: ATK; menyetujui jumlah untuk TOP dan MKLI-DEPO
         80 => [[2, 6, true], [2, 11, true]],                     // MKLI-HO: menyetujui jumlah ATK area MKLI
         1 => [[null, 14], [null, 4]],                            // divisi "-": area tertentu
+    ],
+
+    /*
+     * Cakupan jenis gangguan per divisi (problem_report_scopes): divisions.id (sumo) =>
+     * daftar [problem_report_category_id, dikecualikan?]. Sumo: executor HCM hanya
+     * menangani gangguan UMUM (id 7), executor lain (MIS-IT) selain UMUM.
+     */
+    'problem_report_scopes' => [
+        6 => [[7, false]],  // HCM: hanya UMUM
+        11 => [[7, true]],  // MIS-IT: selain UMUM
     ],
 
     /*

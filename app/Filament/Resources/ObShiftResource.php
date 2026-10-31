@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ObShiftResource\Pages;
 use App\Models\ObRoom;
 use App\Models\ObShift;
@@ -10,6 +11,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -23,11 +27,14 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class ObShiftResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ObShift::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
@@ -59,7 +66,7 @@ class ObShiftResource extends Resource
 
                 Select::make('asset_location_id')
                     ->label('Lokasi')
-                    ->relationship('location', 'name')
+                    ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->placeholder('Semua lokasi')
                     ->helperText('Shift dengan nama sama boleh ada di beberapa lokasi, masing-masing dengan daftar ruangannya sendiri.')
                     ->searchable()
@@ -142,13 +149,15 @@ class ObShiftResource extends Resource
             ])
             ->defaultSort('name')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('asset_location_id')
                     ->label('Lokasi')
-                    ->relationship('location', 'name')
+                    ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('lg'),
@@ -156,6 +165,8 @@ class ObShiftResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

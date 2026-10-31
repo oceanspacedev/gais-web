@@ -40,7 +40,7 @@ class ItemRequestDetailPolicy
             return false;
         }
 
-        if (in_array($request->client_status, [ItemRequestClientStatus::Accepted, ItemRequestClientStatus::Cancelled], true)) {
+        if ($request->trashed() || $detail->trashed() || in_array($request->client_status, [ItemRequestClientStatus::Accepted, ItemRequestClientStatus::Cancelled], true)) {
             return false;
         }
 
@@ -54,15 +54,51 @@ class ItemRequestDetailPolicy
 
     public function delete(User $user, ItemRequestDetail $detail): bool
     {
-        $request = $detail->request;
-
-        return $request instanceof ItemRequest
-            && $request->client_status === ItemRequestClientStatus::Waiting
-            && ($request->isOwnedBy($user) || $user->can('update', $request));
+        return ! $detail->trashed() && $this->manageable($user, $detail);
     }
 
     public function deleteAny(User $user): bool
     {
         return $user->can('update_item::request');
+    }
+
+    /**
+     * Memulihkan atau menghapus permanen barang mengikuti aturan hapus:
+     * pengajuan masih menunggu dan pemohon atau pemegang izin ubah.
+     */
+    public function restore(User $user, ItemRequestDetail $detail): bool
+    {
+        return $this->manageable($user, $detail);
+    }
+
+    public function restoreAny(User $user): bool
+    {
+        return $user->can('update_item::request');
+    }
+
+    /**
+     * Hapus permanen mengikuti izin hapus permanen pengajuan induknya.
+     */
+    public function forceDelete(User $user, ItemRequestDetail $detail): bool
+    {
+        return $user->can('force_delete_item::request') && $this->manageable($user, $detail);
+    }
+
+    /**
+     * Pengajuan induk masih menunggu (dan tidak di Sampah), oleh pemohon atau pemegang izin ubah.
+     */
+    private function manageable(User $user, ItemRequestDetail $detail): bool
+    {
+        $request = $detail->request;
+
+        return $request instanceof ItemRequest
+            && ! $request->trashed()
+            && $request->client_status === ItemRequestClientStatus::Waiting
+            && ($request->isOwnedBy($user) || $user->can('update', $request));
+    }
+
+    public function forceDeleteAny(User $user): bool
+    {
+        return $user->can('force_delete_any_item::request');
     }
 }

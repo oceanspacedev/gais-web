@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers\AssetTransfersRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\HeldAssetsRelationManager;
@@ -38,6 +39,8 @@ use STS\FilamentImpersonate\Actions\Impersonate;
 
 class UserResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = User::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
@@ -101,7 +104,7 @@ class UserResource extends Resource
                         // terbuka walau tabel divisi belum ada (lihat PhoneOtpLoginTest).
                         Select::make('division_id')
                             ->label('Divisi')
-                            ->relationship('division', 'name')
+                            ->relationship('division', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload(false),
                         Select::make('approver_user_id')
@@ -182,7 +185,7 @@ class UserResource extends Resource
                             ->live(),
                         CheckboxList::make('accessibleBusinessEntities')
                             ->label('Akses Badan Usaha')
-                            ->relationship('accessibleBusinessEntities', 'name')
+                            ->relationship('accessibleBusinessEntities', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->helperText('Badan usaha asal pengguna selalu termasuk. Centang badan usaha lain yang boleh dilihat dan dikelola pengguna ini.')
                             ->searchable()
                             ->bulkToggleable()
@@ -253,7 +256,7 @@ class UserResource extends Resource
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('jobTitle')
-                    ->relationship('jobTitle', 'title')
+                    ->relationship('jobTitle', 'title', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->label('Job Title')
                     ->searchable()
                     ->preload(),
@@ -300,34 +303,6 @@ class UserResource extends Resource
             'edit' => Pages\EditUser::route('/{record}/edit'),
             'view' => Pages\ViewUser::route('/{record}'),
         ];
-    }
-
-    /**
-     * Akun super admin hanya terlihat oleh super admin. Cakupan badan usaha
-     * berlaku untuk semua viewer, sama seperti UserPolicy: yang punya akses
-     * semua badan usaha melihat semuanya, yang lain hanya user di badan usaha
-     * yang bisa ia akses (plus akunnya sendiri).
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = static::viewer();
-
-        if (! $viewer->isSuperAdmin()) {
-            $query->whereDoesntHave('roles', function (Builder $query): void {
-                $query->where('name', config('filament-shield.super_admin.name', 'super_admin'));
-            });
-        }
-
-        if ($viewer->hasUnrestrictedBusinessEntityAccess()) {
-            return $query;
-        }
-
-        return $query->where(function (Builder $query) use ($viewer): void {
-            $viewer
-                ->limitToAccessibleBusinessEntities($query, 'users.business_entity_id')
-                ->orWhere($viewer->getQualifiedKeyName(), $viewer->getKey());
-        });
     }
 
     /**
