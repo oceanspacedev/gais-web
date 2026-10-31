@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "407a81083799971baf39dadc06ee8d1a",
+    "content-hash": "3e08044ec8b8eeff771bd35935ba5b29",
     "packages": [
         {
             "name": "anourvalar/eloquent-serialize",
@@ -127,80 +127,6 @@
                 }
             ],
             "time": "2026-03-09T15:40:29+00:00"
-        },
-        {
-            "name": "awcodes/overlook",
-            "version": "v3.0.3",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/awcodes/overlook.git",
-                "reference": "e5007298d8d5213109e929440f27331faf2dfd14"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/awcodes/overlook/zipball/e5007298d8d5213109e929440f27331faf2dfd14",
-                "reference": "e5007298d8d5213109e929440f27331faf2dfd14",
-                "shasum": ""
-            },
-            "require": {
-                "ext-intl": "*",
-                "filament/filament": "^4.0",
-                "php": "^8.2",
-                "spatie/laravel-package-tools": "^1.15"
-            },
-            "require-dev": {
-                "laravel/pint": "^1.0",
-                "orchestra/testbench": "^9.0|^10.0",
-                "pestphp/pest": "^3.7",
-                "pestphp/pest-plugin-laravel": "^3.0",
-                "pestphp/pest-plugin-livewire": "^3.0",
-                "rector/rector": "^2.0",
-                "spatie/laravel-ray": "^1.26"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Awcodes\\Overlook\\OverlookServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Awcodes\\Overlook\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Adam Weston",
-                    "email": "awcodes1@gmail.com",
-                    "role": "Developer"
-                }
-            ],
-            "description": "A Filament plugin that adds an app overview widget to your admin panel.",
-            "homepage": "https://github.com/awcodes/overlook",
-            "keywords": [
-                "awcodes",
-                "filament",
-                "laravel",
-                "overlook",
-                "plugin"
-            ],
-            "support": {
-                "issues": "https://github.com/awcodes/overlook/issues",
-                "source": "https://github.com/awcodes/overlook"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/awcodes",
-                    "type": "github"
-                }
-            ],
-            "time": "2025-12-31T14:23:31+00:00"
         },
         {
             "name": "aws/aws-crt-php",

@@ -49,7 +49,7 @@ GAIS adalah sumber data tunggal tim General Affair: siapa memegang aset apa, dok
 ### Termasuk dalam scope
 
 - `GET /` mengarah ke panel `/admin`.
-- Panel Filament dengan sepuluh grup menu (lihat [Fitur utama](#fitur-utama)), dashboard dengan widget statistik aset dan ringkasan modul sumo, halaman **Panduan** untuk semua user, dan halaman **Dokumentasi Teknis** (dirender dari [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md)) untuk developer.
+- Panel Filament dengan sepuluh grup menu (lihat [Fitur utama](#fitur-utama)), dasbor manajemen per modul (antrean lintas modul, aset, pengajuan, gangguan, asuransi & sewa, operasional, data master), halaman **Panduan** untuk semua user, dan halaman **Dokumentasi Teknis** (dirender dari [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md)) untuk developer.
 - Login panel dengan username atau email, OTP WhatsApp, atau kode/magic link email. Registrasi mandiri, reset password, dan profil default Filament dimatikan.
 - Unduhan PDF berita acara dan penyelesaian tugas, cetak label QR aset, QR pengajuan, dan QR barang (semua butuh login).
 - Halaman QR aset publik `GET /qr/{qr}` yang menampilkan aset dan mencatat pemindaian beserta lokasi.
@@ -85,7 +85,23 @@ Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::n
 | Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta; ekspor Excel user (kolom sumo) untuk pemegang `export_user` |
 | Pengaturan (collapsed) | Roles (Shield), site/PWA settings, Notifikasi WA, Impor Data Sumo, Exceptions, tautan Horizon dan Log Viewer | campuran | Tiap item dijaga permission masing-masing |
 
-Di luar grup: **Dashboard** (widget statistik aset, Overlook, dan sepuluh widget modul sumo), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
+Di luar grup: **Dasbor** (`App\Filament\Pages\Dashboard`: kartu **Perlu Tindakan** lintas modul, lalu satu seksi lipat per modul berisi 33 widget statistik/grafik/tabel; tiap widget dijaga izin `widget_*` dan seksi tanpa widget yang boleh dilihat tidak dirender, lihat [Dasbor manajemen](#dasbor-manajemen)), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
+
+### Dasbor manajemen
+
+`App\Filament\Pages\Dashboard` menimpa dasbor Filament: `content()` menyusun seksi (`Section` yang bisa dilipat, pilihannya diingat per browser) dan memasukkan widget lewat `getWidgetsSchemaComponents()`, jadi penyaringan izin Shield tetap berlaku. Semua widget memakai `Resource::getEloquentQuery()` sehingga angkanya mengikuti hak lihat pembaca (pemohon hanya melihat pengajuannya sendiri). Helper di `app/Support/Dashboard` (`Rupiah`, `MonthSeries`, `ChartPalette`, `ChartOptions`) menyatukan format angka, deret bulan, warna, dan opsi Chart.js (sumbu rupiah ringkas, tooltip nilai penuh).
+
+| Seksi | Widget | Isi |
+|---|---|---|
+| Perlu Tindakan | `AttentionStats` | Antrean lintas modul: pengajuan menunggu executor/konfirmasi, gangguan terbuka, aset menunggu NBH, servis dan pekerjaan vendor berjalan, OB belum selesai hari ini, kendaraan belum kembali, polis/sewa jatuh tempo ≤ 30 hari. Kartu hanya tampil bila menunya boleh dibuka, dan menautkan ke daftar yang sudah difilter |
+| Aset | `CustomAssetWidget`, `AssetConditionChart`, `AssetValueByCategoryChart`, `AssetPurchaseTrendChart`, `AssetTransferTrendChart`, `AssetsByBusinessEntityChart`, `AssetIncidentsTable`, `ActiveAssetServicesTable` | Jumlah/nilai/kondisi/NBH/pembelian 12 bulan/audit terakhir; komposisi kondisi; nilai per kategori dan badan usaha; tren pembelian dan BA per jenis; aset insiden dan servis berjalan |
+| Pengajuan Barang | `SumoOverviewStats`, `ItemRequestTrendChart`, `ItemRequestStageChart`, `ItemRequestItemsChart`, `ItemRequestCostChart`, `ItemRequestCostByDivisionChart`, `PendingItemRequestsTable` | Antrean per tahap (Accounting, Manager, Executor, diproses, konfirmasi pemohon), hasil dan biaya tahun berjalan, periode cutoff, tren 12 bulan per hasil, biaya per pemohon dan divisi, pengajuan menunggu executor beserta tahap dan nilainya |
+| Lapor Gangguan | `ProblemReportOverviewStats`, `ProblemReportTrendChart`, `ProblemReportCategoryChart`, `ProblemReportCountChart`, `OpenProblemReportsTable` | Terbuka/terjadwal, menunggu konfirmasi pelapor, selesai bulan ini, rata-rata penyelesaian 90 hari; masuk vs ditutup per bulan; jenis dan pelapor terbanyak; laporan belum ditutup |
+| Asuransi & Sewa | `ContractOverviewStats`, `InsuranceCostChart`, `RentExpiryChart`, `ExpiringInsurancesTable`, `ExpiringRentsTable` | Polis aktif, nilai pertanggungan, premi 12 bulan ke depan, jatuh tempo ≤ 30 hari; sewa aktif, nilai sewa per tahun, tagihan belum lunas, masa pengingat; premi per bulan; sewa berakhir 12 bulan ke depan; kontrak terdekat jatuh tempo |
+| Operasional | `OperationsOverviewStats`, `ObChecksheetTrendChart`, `VehicleUsageChart`, `VendorTaskCostChart`, `OpenVendorTasksTable`, `VehiclesOutTable` | OB hari ini, tugas belum diambil, penyelesaian 30 hari; kendaraan belum kembali, perjalanan dan km bulan ini; pekerjaan dan biaya vendor; grafik 14 hari OB, pemakaian kendaraan, dan biaya vendor 12 bulan; tabel pekerjaan terbuka dan kendaraan di luar |
+| Organisasi & Data Master | `MasterDataOverview` | Jumlah record master per menu dalam satu kartu ringkas (pengganti Overlook), dilipat secara bawaan |
+
+Izin widget dibuat migrasi `2026_10_13_000007` (widget sumo) dan `2026_10_31_000004` (widget manajemen): super_admin dan pengajuan_admin memegang semuanya; role yang memegang `widget_CustomAssetWidget` (general_affair, admin) mendapat widget aset, operasional, antrean, dan data master; accounting/executor mendapat widget pengajuan (executor juga gangguan); requester mendapat antrean dan ringkasan gangguan miliknya; executor divisi HCM mendapat widget kontrak lewat `config/sumo-import.php`. Widget baru selalu memakai trait `GuardsWidgetWithPermission` dan didaftarkan di `App\Filament\Pages\Dashboard`; izinnya dibuat lewat migrasi lalu `php artisan permission:cache-reset`.
 
 Surface di luar panel:
 

@@ -133,7 +133,7 @@ Pola Laravel standar: panel Filament → model Eloquent, logika bisnis di `app/S
 | `Resources` | 36 resource CRUD. Satu resource = `XxxResource.php` + `Pages/`, opsional `RelationManagers/` dan `Widgets/` |
 | `Pages` | Halaman custom: `Guide`, `TechnicalDocs`, `ScanItemRequestQr`, `ScanProductQr`, `WaNotificationSettings`, `Auth/Login` |
 | `Auth/Pages` | `PhoneLogin` (login OTP WhatsApp di `/phone-login`), `EmailLogin` (kode + magic link di `/email-login`) |
-| `Widgets` | 10 widget dashboard modul sumo |
+| `Widgets` | 33 widget dasbor manajemen (statistik, grafik Chart.js, tabel) beserta trait `Concerns/GuardsWidgetWithPermission`; disusun per seksi modul oleh `Pages/Dashboard.php` |
 | `Actions`, `Exports` | Export format audit, exporter aset, BA, servis, checksheet OB |
 
 Konfigurasi panel (plugin, tema, grup navigasi) ada di `app/Providers/Filament/AdminPanelProvider.php`.
@@ -251,7 +251,7 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 ### Pengaturan dan lainnya
 
 - **Pengaturan:** page `WaNotificationSettings`, `SumoImportRunResource` (Impor Data Sumo), role Shield, `ExceptionResource`; logika di `WhatsappService`, `WhatsAppGateway`, dan `app/Services/Sumo`
-- **Di luar grup:** page Panduan (`Guide.php`), page Dokumentasi Teknis (`TechnicalDocs.php`), dan dashboard dengan widget dari `app/Filament/Widgets`
+- **Di luar grup:** page Panduan (`Guide.php`), page Dokumentasi Teknis (`TechnicalDocs.php`), dan dasbor manajemen (`Dashboard.php`: kartu Perlu Tindakan lalu seksi Aset, Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, Operasional, Organisasi & Data Master; widget dari `app/Filament/Widgets`, helper format/deret bulan/opsi grafik di `app/Support/Dashboard`)
 
 ## Database
 <!-- desc: Peta tabel, kolom kunci, dan relasi Eloquent -->

@@ -4,36 +4,33 @@ namespace App\Filament\Widgets;
 
 use App\Enums\ItemRequestClientStatus;
 use App\Filament\Resources\ItemRequestResource;
+use App\Filament\Widgets\Concerns\GuardsWidgetWithPermission;
 use App\Models\ItemRequestType;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
-use Filament\Facades\Filament;
+use App\Support\Dashboard\ChartOptions;
+use App\Support\Dashboard\ChartPalette;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Beranda sumo: "Jumlah Biaya Pengajuan" per pemohon (10 terbesar) =
- * jumlah item x harga barang, setahun terakhir.
+ * Dasbor > Pengajuan Barang (sumo: "Jumlah Biaya Pengajuan"): biaya per pemohon
+ * (10 terbesar) = jumlah item x harga barang, setahun terakhir.
  */
 class ItemRequestCostChart extends ChartWidget
 {
-    use HasWidgetShield;
-
-    protected static ?int $sort = 12;
+    use GuardsWidgetWithPermission;
 
     protected ?string $heading = 'Biaya Pengajuan per Pemohon';
 
-    // Tanpa polling 5 detik bawaan Filament: angkanya tidak perlu real-time dan querynya berat.
+    protected ?string $description = '10 pemohon dengan biaya terbesar, 12 bulan terakhir.';
+
     protected ?string $pollingInterval = null;
 
-    protected ?string $maxHeight = '320px';
+    protected ?string $maxHeight = '300px';
 
-    public static function canView(): bool
-    {
-        $permission = static::getWidgetPermission();
-        $user = Filament::auth()?->user();
+    protected int|string|array $columnSpan = 4;
 
-        return $permission && $user ? $user->can($permission) : parent::canView();
-    }
+    public ?string $filter = 'all';
 
     protected function getType(): string
     {
@@ -56,12 +53,18 @@ class ItemRequestCostChart extends ChartWidget
 
         return [
             'datasets' => [[
-                'label' => 'Total biaya (Rp)',
+                'label' => 'Total biaya',
                 'data' => $rows->pluck('total')->map(fn ($value): float => round((float) $value))->all(),
-                'backgroundColor' => '#f59e0b',
+                'backgroundColor' => ChartPalette::WARNING,
+                'borderRadius' => 4,
             ]],
             'labels' => $rows->pluck('requester')->all(),
         ];
+    }
+
+    protected function getOptions(): array|RawJs|null
+    {
+        return ChartOptions::value('rupiah', horizontal: true);
     }
 
     protected function baseQuery(): Builder

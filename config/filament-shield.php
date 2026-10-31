@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Guide;
 use App\Filament\Resources\AssetReconciliationResource;
 use App\Filament\Resources\AssetResource;
@@ -20,7 +21,6 @@ use App\Filament\Resources\VehicleChecksheetResource;
 use App\Models\SumoImportRun;
 use App\Support\ObservabilityAccess;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
-use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 

@@ -82,6 +82,7 @@ return [
             'view_any_division', 'view_division', 'create_division', 'update_division',
             'view_any_business::entity', 'view_business::entity',
             'widget_InsuranceCostChart', 'widget_ExpiringInsurancesTable', 'widget_ExpiringRentsTable',
+            'widget_ContractOverviewStats', 'widget_RentExpiryChart',
             ...$crud('insurance', 'export', 'import'),
             ...$crud('insurance::provider'),
             ...$crud('insurance::category'),
