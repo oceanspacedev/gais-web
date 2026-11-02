@@ -76,23 +76,26 @@ class RentResource extends Resource
 
     public static function form(Schema $form): Schema
     {
+        // Dibuat rapat: 3-4 isian per baris di desktop; penjelasan panjang pindah ke ikon (i)
+        // supaya tidak menambah tinggi baris.
         return $form
             ->columns(1)
             ->schema([
                 Section::make('Kontrak')
-                    ->columns(2)
+                    ->icon('heroicon-o-document-text')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
                     ->schema([
                         TextInput::make('rent_code')
                             ->label('Kode Sewa')
                             ->placeholder('Otomatis, mis. '.Rent::CODE_PREFIX.'0001')
-                            ->helperText('Kosongkan untuk kode otomatis seperti di sumo.')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Kosongkan untuk kode otomatis seperti di sumo.')
                             ->maxLength(255),
                         Select::make('business_entity_id')
                             ->label('Badan Usaha')
                             ->options(fn (?Rent $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
                             ->searchable(),
-                        TextInput::make('rented_detail')->label('Objek Sewa')->required()->maxLength(255),
-                        TextInput::make('rented_address')->label('Alamat')->required()->maxLength(255),
+                        TextInput::make('rented_detail')->label('Objek Sewa')->required()->maxLength(255)->columnSpan(['md' => 2]),
+                        TextInput::make('rented_address')->label('Alamat')->required()->maxLength(255)->columnSpan(['md' => 2]),
                         TextInput::make('first_party')->label('Pihak Pertama')->required()->maxLength(255),
                         TextInput::make('second_party')->label('Pihak Kedua')->required()->maxLength(255),
                         DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
@@ -100,29 +103,33 @@ class RentResource extends Resource
                         Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
                         TextInput::make('month_before_reminder')
                             ->label('Pengingat (bulan sebelum)')
-                            ->helperText('Baris sewa diwarnai sejak tanggal berakhir dikurangi bulan ini.')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Baris sewa diwarnai sejak tanggal berakhir dikurangi bulan ini.')
                             ->numeric()
                             ->minValue(0),
                     ]),
                 Section::make('Pembayaran')
-                    ->columns(3)
+                    ->icon('heroicon-o-banknotes')
+                    ->columns(['default' => 1, 'md' => 3])
                     ->schema([
                         TextInput::make('rent_per_year')->label('Sewa per Tahun')->numeric()->prefix('Rp')->required(),
                         TextInput::make('cvcs_fund')->label('Dana PKP (CV.CS)')->numeric()->prefix('Rp'),
                         TextInput::make('online_fund')->label('Dana NON-PKP (Online)')->numeric()->prefix('Rp'),
                     ]),
                 Section::make('Dokumen')
-                    ->columns(2)
+                    ->icon('heroicon-o-paper-clip')
+                    ->columns(['default' => 1, 'md' => 3])
                     ->schema([
                         Select::make('deduction_evidence')->label('Bukti Potong')->options(self::AVAILABILITY_OPTIONS),
-                        static::fileUpload('deduction_evidence_file', 'File Bukti Potong'),
                         Select::make('document')->label('Dokumen Perjanjian')->options(self::AVAILABILITY_OPTIONS),
-                        static::fileUpload('document_file', 'File Dokumen'),
-                        static::fileUpload('payment_evidence_file', 'File Bukti Pembayaran'),
                         TextInput::make('reminder_phones')
                             ->label('Nomor WA Pengingat')
-                            ->helperText('Pisahkan dengan koma. Kosong = memakai nomor global di Notifikasi WA.')
+                            ->placeholder('Kosong = nomor global')
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Pisahkan dengan koma. Kosong = memakai nomor global di Notifikasi WA.')
                             ->maxLength(255),
+                        // Tiga file berdampingan; kotak unggah paling memakan tempat.
+                        static::fileUpload('deduction_evidence_file', 'File Bukti Potong'),
+                        static::fileUpload('document_file', 'File Dokumen'),
+                        static::fileUpload('payment_evidence_file', 'File Bukti Pembayaran'),
                         Textarea::make('notes')->label('Catatan')->rows(2)->columnSpanFull(),
                     ]),
             ]);

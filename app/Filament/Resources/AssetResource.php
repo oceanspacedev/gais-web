@@ -740,22 +740,17 @@ class AssetResource extends Resource
                                 }
                             }),
 
+                        // Penjelasan per isian ada di ikon (i) supaya baris tidak memanjang.
                         Section::make('Kondisi & NBH')
+                            ->description('Kelola kondisi fisik aset, dokumen NBH saat insiden, dan audit penjualan saat aset dijual.')
                             ->schema([
-                                Placeholder::make('lifecycle_hint')
-                                    ->label('Panduan')
-                                    ->content('Kelola kondisi fisik aset, dokumen NBH saat insiden, dan audit penjualan saat aset dijual.')
-                                    ->columnSpanFull()
-                                    ->extraAttributes([
-                                        'class' => 'text-sm text-gray-500',
-                                    ]),
                                 Select::make('condition_status')
                                     ->label('Status Kondisi')
                                     ->options(AssetCondition::options())
                                     ->default(AssetCondition::Available->value)
                                     ->required()
                                     ->live()
-                                    ->helperText('Pilih “Dijual” untuk aset yang sudah keluar inventaris, lalu lengkapi audit penjualannya.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pilih “Dijual” untuk aset yang sudah keluar inventaris, lalu lengkapi audit penjualannya.')
                                     ->columnSpan(1)
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                         if (in_array($state, AssetCondition::incidentValues(), true)) {
@@ -799,19 +794,19 @@ class AssetResource extends Resource
                                         return NbhStatus::options();
                                     })
                                     ->live()
-                                    ->helperText('Perbarui saat proses penggantian selesai.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Perbarui saat proses penggantian selesai.')
                                     ->columnSpan(1)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') !== NbhStatus::None->value),
                                 DatePicker::make('nbh_reported_at')
                                     ->label('Tanggal Insiden')
-                                    ->helperText('Tanggal ditemukannya aset hilang atau rusak.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Tanggal ditemukannya aset hilang atau rusak.')
                                     ->columnSpan(1)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') !== NbhStatus::None->value),
                                 Select::make('nbh_responsible_user_id')
                                     ->label('Penanggung Jawab')
                                     ->options(fn () => Cache::remember('user_options', 300, fn () => User::orderBy('name')->pluck('name', 'id')))
                                     ->searchable()
-                                    ->helperText('Pihak yang bertanggung jawab atas NBH.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pihak yang bertanggung jawab atas NBH.')
                                     ->columnSpan(1)
                                     ->required(fn (callable $get) => $get('nbh_status') === NbhStatus::Resolved->value)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') === NbhStatus::Resolved->value),
@@ -844,21 +839,21 @@ class AssetResource extends Resource
                                 DatePicker::make('sold_at')
                                     ->label('Tanggal Jual')
                                     ->native(false)
-                                    ->helperText('Tanggal efektif aset dijual.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Tanggal efektif aset dijual.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 TextInput::make('sold_to')
                                     ->label('Dijual Ke')
                                     ->maxLength(255)
                                     ->placeholder('Nama pembeli, vendor, atau tujuan penjualan')
-                                    ->helperText('Isi pihak tujuan penjualan untuk kebutuhan audit.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Isi pihak tujuan penjualan untuk kebutuhan audit.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 TextInput::make('sold_price')
                                     ->label('Harga Jual')
                                     ->numeric()
                                     ->prefix('Rp')
-                                    ->helperText('Nilai transaksi penjualan aset.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Nilai transaksi penjualan aset.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 FileUpload::make('sale_document_path')
@@ -882,87 +877,86 @@ class AssetResource extends Resource
                             ->visible(fn (): bool => auth()->user()?->can('manageCondition', Asset::class) ?? false),
 
                         Section::make('Penerima Aset')
+                            ->description('Opsional: sesuaikan penerima aset secara manual untuk kasus khusus.')
                             ->schema([
-                                Placeholder::make('recipient_hint')
-                                    ->label('Pengaturan Penerima')
-                                    ->content('Opsional: sesuaikan penerima aset secara manual untuk kasus khusus.')
-                                    ->columnSpanFull()
-                                    ->extraAttributes([
-                                        'class' => 'text-sm text-gray-500',
-                                    ]),
                                 Select::make('recipient_business_entity_id')
-                                    ->translateLabel()
+                                    ->label('Badan Usaha Penerima')
                                     ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->recipient_business_entity_id))
                                     ->searchable()
-                                    ->helperText('Kosongkan jika tetap mengikuti data transfer terakhir.'),
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Kosongkan jika tetap mengikuti data transfer terakhir.'),
                                 Select::make('recipient_id')
-                                    ->translateLabel()
+                                    ->label('Pemegang Aset')
                                     ->options(fn (?Asset $record): array => self::recipientOptions($record))
                                     ->searchable()
                                     ->disabled(fn (callable $get): bool => $get('condition_status') === AssetCondition::Available->value)
-                                    ->helperText('Pilih pemegang aset saat ini. Aset Tersedia berada di stok dan tidak punya pemegang.'),
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pilih pemegang aset saat ini. Aset Tersedia berada di stok dan tidak punya pemegang.'),
                             ])
-                            ->columns(2)
                             ->visible(fn (): bool => auth()->user()?->can('updateRecipient', Asset::class) ?? false),
                     ])
                     ->columnSpan(2),
 
                 // Kolom kanan
-                Section::make('Detail Pembelian')
-                    ->schema([
-                        DatePicker::make('purchase_date')
-                            ->translateLabel()
-                            ->required(),
-                        Select::make('business_entity_id')
-                            ->translateLabel()
-                            // Aset baru harus masuk badan usaha yang bisa diakses, kalau tidak
-                            // aset itu langsung hilang dari daftar pembuatnya sendiri.
-                            ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
-                            ->in(fn (?Asset $record): array => array_keys(BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id)))
-                            ->searchable()
-                            ->required(),
-                        TextInput::make('item_price')
-                            ->translateLabel()
-                            ->numeric(),
-                        TextInput::make('qty')
-                            ->translateLabel()
-                            ->default(1)
-                            ->required()
-                            ->numeric(),
-                        Select::make('asset_location_id')
-                            ->translateLabel()
-                            ->options(fn () => Cache::remember('asset_location_options', 300, fn () => AssetLocation::orderBy('name')->pluck('name', 'id')))
-                            ->searchable()
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->translateLabel()
-                                    ->required()
-                                    ->maxLength(255),
-                                TextInput::make('address')
-                                    ->translateLabel()
-                                    ->maxLength(255),
-                                TextInput::make('description')
-                                    ->translateLabel()
-                                    ->maxLength(255),
-                            ])
-                            ->createOptionUsing(function ($data) {
-                                $assetLocation = AssetLocation::create([
-                                    'name' => $data['name'],
-                                    'address' => $data['address'],
-                                    'description' => $data['description'],
-                                ]);
-                                Cache::forget('asset_location_options');
+                Group::make([
+                    Section::make('Detail Pembelian')
+                        ->schema([
+                            DatePicker::make('purchase_date')
+                                ->translateLabel()
+                                ->required(),
+                            TextInput::make('qty')
+                                ->translateLabel()
+                                ->default(1)
+                                ->required()
+                                ->numeric(),
+                            TextInput::make('item_price')
+                                ->translateLabel()
+                                ->numeric()
+                                ->columnSpanFull(),
+                            // Selebar baris: tombol + membuat pilihan terlalu sempit kalau dibagi dua.
+                            Select::make('asset_location_id')
+                                ->translateLabel()
+                                ->options(fn () => Cache::remember('asset_location_options', 300, fn () => AssetLocation::orderBy('name')->pluck('name', 'id')))
+                                ->searchable()
+                                ->columnSpanFull()
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->translateLabel()
+                                        ->required()
+                                        ->maxLength(255),
+                                    TextInput::make('address')
+                                        ->translateLabel()
+                                        ->maxLength(255),
+                                    TextInput::make('description')
+                                        ->translateLabel()
+                                        ->maxLength(255),
+                                ])
+                                ->createOptionUsing(function ($data) {
+                                    $assetLocation = AssetLocation::create([
+                                        'name' => $data['name'],
+                                        'address' => $data['address'],
+                                        'description' => $data['description'],
+                                    ]);
+                                    Cache::forget('asset_location_options');
 
-                                return $assetLocation->id;
-                            }),
-                        FileUpload::make('image')
-                            ->label('Foto Aset')
-                            ->directory('assets') // Define the directory to store images
-                            ->image() // Only allow image uploads
-                            ->maxSize(2048),
-                    ])
-                    ->columns(1)
-                    ->columnSpan(1),
+                                    return $assetLocation->id;
+                                }),
+                            Select::make('business_entity_id')
+                                ->translateLabel()
+                                // Aset baru harus masuk badan usaha yang bisa diakses, kalau tidak
+                                // aset itu langsung hilang dari daftar pembuatnya sendiri.
+                                ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
+                                ->in(fn (?Asset $record): array => array_keys(BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id)))
+                                ->searchable()
+                                ->required()
+                                ->columnSpanFull(),
+                            FileUpload::make('image')
+                                ->label('Foto Aset')
+                                ->directory('assets') // Define the directory to store images
+                                ->image() // Only allow image uploads
+                                ->maxSize(2048)
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2),
+                ])->columnSpan(1),
             ])->columns(3);
     }
 

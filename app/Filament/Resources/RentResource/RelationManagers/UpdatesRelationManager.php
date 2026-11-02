@@ -21,6 +21,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -49,19 +50,20 @@ class UpdatesRelationManager extends RelationManager
         /** @var Rent $rent */
         $rent = $this->getOwnerRecord();
 
+        // Rapat seperti form sewa utama: 4 isian per baris di pop-up yang lebih lebar.
         return $form
-            ->columns(2)
+            ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
             ->schema([
                 TextInput::make('rent_code')
                     ->label('Kode Perpanjangan')
                     ->placeholder('Otomatis, mis. '.RentUpdate::CODE_PREFIX.'0001')
-                    ->helperText('Kosongkan untuk kode otomatis seperti di sumo.')
+                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Kosongkan untuk kode otomatis seperti di sumo.')
                     ->maxLength(255),
                 Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
-                TextInput::make('first_party')->label('Pihak Pertama')->default($rent->first_party)->required()->maxLength(255),
-                TextInput::make('second_party')->label('Pihak Kedua')->default($rent->second_party)->required()->maxLength(255),
                 DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                 DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
+                TextInput::make('first_party')->label('Pihak Pertama')->default($rent->first_party)->required()->maxLength(255)->columnSpan(['md' => 2]),
+                TextInput::make('second_party')->label('Pihak Kedua')->default($rent->second_party)->required()->maxLength(255)->columnSpan(['md' => 2]),
                 TextInput::make('rent_per_year')->label('Sewa per Tahun')->numeric()->prefix('Rp')->default($rent->rent_per_year)->required(),
                 TextInput::make('month_before_reminder')->label('Pengingat (bulan sebelum)')->numeric()->minValue(0)->default($rent->month_before_reminder),
                 TextInput::make('cvcs_fund')->label('Dana PKP (CV.CS)')->numeric()->prefix('Rp'),
@@ -70,8 +72,8 @@ class UpdatesRelationManager extends RelationManager
                 RentResource::fileUpload('deduction_evidence_file', 'File Bukti Potong'),
                 Select::make('document')->label('Dokumen Perjanjian')->options(RentResource::AVAILABILITY_OPTIONS),
                 RentResource::fileUpload('document_file', 'File Dokumen'),
-                RentResource::fileUpload('payment_evidence_file', 'File Bukti Pembayaran'),
-                Textarea::make('notes')->label('Catatan')->rows(2)->columnSpanFull(),
+                RentResource::fileUpload('payment_evidence_file', 'File Bukti Pembayaran')->columnSpan(['md' => 2]),
+                Textarea::make('notes')->label('Catatan')->rows(3)->columnSpan(['md' => 2]),
             ]);
     }
 
@@ -81,6 +83,8 @@ class UpdatesRelationManager extends RelationManager
         $rent = $this->getOwnerRecord();
 
         return $table
+            ->modelLabel('Perpanjangan')
+            ->pluralModelLabel('Perpanjangan')
             ->modifyQueryUsing(fn ($query) => $query->with('user'))
             ->columns([
                 TextColumn::make('rent_code')->label('Kode')->weight('bold'),
@@ -119,6 +123,7 @@ class UpdatesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah Perpanjangan')
+                    ->modalWidth(Width::FiveExtraLarge)
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
                 // Sumo: importUpdate/templateUpdate/exportUpdate per sewa.
@@ -137,7 +142,7 @@ class UpdatesRelationManager extends RelationManager
                 )->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
             ])
             ->recordActions([
-                EditAction::make()->visible(fn (): bool => $this->canManage()),
+                EditAction::make()->modalWidth(Width::FiveExtraLarge)->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
                 RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
                 ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),

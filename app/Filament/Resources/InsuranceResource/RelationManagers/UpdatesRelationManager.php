@@ -20,6 +20,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Width;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
@@ -50,23 +51,24 @@ class UpdatesRelationManager extends RelationManager
         /** @var Insurance $insurance */
         $insurance = $this->getOwnerRecord();
 
+        // Urutannya sama dengan form asuransi utama: baris stok lalu baris bangunan, 4 isian per baris.
         return $form
-            ->columns(2)
+            ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
             ->schema([
                 TextInput::make('policy_number')->label('Nomor Polis')->default($insurance->policy_number)->required()->maxLength(255),
                 Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
                 DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                 DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
                 Select::make('stock_provider_id')->label('Provider Stok')->relationship('stockProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->default($insurance->stock_provider_id)->preload()->searchable(),
-                Select::make('building_provider_id')->label('Provider Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->default($insurance->building_provider_id)->preload()->searchable(),
                 TextInput::make('stock_worth')->label('Nilai Stok')->numeric()->prefix('Rp')->default($insurance->stock_worth),
-                TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp')->default($insurance->building_worth),
                 TextInput::make('actual_stock_worth')->label('Nilai Stok Aktual')->numeric()->prefix('Rp'),
-                TextInput::make('extension_of_policy')->label('Perluasan Polis')->maxLength(255),
                 TextInput::make('stock_premium')->label('Premi Stok')->numeric()->prefix('Rp'),
+                Select::make('building_provider_id')->label('Provider Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->default($insurance->building_provider_id)->preload()->searchable(),
+                TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp')->default($insurance->building_worth),
                 TextInput::make('building_premium')->label('Premi Bangunan')->numeric()->prefix('Rp'),
+                TextInput::make('extension_of_policy')->label('Perluasan Polis')->maxLength(255),
                 TextInput::make('payment_evidence')->label('Bukti Pembayaran')->maxLength(255),
-                Textarea::make('notes')->label('Catatan')->rows(2)->columnSpanFull(),
+                Textarea::make('notes')->label('Catatan')->rows(2)->columnSpan(['md' => 2, 'lg' => 3]),
             ]);
     }
 
@@ -76,6 +78,8 @@ class UpdatesRelationManager extends RelationManager
         $insurance = $this->getOwnerRecord();
 
         return $table
+            ->modelLabel('Pembaharuan')
+            ->pluralModelLabel('Pembaharuan')
             ->modifyQueryUsing(fn ($query) => $query->with(['stockProvider', 'buildingProvider', 'user']))
             ->columns([
                 TextColumn::make('policy_number')->label('Nomor Polis')->weight('bold'),
@@ -101,6 +105,7 @@ class UpdatesRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
+                    ->modalWidth(Width::FiveExtraLarge)
                     ->label('Tambah Pembaharuan')
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
@@ -120,7 +125,7 @@ class UpdatesRelationManager extends RelationManager
                 )->visible(fn (): bool => auth()->user()?->can('export', Insurance::class) ?? false),
             ])
             ->recordActions([
-                EditAction::make()->visible(fn (): bool => $this->canManage()),
+                EditAction::make()->modalWidth(Width::FiveExtraLarge)->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
                 RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
                 ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),

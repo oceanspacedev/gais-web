@@ -57,6 +57,7 @@ class VehicleChecksheetResource extends Resource
             ->schema([
                 // Informasi Kendaraan
                 Section::make('Informasi Kendaraan')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         // Forms\Components\Select::make('asset_id')
                         //     ->relationship('asset', 'name')
@@ -107,7 +108,9 @@ class VehicleChecksheetResource extends Resource
                     ]),
 
                 // Informasi Keberangkatan
+                // KM dan waktu sebaris, dua foto berdampingan.
                 Section::make('Informasi Keberangkatan')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('start_km')
                             ->required()
@@ -162,6 +165,7 @@ class VehicleChecksheetResource extends Resource
 
                 // Informasi Pengembalian
                 Section::make('Informasi Pengembalian')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('end_km')
                             ->required()
@@ -205,6 +209,7 @@ class VehicleChecksheetResource extends Resource
                     ->hidden(fn ($livewire) => $livewire instanceof CreateRecord),
                 // Informasi Tambahan
                 Section::make('Informasi Tambahan')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('rental_duration')
                             ->numeric()

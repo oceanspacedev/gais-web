@@ -20,11 +20,13 @@ use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
@@ -54,30 +56,45 @@ class TaskResource extends Resource
 
     public static function form(Schema $form): Schema
     {
+        // Rapat: 3 isian per baris di desktop; vendor digabung ke sini karena hanya satu isian.
         return $form
             ->schema([
                 Section::make('Informasi Umum')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
+                        TextInput::make('name')
+                            ->label('Nama Pekerjaan')
+                            ->required()
+                            ->columnSpan(['md' => 2]),
+
+                        Select::make('vendor_id')
+                            ->label('Vendor')
+                            ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
+                            ->searchable()
+                            ->preload()
+                            ->required()
+                            ->createOptionForm([
                                 TextInput::make('name')
-                                    ->label('Nama Pekerjaan')
+                                    ->label('Nama Vendor')
                                     ->required(),
 
-                                TextInput::make('cost')
-                                    ->label('Biaya')
+                                TextInput::make('last_price')
+                                    ->label('Harga Terakhir (Rp)')
                                     ->numeric()
                                     ->prefix('Rp ')
-                                    ->required(),
+                                    ->required()
+                                    ->placeholder('Masukkan harga terakhir'),
                             ]),
+
+                        TextInput::make('cost')
+                            ->label('Biaya')
+                            ->numeric()
+                            ->prefix('Rp ')
+                            ->required(),
 
                         DateTimePicker::make('work_timestamp')
                             ->native(false)
                             ->default(now())
-                            ->required(),
-
-                        Textarea::make('description')
-                            ->label('Deskripsi')
                             ->required(),
 
                         TextInput::make('location')
@@ -100,29 +117,11 @@ class TaskResource extends Resource
                             ->default(fn () => auth()->id())
                             // ->disabled(fn() => !auth()->user()->hasRole('super_admin'))
                             ->dehydrated(true),
-                    ]),
 
-                // Vendor Information Section
-                Section::make('Informasi Vendor')
-                    ->schema([
-                        Select::make('vendor_id')
-                            ->label('Vendor')
-                            ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
-                            ->searchable()
-                            ->preload()
+                        Textarea::make('description')
+                            ->label('Deskripsi')
                             ->required()
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->label('Nama Vendor')
-                                    ->required(),
-
-                                TextInput::make('last_price')
-                                    ->label('Harga Terakhir (Rp)')
-                                    ->numeric()
-                                    ->prefix('Rp ')
-                                    ->required()
-                                    ->placeholder('Masukkan harga terakhir'),
-                            ]),
+                            ->columnSpanFull(),
                     ]),
 
                 // Attachment Section
@@ -137,7 +136,9 @@ class TaskResource extends Resource
                             ->hiddenOn('create'),
                     ])
                     ->columns(1)
-                    ->collapsible(),
+                    ->collapsible()
+                    // Isinya hanya muncul saat edit; tanpa ini halaman buat menampilkan kotak kosong.
+                    ->hiddenOn('create'),
             ]);
     }
 
@@ -304,102 +305,93 @@ class TaskResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        // Satu kolom selebar layar: data pekerjaan, lalu lampiran. Nama pekerjaan jadi judul halaman.
         return $infolist
+            ->columns(1)
             ->schema([
-                // General Information Section
-                Section::make('Informasi Umum')
-                    ->description('Detail penting mengenai tugas dan entitas terkait.')
+                Section::make('Informasi Pekerjaan')
+                    ->icon('heroicon-o-wrench-screwdriver')
                     ->schema([
-                        Grid::make(2) // Two-column grid layout for better spacing
-                            ->schema([
-                                TextEntry::make('name')
-                                    ->label('Nama Tugas')
-                                    ->placeholder('Tidak ada nama tugas'),
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('code')
+                                ->label('Nomor Tugas')
+                                ->placeholder('Belum dibuat')
+                                ->columnSpan(['default' => 2]),
+                            TextEntry::make('status')
+                                ->label('Status')
+                                ->badge()
+                                ->formatStateUsing(fn (?string $state): string => static::statusLabel($state))
+                                ->color(fn (?string $state): string => static::statusColor($state)),
+                            TextEntry::make('cost')
+                                ->label('Biaya')
+                                ->money('IDR', decimalPlaces: 0)
+                                ->weight(FontWeight::Bold)
+                                ->placeholder('-'),
+                            TextEntry::make('vendor.name')->label('Vendor')->placeholder('-'),
+                            TextEntry::make('work_timestamp')->label('Waktu Pekerjaan')->dateTime('d M Y, H:i')->placeholder('-'),
+                            TextEntry::make('location')->label('Lokasi')->placeholder('-'),
+                            TextEntry::make('user.name')->label('PIC')->placeholder('-'),
+                            TextEntry::make('businessEntity.name')->label('Badan Usaha')->placeholder('-'),
+                            TextEntry::make('created_at')->label('Dibuat')->dateTime('d M Y, H:i'),
+                            TextEntry::make('updated_at')->label('Diperbarui')->dateTime('d M Y, H:i'),
+                            TextEntry::make('document_upload')
+                                ->label('Dokumen')
+                                ->state(fn (Task $record): string => filled($record->document_upload) ? 'Lihat Dokumen' : 'Belum diunggah')
+                                ->url(fn (Task $record): ?string => filled($record->document_upload) ? StoredFile::url($record->document_upload) : null, true)
+                                ->icon(fn (Task $record): ?string => filled($record->document_upload) ? 'heroicon-o-document-text' : null)
+                                ->color(fn (Task $record): string => filled($record->document_upload) ? 'primary' : 'gray'),
+                            TextEntry::make('description')
+                                ->label('Deskripsi')
+                                ->placeholder('-')
+                                ->columnSpanFull(),
+                        ]),
+                    ]),
 
-                                TextEntry::make('vendor.name')
-                                    ->label('Nama Vendor')
-                                    ->placeholder('Tidak ada vendor yang ditugaskan'),
-
-                                TextEntry::make('businessEntity.name')
-                                    ->label('Badan Usaha')
-                                    ->placeholder('Tidak ada badan usaha terkait'),
-
-                                TextEntry::make('code')
-                                    ->label('Nomor Tugas')
-                                    ->placeholder('Kode tugas belum dibuat'),
-                            ]),
-                    ])
-                    ->columns(1) // Single column for easier readability
-                    ->collapsible(), // Allow section to be collapsible for a cleaner UI
-
-                // Status Section
-                Section::make('Status Pekerjaan')
-                    ->description('Periksa status terbaru dari tugas ini.')
-                    ->schema([
-                        TextEntry::make('status')
-                            ->label('Status')
-                            ->placeholder('Status belum diperbarui'),
-                    ])
-                    ->columns(1)
-                    ->collapsible(), // Make it collapsible
-
-                // Attachments Section
                 Section::make('Lampiran')
-                    ->description('Lampiran terkait tugas ini.')
+                    ->icon('heroicon-o-photo')
                     ->schema([
-                        TextEntry::make('attachment')
-                            ->label('Lampiran')
-                            ->formatStateUsing(function ($state) {
-                                // Jika state adalah JSON-encoded string, ubah menjadi array
-                                if (is_string($state) && str_starts_with($state, '[')) {
-                                    $state = json_decode($state, true); // Decode JSON string to array
-                                }
-
-                                // Jika state adalah array, tampilkan gambar
-                                if (is_array($state)) {
-                                    return "<div style='display: flex; flex-wrap: wrap; gap: 10px;'>"
-                                        .collect($state)->map(function ($image) {
-                                            $url = e(StoredFile::url($image));
-
-                                            return "<img src='{$url}' alt='Lampiran' style='max-width: 100px; border-radius: 5px;'>";
-                                        })->implode('').
-                                        '</div>';
-                                }
-
-                                // Jika hanya satu gambar
-                                if (is_string($state) && ! empty($state)) {
-                                    $url = e(StoredFile::url($state));
-
-                                    return "<img src='{$url}' alt='Lampiran' style='max-width: 100px; border-radius: 5px;'>";
-                                }
-
-                                return 'Tidak ada lampiran';
-                            })
-                            ->html(), // Enable HTML rendering for images
-                    ])
-                    ->collapsible() // Allow section to be collapsible
-                    ->columns(1),
-
-                // Timestamps Section
-                Section::make('Tanggal')
-                    ->description('Waktu pembuatan dan pembaruan tugas ini.')
-                    ->schema([
-                        Grid::make(2) // Two-column grid for created and updated timestamps
-                            ->schema([
-                                TextEntry::make('created_at')
-                                    ->label('Dibuat Pada')
-                                    ->dateTime()
-                                    ->placeholder('Tanggal pembuatan belum tersedia'),
-
-                                TextEntry::make('updated_at')
-                                    ->label('Diperbarui Pada')
-                                    ->dateTime()
-                                    ->placeholder('Tanggal pembaruan belum tersedia'),
-                            ]),
-                    ])
-                    ->columns(1)
-                    ->collapsible(), // Make this section collapsible too
+                        // Kolom attachment berisi JSON daftar path; ditampilkan sebagai foto biasa.
+                        ImageEntry::make('attachment')
+                            ->hiddenLabel()
+                            ->state(fn (Task $record): array => collect(static::attachmentPaths($record))->map(fn (string $path): string => StoredFile::url($path))->all())
+                            ->height(120)
+                            ->placeholder('Tidak ada lampiran'),
+                    ]),
             ]);
+    }
+
+    public static function statusLabel(?string $status): string
+    {
+        return match ($status) {
+            'open' => 'Terbuka',
+            'in_progress' => 'Dikerjakan',
+            'completed' => 'Selesai',
+            default => $status ?? '-',
+        };
+    }
+
+    public static function statusColor(?string $status): string
+    {
+        return match ($status) {
+            'open' => 'danger',
+            'in_progress' => 'warning',
+            'completed' => 'success',
+            default => 'gray',
+        };
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private static function attachmentPaths(Task $record): array
+    {
+        $state = $record->attachment;
+
+        if (is_string($state) && str_starts_with($state, '[')) {
+            $state = json_decode($state, true);
+        }
+
+        return collect(is_array($state) ? $state : [$state])->filter(fn ($path): bool => is_string($path) && $path !== '')->values()->all();
     }
 
     public static function getRelations(): array

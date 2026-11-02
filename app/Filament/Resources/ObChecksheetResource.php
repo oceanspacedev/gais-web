@@ -96,6 +96,15 @@ class ObChecksheetResource extends Resource
                     ->schema([
                         Grid::make(['default' => 1, 'sm' => 2, 'md' => 3])
                             ->schema([
+                                TextInput::make('room')
+                                    ->label('Nama Ruangan')
+                                    ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Nama yang cocok dengan Master Ruangan otomatis terhubung.')
+                                    ->datalist(fn (Get $get): array => self::roomSuggestions($get('ob_shift_id')))
+                                    ->required()
+                                    ->maxLength(255)
+                                    ->columnSpan(['sm' => 2]),
+
                                 TextInput::make('reference_number')
                                     ->label('Nomor Referensi')
                                     ->readOnly(),
@@ -138,6 +147,12 @@ class ObChecksheetResource extends Resource
                                     ->label('Durasi')
                                     ->suffix('menit')
                                     ->numeric(),
+
+                                Textarea::make('notes')
+                                    ->label('Catatan (Opsional)')
+                                    ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
+                                    ->rows(2)
+                                    ->columnSpanFull(),
                             ]),
                     ])
                     ->hiddenOn('create'),
@@ -171,14 +186,14 @@ class ObChecksheetResource extends Resource
                                 CameraCapture::make('before_photo')
                                     ->label('Foto Sebelum Pembersihan')
                                     ->folder('ob-checksheets/before')
-                                    ->required()
-                                    ->columnSpanFull(),
+                                    ->required(),
                                 Textarea::make('notes')
                                     ->label('Catatan (Opsional)')
                                     ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
-                                    ->rows(2)
-                                    ->columnSpanFull(),
+                                    ->rows(4),
                             ])
+                            // Di HP tetap satu kolom; di layar lebar foto dan catatan berdampingan.
+                            ->columns(['default' => 1, 'md' => 2])
                             ->minItems(1)
                             ->defaultItems(1)
                             ->addActionLabel('Tambah ruangan')
@@ -191,19 +206,6 @@ class ObChecksheetResource extends Resource
                             ->columnSpanFull(),
                     ]),
 
-                Section::make('Ruangan yang Dibersihkan')
-                    ->hiddenOn('create')
-                    ->schema([
-                        TextInput::make('room')
-                            ->label('Nama Ruangan')
-                            ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
-                            ->helperText('Nama yang cocok dengan Master Ruangan otomatis terhubung.')
-                            ->datalist(fn (Get $get): array => self::roomSuggestions($get('ob_shift_id')))
-                            ->required()
-                            ->maxLength(255)
-                            ->columnSpanFull(),
-                    ]),
-
                 Section::make('Dokumentasi Foto Kebersihan')
                     ->hiddenOn('create')
                     ->columns(['default' => 1, 'md' => 2])
@@ -213,16 +215,6 @@ class ObChecksheetResource extends Resource
                         self::photoPreview('after_photo', 'Foto Sesudah Pembersihan', 'ob-checksheets/after'),
                     ]),
 
-                Section::make('Catatan Tambahan (Opsional)')
-                    ->hiddenOn('create')
-                    ->collapsible()
-                    ->schema([
-                        Textarea::make('notes')
-                            ->label('Catatan')
-                            ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
-                            ->rows(3)
-                            ->columnSpanFull(),
-                    ]),
             ]);
     }
 

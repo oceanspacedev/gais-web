@@ -20,9 +20,12 @@ use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -63,11 +66,13 @@ class InsuranceResource extends Resource
 
     public static function form(Schema $form): Schema
     {
+        // Dibuat rapat: 3-4 isian per baris di desktop supaya form tidak perlu banyak scroll.
         return $form
             ->columns(1)
             ->schema([
                 Section::make('Polis')
-                    ->columns(2)
+                    ->icon('heroicon-o-document-text')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         TextInput::make('policy_number')->label('Nomor Polis')->required()->maxLength(255),
                         TextInput::make('insured_name')->label('Nama Tertanggung')->required()->maxLength(255),
@@ -78,24 +83,27 @@ class InsuranceResource extends Resource
                             ->label('Badan Usaha')
                             ->options(fn (?Insurance $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
                             ->searchable(),
-                        TextInput::make('insured_address')->label('Alamat Tertanggung')->maxLength(255)->columnSpanFull(),
-                        TextInput::make('insured_detail')->label('Detail Tertanggung')->maxLength(255)->columnSpanFull(),
-                        TextInput::make('risk_address')->label('Alamat Risiko')->maxLength(255)->columnSpanFull(),
+                        TextInput::make('insured_detail')->label('Detail Tertanggung')->maxLength(255),
+                        TextInput::make('insured_address')->label('Alamat Tertanggung')->maxLength(255),
+                        TextInput::make('risk_address')->label('Alamat Risiko')->maxLength(255),
                     ]),
+                // Baris stok dan baris bangunan berdampingan supaya mudah dibandingkan.
                 Section::make('Nilai dan Premi')
-                    ->columns(2)
+                    ->icon('heroicon-o-banknotes')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
                     ->schema([
                         Select::make('stock_provider_id')->label('Provider Asuransi Stok')->relationship('stockProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable(),
-                        Select::make('building_provider_id')->label('Provider Asuransi Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable(),
                         TextInput::make('stock_worth')->label('Nilai Stok')->numeric()->prefix('Rp'),
-                        TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp'),
                         TextInput::make('actual_stock_worth')->label('Nilai Stok Aktual')->numeric()->prefix('Rp'),
-                        TextInput::make('extension_of_policy')->label('Perluasan Polis')->maxLength(255),
                         TextInput::make('stock_premium')->label('Premi Stok')->numeric()->prefix('Rp'),
+                        Select::make('building_provider_id')->label('Provider Asuransi Bangunan')->relationship('buildingProvider', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload()->searchable(),
+                        TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp'),
                         TextInput::make('building_premium')->label('Premi Bangunan')->numeric()->prefix('Rp'),
+                        TextInput::make('extension_of_policy')->label('Perluasan Polis')->maxLength(255),
                     ]),
                 Section::make('Periode dan Status')
-                    ->columns(2)
+                    ->icon('heroicon-o-calendar-days')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
                     ->schema([
                         DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                         DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
@@ -104,8 +112,74 @@ class InsuranceResource extends Resource
                         TextInput::make('reminder_phones')
                             ->label('Nomor WA Pengingat')
                             ->helperText('Pisahkan dengan koma. Kosong = memakai nomor global di Notifikasi WA.')
-                            ->maxLength(255),
-                        Textarea::make('notes')->label('Catatan')->rows(2)->columnSpanFull(),
+                            ->maxLength(255)
+                            ->columnSpan(['md' => 2]),
+                        Textarea::make('notes')->label('Catatan')->rows(2)->columnSpan(['md' => 2]),
+                    ]),
+            ]);
+    }
+
+    public static function infolist(Schema $infolist): Schema
+    {
+        $money = fn (TextEntry $entry): TextEntry => $entry->money('IDR', decimalPlaces: 0)->placeholder('-');
+
+        // Halaman detail tadinya memakai form yang dinonaktifkan; ini tampilan baca yang rapat.
+        return $infolist
+            ->columns(1)
+            ->schema([
+                Section::make('Polis')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('insured_name')->label('Nama Tertanggung')->weight(FontWeight::SemiBold)
+                                ->helperText(fn (Insurance $record): ?string => $record->insured_detail)
+                                ->columnSpan(['default' => 2]),
+                            TextEntry::make('category.name')->label('Kategori')->placeholder('-'),
+                            TextEntry::make('scope.name')->label('Cakupan')->placeholder('-'),
+                            TextEntry::make('businessEntity.name')->label('Badan Usaha')->placeholder('-'),
+                            TextEntry::make('warehouse_code')->label('Kode Gudang')->placeholder('-'),
+                            TextEntry::make('insured_address')->label('Alamat Tertanggung')->placeholder('-')
+                                ->columnSpan(['default' => 2, 'lg' => 1]),
+                            TextEntry::make('risk_address')->label('Alamat Risiko')->placeholder('-')
+                                ->columnSpan(['default' => 2, 'lg' => 1]),
+                        ]),
+                    ]),
+
+                Section::make('Nilai dan Premi')
+                    ->icon('heroicon-o-banknotes')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('stockProvider.name')->label('Provider Stok')->placeholder('-'),
+                            $money(TextEntry::make('stock_worth')->label('Nilai Stok')),
+                            $money(TextEntry::make('actual_stock_worth')->label('Nilai Stok Aktual')),
+                            $money(TextEntry::make('stock_premium')->label('Premi Stok'))->weight(FontWeight::SemiBold),
+                            TextEntry::make('buildingProvider.name')->label('Provider Bangunan')->placeholder('-'),
+                            $money(TextEntry::make('building_worth')->label('Nilai Bangunan')),
+                            $money(TextEntry::make('building_premium')->label('Premi Bangunan'))->weight(FontWeight::SemiBold),
+                            TextEntry::make('extension_of_policy')->label('Perluasan Polis')->placeholder('-'),
+                        ]),
+                    ]),
+
+                Section::make('Periode dan Status')
+                    ->icon('heroicon-o-calendar-days')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('join_date')->label('Tanggal Mulai')->date('d M Y'),
+                            TextEntry::make('expired_date')->label('Tanggal Berakhir')->date('d M Y'),
+                            TextEntry::make('status')->label('Status Polis Awal')->badge(),
+                            // Pembaharuan terakhir menentukan jatuh tempo yang berlaku (lihat Riwayat Pembaharuan).
+                            TextEntry::make('effective_expired_date')->label('Jatuh Tempo Berlaku')
+                                ->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->translatedFormat('d M Y'))
+                                ->helperText(fn (Insurance $record): ?string => $record->latestUpdate() ? 'Dari pembaharuan terakhir' : null)
+                                ->weight(FontWeight::Bold)
+                                ->color(fn (Insurance $record): ?string => $record->effectiveDueColor())
+                                ->placeholder('-'),
+                            TextEntry::make('payment_evidence')->label('Bukti Pembayaran')->placeholder('-'),
+                            TextEntry::make('reminder_phones')->label('Nomor WA Pengingat')->placeholder('Nomor global'),
+                            TextEntry::make('notes')->label('Catatan')
+                                ->columnSpan(['default' => 2])
+                                ->visible(fn (Insurance $record): bool => filled($record->notes)),
+                        ]),
                     ]),
             ]);
     }
