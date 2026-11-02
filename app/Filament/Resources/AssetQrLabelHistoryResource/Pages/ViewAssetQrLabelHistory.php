@@ -12,6 +12,21 @@ class ViewAssetQrLabelHistory extends ViewRecord
 {
     protected static string $resource = AssetQrLabelHistoryResource::class;
 
+    public function getTitle(): string
+    {
+        return $this->getRecord()->actionLabel();
+    }
+
+    public function getSubheading(): ?string
+    {
+        $record = $this->getRecord();
+
+        return collect([
+            $record->created_at?->translatedFormat('d M Y, H:i'),
+            $record->user?->name ? 'oleh '.$record->user->name : null,
+        ])->filter()->implode(' · ');
+    }
+
     protected function getHeaderActions(): array
     {
         return [

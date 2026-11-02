@@ -25,8 +25,10 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
@@ -130,46 +132,93 @@ class RentResource extends Resource
     {
         $money = fn (TextEntry $entry): TextEntry => $entry->money('IDR', decimalPlaces: 0)->placeholder('-');
 
+        // Dokumen: status ketersediaan, dan bisa diklik kalau filenya ada.
+        $document = fn (TextEntry $entry, string $fileColumn): TextEntry => $entry
+            ->placeholder('-')
+            ->url(fn (Rent $record): ?string => LegacyUpload::url(LegacyUpload::RENT_DIR, $record->{$fileColumn}), true)
+            ->icon(fn (Rent $record): ?string => filled($record->{$fileColumn}) ? 'heroicon-o-paper-clip' : null)
+            ->color(fn (Rent $record): ?string => filled($record->{$fileColumn}) ? 'primary' : null);
+
+        // Kiri: kontrak dan tagihan. Kanan: periode/pengingat dan dokumen.
         return $infolist
-            ->columns(1)
+            ->columns(['default' => 1, 'lg' => 3])
             ->schema([
-                Section::make('Kontrak')
-                    ->columns(3)
-                    ->schema([
-                        TextEntry::make('rent_code')->label('Kode Sewa')->weight('bold'),
-                        TextEntry::make('rented_detail')->label('Objek Sewa'),
-                        TextEntry::make('rented_address')->label('Alamat')->placeholder('-'),
-                        TextEntry::make('first_party')->label('Pihak Pertama'),
-                        TextEntry::make('second_party')->label('Pihak Kedua'),
-                        TextEntry::make('businessEntity.name')->label('Badan Usaha')->placeholder('-'),
-                        TextEntry::make('join_date')->label('Tanggal Mulai')->date('d/m/Y'),
-                        TextEntry::make('expired_date')->label('Tanggal Berakhir')->date('d/m/Y')->color(fn (Rent $record): ?string => $record->dueColor()),
-                        TextEntry::make('status')->label('Status')->badge(),
-                        TextEntry::make('reminder_date')->label('Tanggal Reminder')
-                            ->state(fn (Rent $record): ?string => $record->reminderDate()?->format('d/m/Y'))
-                            ->helperText(fn (Rent $record): string => ($record->month_before_reminder ?: 0).' bulan sebelum berakhir')
-                            ->placeholder('-'),
-                        TextEntry::make('deduction_evidence')->label('Bukti Potong')->placeholder('-'),
-                        TextEntry::make('document')->label('Dokumen Perjanjian')->placeholder('-'),
-                        TextEntry::make('reminder_phones')->label('Nomor WA Pengingat')->placeholder('Nomor global'),
-                        TextEntry::make('notes')->label('Catatan')->placeholder('-')->columnSpanFull(),
-                    ]),
-                Section::make('Tagihan Kontrak Awal')
-                    ->description('Jumlah tahun = hari sewa / 366 dibulatkan ke atas; total = tahun x sewa per tahun.')
-                    ->schema([
-                        Grid::make(3)->schema([
-                            $money(TextEntry::make('rent_per_year')->label('Sewa per Tahun')),
-                            $money(TextEntry::make('billing_total')->label('Total Tagihan')->state(fn (Rent $record): int => $record->billingSummary()['total'])),
-                            TextEntry::make('billing_years')->label('Jumlah Tahun')->state(fn (Rent $record): string => $record->billingSummary()['years'].' tahun'),
-                            $money(TextEntry::make('cvcs_fund')->label('Dana PKP (CV.CS)')),
-                            $money(TextEntry::make('online_fund')->label('Dana NON-PKP (Online)')),
-                            $money(TextEntry::make('billing_remaining')->label('Sisa Tagihan')->state(fn (Rent $record): int => $record->billingSummary()['remaining'])),
-                            TextEntry::make('billing_status')->label('Status Tagihan')
+                Group::make([
+                    Section::make('Informasi Kontrak')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('rented_detail')->label('Objek Sewa')->weight(FontWeight::SemiBold)
+                                    ->helperText(fn (Rent $record): ?string => $record->rented_address)
+                                    ->columnSpan(['default' => 2, 'xl' => 1]),
+                                TextEntry::make('businessEntity.name')->label('Badan Usaha')->placeholder('-'),
+                                TextEntry::make('status')->label('Status')->badge(),
+                                TextEntry::make('first_party')->label('Pihak Pertama'),
+                                TextEntry::make('second_party')->label('Pihak Kedua'),
+                            ]),
+                        ]),
+
+                    Section::make('Tagihan Kontrak Awal')
+                        ->icon('heroicon-o-banknotes')
+                        ->description('Jumlah tahun = hari sewa / 366 dibulatkan ke atas; total = tahun x sewa per tahun.')
+                        ->afterHeader([
+                            TextEntry::make('billing_status')->hiddenLabel()
                                 ->state(fn (Rent $record): string => $record->billingSummary()['status'])
                                 ->badge()
                                 ->color(fn (string $state): string => Rent::billingColor($state)),
+                        ])
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                $money(TextEntry::make('rent_per_year')->label('Sewa per Tahun')),
+                                TextEntry::make('billing_years')->label('Jumlah Tahun')->state(fn (Rent $record): string => $record->billingSummary()['years'].' tahun'),
+                                $money(TextEntry::make('billing_total')->label('Total Tagihan')->weight(FontWeight::Bold)
+                                    ->state(fn (Rent $record): int => $record->billingSummary()['total'])),
+                                $money(TextEntry::make('cvcs_fund')->label('Dana PKP (CV.CS)')),
+                                $money(TextEntry::make('online_fund')->label('Dana NON-PKP (Online)')),
+                                $money(TextEntry::make('billing_remaining')->label('Sisa Tagihan')->weight(FontWeight::Bold)
+                                    ->state(fn (Rent $record): int => $record->billingSummary()['remaining'])
+                                    ->color(fn (Rent $record): string => Rent::billingColor($record->billingSummary()['status']))),
+                            ]),
                         ]),
-                    ]),
+
+                    Section::make('Catatan')
+                        ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                        ->visible(fn (Rent $record): bool => filled($record->notes))
+                        ->schema([
+                            TextEntry::make('notes')->hiddenLabel(),
+                        ]),
+                ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
+
+                Group::make([
+                    Section::make('Periode Sewa')
+                        ->icon('heroicon-o-calendar-days')
+                        ->schema([
+                            Grid::make(['default' => 2, 'lg' => 1])->schema([
+                                TextEntry::make('join_date')->label('Tanggal Mulai')->date('d M Y'),
+                                TextEntry::make('expired_date')->label('Tanggal Berakhir')->date('d M Y')->weight(FontWeight::SemiBold)
+                                    ->color(fn (Rent $record): ?string => $record->dueColor()),
+                                TextEntry::make('reminder_date')->label('Tanggal Reminder')
+                                    ->state(fn (Rent $record): ?string => $record->reminderDate()?->translatedFormat('d M Y'))
+                                    ->helperText(fn (Rent $record): string => ($record->month_before_reminder ?: 0).' bulan sebelum berakhir')
+                                    ->placeholder('-'),
+                                TextEntry::make('reminder_phones')->label('Nomor WA Pengingat')->placeholder('Nomor global'),
+                            ]),
+                        ]),
+
+                    Section::make('Dokumen')
+                        ->icon('heroicon-o-paper-clip')
+                        ->schema([
+                            Grid::make(['default' => 2, 'lg' => 1])->schema([
+                                $document(TextEntry::make('document')->label('Dokumen Perjanjian'), 'document_file'),
+                                $document(TextEntry::make('deduction_evidence')->label('Bukti Potong'), 'deduction_evidence_file'),
+                                TextEntry::make('payment_evidence_file')->label('Bukti Pembayaran')
+                                    ->state(fn (Rent $record): string => filled($record->payment_evidence_file) ? 'Lihat Dokumen' : 'Tidak ada file')
+                                    ->url(fn (Rent $record): ?string => LegacyUpload::url(LegacyUpload::RENT_DIR, $record->payment_evidence_file), true)
+                                    ->icon(fn (Rent $record): ?string => filled($record->payment_evidence_file) ? 'heroicon-o-paper-clip' : null)
+                                    ->color(fn (Rent $record): string => filled($record->payment_evidence_file) ? 'primary' : 'gray'),
+                            ]),
+                        ]),
+                ])->columnSpan(1)->extraAttributes(['class' => 'gais-fill-column']),
             ]);
     }
 

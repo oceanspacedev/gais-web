@@ -34,6 +34,18 @@ class ViewAsset extends ViewRecord
         $this->record->loadMissing('qr');
     }
 
+    public function getTitle(): string
+    {
+        return $this->getRecord()->name ?: 'Detail Aset';
+    }
+
+    public function getSubheading(): ?string
+    {
+        $record = $this->getRecord();
+
+        return collect([$record->category?->name, $record->condition_status_label])->filter()->implode(' · ') ?: null;
+    }
+
     protected function getActions(): array
     {
         $actions = [
@@ -324,44 +336,51 @@ class ViewAsset extends ViewRecord
                 ->icon('heroicon-m-ellipsis-vertical')
                 ->color('gray')
                 ->button(),
-            Actions\Action::make('printQrLabel')
-                ->label('Print Label QR')
-                ->icon('heroicon-o-printer')
-                ->url(fn (): string => route('assets.qr-label.print', $this->record))
-                ->openUrlInNewTab(),
-            Actions\Action::make('downloadQrLabel')
-                ->label('Download Label QR (PDF)')
+            // Tiga aksi QR digabung satu menu supaya header tidak penuh tombol.
+            Actions\ActionGroup::make([
+                Actions\Action::make('printQrLabel')
+                    ->label('Print Label QR')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (): string => route('assets.qr-label.print', $this->record))
+                    ->openUrlInNewTab(),
+                Actions\Action::make('downloadQrLabel')
+                    ->label('Download Label QR (PDF)')
+                    ->icon('heroicon-o-qr-code')
+                    ->action(function () {
+                        /** @var Asset $asset */
+                        $asset = $this->record;
+
+                        $history = app(AssetQrLabelHistoryService::class)->record(
+                            auth()->user(),
+                            AssetQrLabelHistory::ACTION_DOWNLOAD_PDF,
+                            [$asset],
+                        );
+
+                        abort_unless($history, 500);
+
+                        return app(AssetQrLabelHistoryService::class)->download($history);
+                    }),
+                Actions\Action::make('regenerateQr')
+                    ->label('Regenerate QR')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (): bool => auth()->user()?->can('regenerateQr', Asset::class) ?? false)
+                    ->action(function (): void {
+                        app(AssetQrService::class)->regenerate($this->record);
+                        $this->record->refresh()->load('qr');
+
+                        Notification::make()
+                            ->title('QR diganti')
+                            ->body('Stiker lama tidak berlaku. Cetak ulang label.')
+                            ->success()
+                            ->send();
+                    }),
+            ])
+                ->label('Label QR')
                 ->icon('heroicon-o-qr-code')
-                ->action(function () {
-                    /** @var Asset $asset */
-                    $asset = $this->record;
-
-                    $history = app(AssetQrLabelHistoryService::class)->record(
-                        auth()->user(),
-                        AssetQrLabelHistory::ACTION_DOWNLOAD_PDF,
-                        [$asset],
-                    );
-
-                    abort_unless($history, 500);
-
-                    return app(AssetQrLabelHistoryService::class)->download($history);
-                }),
-            Actions\Action::make('regenerateQr')
-                ->label('Regenerate QR')
-                ->icon('heroicon-o-arrow-path')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->visible(fn (): bool => auth()->user()?->can('regenerateQr', Asset::class) ?? false)
-                ->action(function (): void {
-                    app(AssetQrService::class)->regenerate($this->record);
-                    $this->record->refresh()->load('qr');
-
-                    Notification::make()
-                        ->title('QR diganti')
-                        ->body('Stiker lama tidak berlaku. Cetak ulang label.')
-                        ->success()
-                        ->send();
-                }),
+                ->color('gray')
+                ->button(),
             Actions\EditAction::make(),
         ];
 

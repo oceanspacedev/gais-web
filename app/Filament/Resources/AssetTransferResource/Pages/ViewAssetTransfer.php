@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AssetTransferResource\Pages;
 
 use App\Filament\Resources\AssetTransferResource;
 use App\Models\AssetTransfer;
+use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\EditAction;
 use Filament\Notifications\Notification;
@@ -18,16 +19,28 @@ class ViewAssetTransfer extends ViewRecord
     // Daftar aset di infolist; tanpa ini setiap baris memuat asetnya sendiri.
     protected function resolveRecord(int|string $key): Model
     {
-        return parent::resolveRecord($key)->loadMissing('details.asset');
+        return parent::resolveRecord($key)->loadMissing(['details.asset', 'fromUser.jobTitle', 'toUser.jobTitle', 'businessEntity']);
     }
 
+    public function getTitle(): string
+    {
+        return $this->getRecord()->letter_number ?: 'Detail Aset Transfer';
+    }
+
+    public function getSubheading(): ?string
+    {
+        $record = $this->getRecord();
+
+        return collect([$record->status, $record->transfer_date ? Carbon::parse($record->transfer_date)->translatedFormat('d M Y') : null])->filter()->implode(' · ');
+    }
+
+    // Ubah di paling kanan sebagai aksi utama, sama seperti halaman detail lain.
     protected function getHeaderActions(): array
     {
         return [
-            EditAction::make(),
             Action::make('clear_document')
                 ->label('Kosongkan Dokumen')
-                ->color('warning')
+                ->color('gray')
                 ->icon('heroicon-o-trash')
                 ->requiresConfirmation()
                 ->modalHeading('Kosongkan Dokumen')
@@ -46,8 +59,10 @@ class ViewAssetTransfer extends ViewRecord
                 }),
             Action::make('download')
                 ->label('Download PDF')
+                ->icon('heroicon-o-arrow-down-tray')
                 ->url(fn (AssetTransfer $record): string => route('asset-transfer.download', $record))
-                ->color('info'),
+                ->color('gray'),
+            EditAction::make(),
         ];
     }
 }

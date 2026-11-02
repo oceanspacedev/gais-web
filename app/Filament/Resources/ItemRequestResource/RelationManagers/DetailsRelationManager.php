@@ -74,13 +74,15 @@ class DetailsRelationManager extends RelationManager
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('product.unitType'))
             ->columns([
-                TextColumn::make('product.name')->label('Barang')->weight('bold')->placeholder('(barang dihapus)'),
-                TextColumn::make('product.unitType.name')->label('Satuan')->placeholder('-'),
-                TextColumn::make('qty_request')->label('Diminta')->numeric(decimalPlaces: 0),
-                TextColumn::make('qty_approved')->label('Disetujui')->numeric(decimalPlaces: 0)->placeholder('Belum'),
-                TextColumn::make('product.price')->label('Harga')->money('IDR', decimalPlaces: 0)->placeholder('-'),
-                TextColumn::make('line_total')->label('Subtotal')->state(fn (ItemRequestDetail $record): string => 'Rp '.number_format($record->lineTotal(), 0, ',', '.')),
-                TextColumn::make('description')->label('Keterangan')->wrap()->placeholder('-'),
+                TextColumn::make('product.name')->label('Barang')->weight('bold')->wrap()->placeholder('(barang dihapus)')
+                    ->description(fn (ItemRequestDetail $record): ?string => $record->description),
+                TextColumn::make('qty_request')->label('Diminta')->numeric(decimalPlaces: 0)->alignEnd()
+                    ->suffix(fn (ItemRequestDetail $record): string => $record->product?->unitType ? ' '.$record->product->unitType->name : ''),
+                TextColumn::make('qty_approved')->label('Disetujui')->numeric(decimalPlaces: 0)->alignEnd()->placeholder('Belum')
+                    ->suffix(fn (ItemRequestDetail $record): string => $record->product?->unitType ? ' '.$record->product->unitType->name : ''),
+                TextColumn::make('product.price')->label('Harga')->money('IDR', decimalPlaces: 0)->alignEnd()->placeholder('-'),
+                TextColumn::make('line_total')->label('Subtotal')->weight('semibold')->alignEnd()
+                    ->state(fn (ItemRequestDetail $record): string => 'Rp '.number_format($record->lineTotal(), 0, ',', '.')),
             ])
             ->filters([
                 TrashedFilter::make(),

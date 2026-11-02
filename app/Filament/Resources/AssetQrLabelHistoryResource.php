@@ -4,20 +4,27 @@ namespace App\Filament\Resources;
 
 use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\AssetQrLabelHistoryResource\Pages;
+use App\Models\Asset;
 use App\Models\AssetQrLabelHistory;
 use App\Services\AssetQrLabelHistoryService;
 use App\Support\RelationSearch;
 use Filament\Actions\Action;
 use Filament\Actions\ViewAction;
+use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 class AssetQrLabelHistoryResource extends Resource
@@ -70,40 +77,91 @@ class AssetQrLabelHistoryResource extends Resource
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema->schema([
-            Section::make('Detail Generate Label QR')
-                ->schema([
-                    TextEntry::make('created_at')
-                        ->label('Waktu')
-                        ->dateTime('d/m/Y H:i:s'),
-                    TextEntry::make('action')
-                        ->label('Aksi')
-                        ->badge()
-                        ->formatStateUsing(fn (AssetQrLabelHistory $record): string => $record->actionLabel())
-                        ->color(fn (string $state): string => match ($state) {
-                            AssetQrLabelHistory::ACTION_PRINT => 'info',
-                            AssetQrLabelHistory::ACTION_DOWNLOAD_PDF => 'success',
-                            default => 'gray',
-                        }),
-                    TextEntry::make('user.name')
-                        ->label('Di-generate oleh')
-                        ->placeholder('—'),
-                    TextEntry::make('asset_count')
-                        ->label('Jumlah aset'),
-                    TextEntry::make('file_name')
-                        ->label('File PDF')
-                        ->placeholder('Tidak ada file'),
-                    TextEntry::make('asset_summary')
-                        ->label('Daftar aset')
-                        ->columnSpanFull()
-                        ->placeholder('—'),
-                    TextEntry::make('asset_ids')
-                        ->label('ID aset')
-                        ->formatStateUsing(fn ($state): string => is_array($state) ? implode(', ', $state) : (string) $state)
-                        ->columnSpanFull(),
-                ])
-                ->columns(2),
-        ]);
+        // Satu kolom selebar layar: ringkasan generate, lalu daftar aset di label.
+        return $schema
+            ->columns(1)
+            ->schema([
+                Section::make('Detail Generate Label QR')
+                    ->icon('heroicon-o-qr-code')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('action')
+                                ->label('Aksi')
+                                ->badge()
+                                ->formatStateUsing(fn (AssetQrLabelHistory $record): string => $record->actionLabel())
+                                ->color(fn (string $state): string => match ($state) {
+                                    AssetQrLabelHistory::ACTION_PRINT => 'info',
+                                    AssetQrLabelHistory::ACTION_DOWNLOAD_PDF => 'success',
+                                    default => 'gray',
+                                })
+                                ->columnSpan(['default' => 2, 'lg' => 1]),
+                            TextEntry::make('created_at')
+                                ->label('Waktu')
+                                ->dateTime('d M Y, H:i:s'),
+                            TextEntry::make('user.name')
+                                ->label('Di-generate oleh')
+                                ->weight(FontWeight::SemiBold)
+                                ->helperText(fn (AssetQrLabelHistory $record): ?string => $record->user?->email)
+                                ->placeholder('—'),
+                            TextEntry::make('asset_count')
+                                ->label('Jumlah Aset')
+                                ->numeric()
+                                ->size(TextSize::Large)
+                                ->weight(FontWeight::Bold),
+                            TextEntry::make('file_name')
+                                ->label('File PDF')
+                                ->icon(fn (AssetQrLabelHistory $record): ?string => filled($record->file_name) ? 'heroicon-o-document' : null)
+                                ->placeholder('Tidak ada file')
+                                ->columnSpanFull(),
+                        ]),
+                    ]),
+
+                Section::make('Aset dalam Label')
+                    ->icon('heroicon-o-cube')
+                    ->schema([
+                        RepeatableEntry::make('labelled_assets')
+                            ->hiddenLabel()
+                            ->state(fn (AssetQrLabelHistory $record) => static::labelledAssets($record))
+                            ->table([
+                                TableColumn::make('ID')->width('6rem'),
+                                TableColumn::make('Nama Aset'),
+                                TableColumn::make('Kategori'),
+                            ])
+                            ->schema([
+                                // Label dipakai saat tabel jadi kartu di layar sempit.
+                                TextEntry::make('id')->label('ID')->color('gray'),
+                                TextEntry::make('name')
+                                    ->label('Nama Aset')
+                                    ->weight(FontWeight::SemiBold)
+                                    ->url(fn (Asset $record): ?string => $record->trashed() ? null : AssetResource::getUrl('view', ['record' => $record]))
+                                    ->helperText(fn (Asset $record): ?string => $record->trashed() ? 'Aset sudah dihapus' : null),
+                                TextEntry::make('category.name')->label('Kategori')->placeholder('-'),
+                            ])
+                            ->visible(fn (AssetQrLabelHistory $record): bool => static::labelledAssets($record)->isNotEmpty()),
+                        // Aset yang sudah dihapus permanen tidak bisa dimuat lagi; pakai nama yang tercatat saat generate.
+                        TextEntry::make('asset_summary')
+                            ->label('Daftar aset (tercatat saat generate)')
+                            ->placeholder('—')
+                            ->visible(fn (AssetQrLabelHistory $record): bool => static::labelledAssets($record)->isEmpty()),
+                    ]),
+            ]);
+    }
+
+    /**
+     * Aset yang dicetak di label, urut seperti saat generate.
+     *
+     * @return Collection<int, Asset>
+     */
+    private static function labelledAssets(AssetQrLabelHistory $record): Collection
+    {
+        $ids = collect($record->asset_ids ?? [])->map(fn ($id): int => (int) $id);
+
+        return Asset::withTrashed()
+            ->with('category')
+            ->whereIn('id', $ids)
+            ->get()
+            ->sortBy(fn (Asset $asset): int => (int) $ids->search($asset->id))
+            ->values();
     }
 
     public static function table(Table $table): Table

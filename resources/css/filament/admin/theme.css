@@ -48,4 +48,27 @@
     .mky-header .fi-dropdown.fi-user-menu:has(.language-switch-trigger) {
         @apply inline-flex items-center;
     }
+
+    /*
+     * Halaman detail dua kolom: kotak terakhir di kolom yang lebih pendek
+     * memanjang sampai bawahnya sejajar dengan kolom satunya. Kotak yang
+     * disembunyikan (visible false) tetap ada sebagai .fi-hidden, jadi dilewati.
+     * Dipasang lewat Group::make()->extraAttributes(['class' => 'gais-fill-column']).
+     */
+    .gais-fill-column,
+    .gais-fill-column > .fi-grid,
+    .gais-fill-column > .fi-grid > .fi-grid-col:nth-last-child(1 of :not(.fi-hidden)),
+    .gais-fill-column > .fi-grid > .fi-grid-col:nth-last-child(1 of :not(.fi-hidden)) > .fi-sc-component,
+    .gais-fill-column > .fi-grid > .fi-grid-col:nth-last-child(1 of :not(.fi-hidden)) > .fi-sc-component > .fi-sc-section,
+    .gais-fill-column > .fi-grid > .fi-grid-col:nth-last-child(1 of :not(.fi-hidden)) > .fi-sc-component > .fi-sc-section > .fi-section {
+        @apply flex flex-1 flex-col;
+    }
+
+    .gais-fill-column {
+        @apply h-full;
+    }
+
+    .gais-fill-column > .fi-grid > .fi-grid-col:nth-last-child(1 of :not(.fi-hidden)) > .fi-sc-component > .fi-sc-section > .fi-section > .fi-section-content-ctn {
+        @apply flex-1;
+    }
 }

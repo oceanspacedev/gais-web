@@ -228,40 +228,61 @@ class ObChecksheetResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        // Satu kolom selebar layar; nomor referensi sudah jadi judul halaman.
         return $infolist
+            ->columns(1)
             ->schema([
                 Section::make('Informasi Laporan')
+                    ->icon('heroicon-o-clipboard-document-check')
                     ->schema([
-                        TextEntry::make('reference_number')->label('Nomor Referensi'),
-                        TextEntry::make('user.name')->label('Petugas OB')->placeholder('Belum diambil'),
-                        TextEntry::make('status')
-                            ->label('Status')
-                            ->badge()
-                            ->color(fn (?string $state): string => self::statusColor($state))
-                            ->formatStateUsing(fn (?string $state): string => ObChecksheet::statusLabel($state)),
-                        TextEntry::make('source')
-                            ->label('Jenis')
-                            ->badge()
-                            ->color(fn (?string $state): string => $state === ObChecksheet::SOURCE_ASSIGNED ? 'info' : 'gray')
-                            ->formatStateUsing(fn (?string $state): string => ObChecksheet::sourceLabel($state)),
-                        TextEntry::make('room')->label('Ruangan'),
-                        TextEntry::make('scheduled_date')->label('Tanggal')->date('d M Y')->placeholder('-'),
-                        TextEntry::make('shift_label')->label('Shift')->placeholder('-'),
-                        TextEntry::make('assigner.name')
-                            ->label('Ditugaskan Oleh')
-                            ->placeholder('-')
-                            ->visible(fn (?ObChecksheet $record): bool => $record?->isAssigned() ?? false),
-                        TextEntry::make('started_at')->label('Waktu Mulai')->dateTime('d M Y H:i')->placeholder('-'),
-                        TextEntry::make('finished_at')->label('Waktu Selesai')->dateTime('d M Y H:i')->placeholder('-'),
-                        TextEntry::make('duration_minutes')
-                            ->label('Durasi')
-                            ->suffix(' menit')
-                            ->placeholder('-')
-                            ->visible(fn (?ObChecksheet $record): bool => $record?->showsDuration() ?? true),
-                        TextEntry::make('notes')->label('Catatan')->placeholder('-')->columnSpanFull(),
-                    ])
-                    ->columns(['default' => 1, 'md' => 3]),
+                        // Baris 1: di mana dan siapa.
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('room')
+                                ->label('Ruangan')
+                                ->weight(FontWeight::SemiBold)
+                                ->icon('heroicon-o-map-pin')
+                                ->columnSpan(['default' => 2]),
+                            TextEntry::make('user.name')
+                                ->label('Petugas OB')
+                                ->icon('heroicon-o-user')
+                                ->placeholder('Belum diambil'),
+                            TextEntry::make('status')
+                                ->label('Status')
+                                ->badge()
+                                ->color(fn (?string $state): string => self::statusColor($state))
+                                ->formatStateUsing(fn (?string $state): string => ObChecksheet::statusLabel($state)),
+                        ]),
+                        // Baris 2: jadwal.
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('source')
+                                ->label('Jenis')
+                                ->badge()
+                                ->color(fn (?string $state): string => $state === ObChecksheet::SOURCE_ASSIGNED ? 'info' : 'gray')
+                                ->formatStateUsing(fn (?string $state): string => ObChecksheet::sourceLabel($state)),
+                            TextEntry::make('scheduled_date')->label('Tanggal')->date('d M Y')->placeholder('-'),
+                            TextEntry::make('shift_label')->label('Shift')->placeholder('-'),
+                            TextEntry::make('assigner.name')
+                                ->label('Ditugaskan Oleh')
+                                ->placeholder('-')
+                                ->visible(fn (?ObChecksheet $record): bool => $record?->isAssigned() ?? false),
+                        ]),
+                        // Baris 3: waktu pengerjaan.
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('started_at')->label('Waktu Mulai')->dateTime('d M Y, H:i')->placeholder('-'),
+                            TextEntry::make('finished_at')->label('Waktu Selesai')->dateTime('d M Y, H:i')->placeholder('-'),
+                            TextEntry::make('duration_minutes')
+                                ->label('Durasi')
+                                ->suffix(' menit')
+                                ->weight(FontWeight::Bold)
+                                ->placeholder('-')
+                                ->visible(fn (?ObChecksheet $record): bool => $record?->showsDuration() ?? true),
+                        ]),
+                        TextEntry::make('notes')
+                            ->label('Catatan')
+                            ->visible(fn (?ObChecksheet $record): bool => filled($record?->notes)),
+                    ]),
                 Section::make('Dokumentasi Foto Kebersihan')
+                    ->icon('heroicon-o-camera')
                     ->schema([
                         ImageEntry::make('before_photo')
                             ->label('Foto Sebelum Pembersihan')

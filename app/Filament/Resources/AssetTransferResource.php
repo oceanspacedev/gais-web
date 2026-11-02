@@ -29,6 +29,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -37,6 +38,7 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
@@ -420,65 +422,70 @@ class AssetTransferResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        // Satu kolom selebar layar: isinya sedikit, jadi kolom samping hanya menyisakan ruang kosong.
         return $infolist
+            ->columns(1)
             ->schema([
-                Section::make('📄 Informasi Transfer Aset')
+                Section::make('Informasi Berita Acara')
+                    ->icon('heroicon-o-document-text')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextEntry::make('letter_number')
-                                    ->label('Nomor Surat')
-                                    ->extraAttributes([
-                                        'style' => 'font-weight: bold; color: #1a202c;',
-                                    ]),
-                                TextEntry::make('status')
-                                    ->label('Jenis Berita Acara')
-                                    ->badge()
-                                    ->colors(AssetTransferDocumentType::colors()),
-                                TextEntry::make('fromUser.name')
-                                    ->label('Dari Pengguna')
-                                    ->icon('heroicon-o-user')
-                                    ->columnSpan(1),
-                                TextEntry::make('toUser.name')
-                                    ->label('Ke Pengguna')
-                                    ->icon('heroicon-o-user')
-                                    ->columnSpan(1),
-                                TextEntry::make('transfer_date')
-                                    ->label('Tanggal Transfer')
-                                    ->date()
-                                    ->formatStateUsing(fn ($state) => Carbon::parse($state)->format('d M Y'))
-                                    ->extraAttributes(['style' => 'font-weight: bold;']),
-                                TextEntry::make('businessEntity.name')
-                                    ->label('Entitas Bisnis')
-                                    ->icon('heroicon-o-briefcase'),
-                                TextEntry::make('document')
-                                    ->label('Dokumen')
-                                    ->url(fn ($record) => $record->document ? StoredFile::url($record->document) : null, true)
-                                    ->openUrlInNewTab()
-                                    ->icon('heroicon-o-document')
-                                    ->getStateUsing(fn ($record) => $record && $record->document ? 'Unduh Dokumen' : 'Tidak Ada Dokumen')
-                                    ->extraAttributes(['style' => 'font-weight:bold;color:#007bff;']),
-                            ]),
-                    ])
-                    ->columns(2)
-                    ->collapsible(),
-                Section::make('📦 Detail Aset yang Ditransfer')
+                        Grid::make(['default' => 2, 'lg' => 3])->schema([
+                            TextEntry::make('status')
+                                ->label('Jenis Berita Acara')
+                                ->badge()
+                                ->colors(AssetTransferDocumentType::colors())
+                                ->columnSpan(['default' => 2, 'lg' => 1]),
+                            TextEntry::make('transfer_date')
+                                ->label('Tanggal Transfer')
+                                ->date('d M Y')
+                                ->weight(FontWeight::SemiBold),
+                            TextEntry::make('businessEntity.name')
+                                ->label('Entitas Bisnis')
+                                ->placeholder('-'),
+                            TextEntry::make('fromUser.name')
+                                ->label('Dari')
+                                ->icon('heroicon-o-arrow-up-right')
+                                ->weight(FontWeight::SemiBold)
+                                ->helperText(fn (AssetTransfer $record): ?string => $record->fromUser?->jobTitle?->name)
+                                ->placeholder('-'),
+                            TextEntry::make('toUser.name')
+                                ->label('Kepada')
+                                ->icon('heroicon-o-arrow-down-left')
+                                ->iconColor('success')
+                                ->weight(FontWeight::SemiBold)
+                                ->helperText(fn (AssetTransfer $record): ?string => $record->toUser?->jobTitle?->name)
+                                ->placeholder('-'),
+                            TextEntry::make('document')
+                                ->label('BA Bertanda Tangan')
+                                ->state(fn (AssetTransfer $record): string => $record->document ? 'Unduh Dokumen' : 'Belum diunggah')
+                                ->url(fn (AssetTransfer $record): ?string => $record->document ? StoredFile::url($record->document) : null, true)
+                                ->icon(fn (AssetTransfer $record): ?string => $record->document ? 'heroicon-o-arrow-down-tray' : null)
+                                ->color(fn (AssetTransfer $record): string => $record->document ? 'primary' : 'gray'),
+                        ]),
+                    ]),
+
+                Section::make('Aset yang Ditransfer')
+                    ->icon('heroicon-o-cube')
+                    ->description(fn (AssetTransfer $record): string => $record->details->count().' aset')
                     ->schema([
                         RepeatableEntry::make('details')
-                            ->schema([
-                                Grid::make(2)
-                                    ->schema([
-                                        TextEntry::make('asset.name')
-                                            ->label('Nama Aset')
-                                            ->extraAttributes(['style' => 'font-weight: bold;']),
-                                        TextEntry::make('equipment')
-                                            ->label('Keterangan Peralatan'),
-                                    ]),
+                            ->hiddenLabel()
+                            ->table([
+                                TableColumn::make('Nama Aset'),
+                                TableColumn::make('Keterangan Peralatan'),
                             ])
-                            ->columnSpan(2),
-                    ])
-                    ->collapsible()
-                    ->columns(2),
+                            ->schema([
+                                // Label dipakai saat tabel jadi kartu di layar sempit.
+                                TextEntry::make('asset.name')
+                                    ->label('Nama Aset')
+                                    ->weight(FontWeight::SemiBold)
+                                    ->placeholder('(aset dihapus)')
+                                    ->url(fn ($record): ?string => $record->asset ? AssetResource::getUrl('view', ['record' => $record->asset]) : null),
+                                TextEntry::make('equipment')
+                                    ->label('Keterangan Peralatan')
+                                    ->placeholder('-'),
+                            ]),
+                    ]),
             ]);
     }
 

@@ -10,6 +10,7 @@ use App\Exceptions\ItemRequestException;
 use App\Filament\Resources\ItemRequestResource\Pages;
 use App\Filament\Resources\ItemRequestResource\RelationManagers\DetailsRelationManager;
 use App\Models\ItemRequest;
+use App\Models\ItemRequestApproval;
 use App\Models\ItemRequestType;
 use App\Models\Product;
 use App\Models\User;
@@ -40,9 +41,12 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
@@ -171,21 +175,37 @@ class ItemRequestResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        $canAudit = fn (): bool => auth()->user()?->can('audit', ItemRequest::class) ?? false;
+        $hasDocuments = fn (ItemRequest $record): bool => (bool) $record->type?->requires_attachment
+            || (bool) $record->type?->requires_accounting_approval
+            || filled($record->request_file)
+            || filled($record->request_file_2);
+
+        // Kiri: data pengajuan, dokumen, catatan. Kanan: alur approval per tahap.
         return $infolist
-            ->columns(1)
+            ->columns(['default' => 1, 'lg' => 3])
             ->schema([
-                Section::make('Ringkasan')
-                    ->schema([
-                        Grid::make(3)->schema([
-                            TextEntry::make('request_code')->label('Kode')->badge()->color('primary'),
-                            TextEntry::make('type.name')->label('Tipe'),
-                            TextEntry::make('client_status')->label('Status Akhir')->badge(),
-                            TextEntry::make('user.name')->label('Pemohon')->placeholder('-'),
-                            TextEntry::make('user.division.name')->label('Divisi')->placeholder('-'),
-                            TextEntry::make('requested_at')->label('Tanggal')->dateTime('d/m/Y H:i'),
-                            IconEntry::make('po_status')->label('Status PO')->boolean()->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
-                            TextEntry::make('po_number')->label('Nomor PO')->placeholder('-')->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
-                            TextEntry::make('grand_total')->label('Total')->state(fn (ItemRequest $record): string => 'Rp '.number_format($record->grandTotal(), 0, ',', '.')),
+                Group::make([
+                    Section::make('Informasi Pengajuan')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('user.name')->label('Pemohon')->placeholder('-')->weight(FontWeight::SemiBold)
+                                    ->helperText(fn (ItemRequest $record): ?string => $record->user?->division?->name),
+                                TextEntry::make('requested_at')->label('Tanggal Pengajuan')->dateTime('d M Y, H:i'),
+                                TextEntry::make('client_status')->label('Status')->badge(),
+                                TextEntry::make('type.name')->label('Tipe Pengajuan'),
+                                TextEntry::make('grand_total')->label('Total')->weight(FontWeight::Bold)->color('primary')
+                                    ->state(fn (ItemRequest $record): string => 'Rp '.number_format($record->grandTotal(), 0, ',', '.')),
+                                TextEntry::make('closedBy.name')->label('Ditutup Oleh')->placeholder('-'),
+                            ]),
+                        ]),
+
+                    Section::make('Dokumen & PO')
+                        ->icon('heroicon-o-paper-clip')
+                        ->visible($hasDocuments)
+                        ->columns(['default' => 1, 'sm' => 2])
+                        ->schema([
                             TextEntry::make('request_file')->label('File Persetujuan')
                                 ->state(fn (ItemRequest $record): string => LegacyUpload::fileName($record->request_file) ?? '-')
                                 ->url(fn (ItemRequest $record): ?string => LegacyUpload::url(LegacyUpload::REQUEST_DIR, $record->request_file), true)
@@ -194,25 +214,47 @@ class ItemRequestResource extends Resource
                                 ->state(fn (ItemRequest $record): string => LegacyUpload::fileName($record->request_file_2) ?? '-')
                                 ->url(fn (ItemRequest $record): ?string => LegacyUpload::url(LegacyUpload::REQUEST_DIR, $record->request_file_2), true)
                                 ->icon(fn (ItemRequest $record): ?string => filled($record->request_file_2) ? 'heroicon-o-paper-clip' : null),
-                            TextEntry::make('closedBy.name')->label('Ditutup Oleh')->placeholder('-'),
+                            IconEntry::make('po_status')->label('Status PO')->boolean()->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
+                            TextEntry::make('po_number')->label('Nomor PO')->placeholder('-')->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
                         ]),
-                        TextEntry::make('notes')->label('Catatan Executor')->placeholder('-')->columnSpanFull(),
-                        TextEntry::make('user_notes')->label('Catatan Pemohon')->placeholder('-')->columnSpanFull(),
-                        TextEntry::make('audit_notes')->label('Catatan Audit')->placeholder('-')->columnSpanFull()
-                            ->visible(fn (): bool => auth()->user()?->can('audit', ItemRequest::class) ?? false),
-                    ]),
 
-                Section::make('Riwayat Approval')
-                    ->schema([
-                        RepeatableEntry::make('approvals')
-                            ->hiddenLabel()
-                            ->schema([
-                                TextEntry::make('approval_type')->label('Tahap')->badge(),
-                                TextEntry::make('approver.name')->label('Oleh')->placeholder('Belum'),
-                                TextEntry::make('approved_at')->label('Waktu')->dateTime('d/m/Y H:i')->placeholder('-'),
-                            ])
-                            ->columns(3),
-                    ]),
+                    // Catatan yang kosong tidak ditampilkan supaya halaman tidak penuh tanda "-".
+                    Section::make('Catatan')
+                        ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                        ->visible(fn (ItemRequest $record): bool => filled($record->notes) || filled($record->user_notes) || ($canAudit() && filled($record->audit_notes)))
+                        ->schema([
+                            TextEntry::make('user_notes')->label('Catatan Pemohon')->visible(fn (ItemRequest $record): bool => filled($record->user_notes)),
+                            TextEntry::make('notes')->label('Catatan Executor')->visible(fn (ItemRequest $record): bool => filled($record->notes)),
+                            TextEntry::make('audit_notes')->label('Catatan Audit')
+                                ->visible(fn (ItemRequest $record): bool => $canAudit() && filled($record->audit_notes)),
+                        ]),
+                ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
+
+                Group::make([
+                    Section::make('Riwayat Approval')
+                        ->icon('heroicon-o-check-badge')
+                        ->schema([
+                            // Tahap Accounting hanya tampil kalau tipenya memang butuh, sama seperti ringkasan di tabel.
+                            RepeatableEntry::make('approvals')
+                                ->hiddenLabel()
+                                ->state(fn (ItemRequest $record) => $record->approvals
+                                    ->filter(fn (ItemRequestApproval $approval): bool => $approval->approval_type !== ItemRequestApprovalType::Accounting
+                                        || (bool) $record->type?->requires_accounting_approval)
+                                    ->values())
+                                ->schema([
+                                    Grid::make(['default' => 2])->schema([
+                                        TextEntry::make('approval_type')->hiddenLabel()->badge()->color('gray'),
+                                        TextEntry::make('approved_at')->hiddenLabel()->dateTime('d/m/Y H:i')
+                                            ->size(TextSize::Small)->color('gray')->alignEnd(),
+                                    ]),
+                                    TextEntry::make('approver.name')->hiddenLabel()
+                                        ->state(fn (ItemRequestApproval $record): string => $record->isApproved() ? ($record->approver?->name ?? '-') : 'Menunggu')
+                                        ->icon(fn (ItemRequestApproval $record): string => $record->isApproved() ? 'heroicon-m-check-circle' : 'heroicon-m-clock')
+                                        ->iconColor(fn (ItemRequestApproval $record): string => $record->isApproved() ? 'success' : 'gray')
+                                        ->color(fn (ItemRequestApproval $record): ?string => $record->isApproved() ? null : 'gray'),
+                                ]),
+                        ]),
+                ])->columnSpan(1)->extraAttributes(['class' => 'gais-fill-column']),
             ]);
     }
 
