@@ -23,6 +23,7 @@ use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
@@ -145,42 +146,49 @@ class InsuranceResource extends Resource
                         ]),
                     ]),
 
-                Section::make('Nilai dan Premi')
-                    ->icon('heroicon-o-banknotes')
-                    ->schema([
-                        Grid::make(['default' => 2, 'lg' => 4])->schema([
-                            TextEntry::make('stockProvider.name')->label('Provider Stok')->placeholder('-'),
-                            $money(TextEntry::make('stock_worth')->label('Nilai Stok')),
-                            $money(TextEntry::make('actual_stock_worth')->label('Nilai Stok Aktual')),
-                            $money(TextEntry::make('stock_premium')->label('Premi Stok'))->weight(FontWeight::SemiBold),
-                            TextEntry::make('buildingProvider.name')->label('Provider Bangunan')->placeholder('-'),
-                            $money(TextEntry::make('building_worth')->label('Nilai Bangunan')),
-                            $money(TextEntry::make('building_premium')->label('Premi Bangunan'))->weight(FontWeight::SemiBold),
-                            TextEntry::make('extension_of_policy')->label('Perluasan Polis')->placeholder('-'),
-                        ]),
-                    ]),
+                // Nilai dan periode berdampingan di desktop; kedua kotak memanjang sampai sejajar (gais-fill-column).
+                Grid::make(['default' => 1, 'lg' => 2])->schema([
+                    Group::make([
+                        Section::make('Nilai dan Premi')
+                            ->icon('heroicon-o-banknotes')
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    TextEntry::make('stockProvider.name')->label('Provider Stok')->placeholder('-'),
+                                    $money(TextEntry::make('stock_worth')->label('Nilai Stok')),
+                                    $money(TextEntry::make('actual_stock_worth')->label('Nilai Stok Aktual')),
+                                    $money(TextEntry::make('stock_premium')->label('Premi Stok'))->weight(FontWeight::SemiBold),
+                                    TextEntry::make('buildingProvider.name')->label('Provider Bangunan')->placeholder('-'),
+                                    $money(TextEntry::make('building_worth')->label('Nilai Bangunan')),
+                                    $money(TextEntry::make('building_premium')->label('Premi Bangunan'))->weight(FontWeight::SemiBold),
+                                    TextEntry::make('extension_of_policy')->label('Perluasan Polis')->placeholder('-'),
+                                ]),
+                            ]),
+                    ])->extraAttributes(['class' => 'gais-fill-column']),
 
-                Section::make('Periode dan Status')
-                    ->icon('heroicon-o-calendar-days')
-                    ->schema([
-                        Grid::make(['default' => 2, 'lg' => 4])->schema([
-                            TextEntry::make('join_date')->label('Tanggal Mulai')->date('d M Y'),
-                            TextEntry::make('expired_date')->label('Tanggal Berakhir')->date('d M Y'),
-                            TextEntry::make('status')->label('Status Polis Awal')->badge(),
-                            // Pembaharuan terakhir menentukan jatuh tempo yang berlaku (lihat Riwayat Pembaharuan).
-                            TextEntry::make('effective_expired_date')->label('Jatuh Tempo Berlaku')
-                                ->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->translatedFormat('d M Y'))
-                                ->helperText(fn (Insurance $record): ?string => $record->latestUpdate() ? 'Dari pembaharuan terakhir' : null)
-                                ->weight(FontWeight::Bold)
-                                ->color(fn (Insurance $record): ?string => $record->effectiveDueColor())
-                                ->placeholder('-'),
-                            TextEntry::make('payment_evidence')->label('Bukti Pembayaran')->placeholder('-'),
-                            TextEntry::make('reminder_phones')->label('Nomor WA Pengingat')->placeholder('Nomor global'),
-                            TextEntry::make('notes')->label('Catatan')
-                                ->columnSpan(['default' => 2])
-                                ->visible(fn (Insurance $record): bool => filled($record->notes)),
-                        ]),
-                    ]),
+                    Group::make([
+                        Section::make('Periode dan Status')
+                            ->icon('heroicon-o-calendar-days')
+                            ->schema([
+                                Grid::make(2)->schema([
+                                    TextEntry::make('join_date')->label('Tanggal Mulai')->date('d M Y'),
+                                    TextEntry::make('expired_date')->label('Tanggal Berakhir')->date('d M Y'),
+                                    TextEntry::make('status')->label('Status Polis Awal')->badge(),
+                                    // Pembaharuan terakhir menentukan jatuh tempo yang berlaku (lihat Riwayat Pembaharuan).
+                                    TextEntry::make('effective_expired_date')->label('Jatuh Tempo Berlaku')
+                                        ->state(fn (Insurance $record): ?string => $record->effectiveExpiredDate()?->translatedFormat('d M Y'))
+                                        ->helperText(fn (Insurance $record): ?string => $record->latestUpdate() ? 'Dari pembaharuan terakhir' : null)
+                                        ->weight(FontWeight::Bold)
+                                        ->color(fn (Insurance $record): ?string => $record->effectiveDueColor())
+                                        ->placeholder('-'),
+                                    TextEntry::make('payment_evidence')->label('Bukti Pembayaran')->placeholder('-'),
+                                    TextEntry::make('reminder_phones')->label('Nomor WA Pengingat')->placeholder('Nomor global'),
+                                    TextEntry::make('notes')->label('Catatan')
+                                        ->columnSpan(['default' => 2])
+                                        ->visible(fn (Insurance $record): bool => filled($record->notes)),
+                                ]),
+                            ]),
+                    ])->extraAttributes(['class' => 'gais-fill-column']),
+                ]),
             ]);
     }
 

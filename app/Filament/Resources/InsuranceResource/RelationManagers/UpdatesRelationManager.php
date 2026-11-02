@@ -51,9 +51,10 @@ class UpdatesRelationManager extends RelationManager
         /** @var Insurance $insurance */
         $insurance = $this->getOwnerRecord();
 
-        // Urutannya sama dengan form asuransi utama: baris stok lalu baris bangunan, 4 isian per baris.
+        // Slide-over supaya tabel riwayat tetap terlihat di kiri; 2 isian per baris
+        // (breakpoint mengikuti layar, bukan panel). Urutan: stok lalu bangunan, seperti form utama.
         return $form
-            ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
+            ->columns(['default' => 1, 'sm' => 2])
             ->schema([
                 TextInput::make('policy_number')->label('Nomor Polis')->default($insurance->policy_number)->required()->maxLength(255),
                 Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
@@ -67,8 +68,8 @@ class UpdatesRelationManager extends RelationManager
                 TextInput::make('building_worth')->label('Nilai Bangunan')->numeric()->prefix('Rp')->default($insurance->building_worth),
                 TextInput::make('building_premium')->label('Premi Bangunan')->numeric()->prefix('Rp'),
                 TextInput::make('extension_of_policy')->label('Perluasan Polis')->maxLength(255),
-                TextInput::make('payment_evidence')->label('Bukti Pembayaran')->maxLength(255),
-                Textarea::make('notes')->label('Catatan')->rows(2)->columnSpan(['md' => 2, 'lg' => 3]),
+                TextInput::make('payment_evidence')->label('Bukti Pembayaran')->maxLength(255)->columnSpanFull(),
+                Textarea::make('notes')->label('Catatan')->rows(3)->columnSpanFull(),
             ]);
     }
 
@@ -105,7 +106,8 @@ class UpdatesRelationManager extends RelationManager
             ])
             ->headerActions([
                 CreateAction::make()
-                    ->modalWidth(Width::FiveExtraLarge)
+                    ->slideOver()
+                    ->modalWidth(Width::TwoExtraLarge)
                     ->label('Tambah Pembaharuan')
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
@@ -125,7 +127,7 @@ class UpdatesRelationManager extends RelationManager
                 )->visible(fn (): bool => auth()->user()?->can('export', Insurance::class) ?? false),
             ])
             ->recordActions([
-                EditAction::make()->modalWidth(Width::FiveExtraLarge)->visible(fn (): bool => $this->canManage()),
+                EditAction::make()->slideOver()->modalWidth(Width::TwoExtraLarge)->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
                 RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
                 ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),

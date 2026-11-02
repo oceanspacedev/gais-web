@@ -50,9 +50,10 @@ class UpdatesRelationManager extends RelationManager
         /** @var Rent $rent */
         $rent = $this->getOwnerRecord();
 
-        // Rapat seperti form sewa utama: 4 isian per baris di pop-up yang lebih lebar.
+        // Dibuka sebagai slide-over supaya tabel riwayat tetap terlihat di kiri;
+        // panelnya sempit, jadi 2 isian per baris (breakpoint mengikuti layar, bukan panel).
         return $form
-            ->columns(['default' => 1, 'md' => 2, 'lg' => 4])
+            ->columns(['default' => 1, 'sm' => 2])
             ->schema([
                 TextInput::make('rent_code')
                     ->label('Kode Perpanjangan')
@@ -62,18 +63,18 @@ class UpdatesRelationManager extends RelationManager
                 Select::make('status')->label('Status')->options(ContractStatus::class)->default(ContractStatus::Running->value)->required(),
                 DatePicker::make('join_date')->label('Tanggal Mulai')->native(false)->required(),
                 DatePicker::make('expired_date')->label('Tanggal Berakhir')->native(false)->required()->afterOrEqual('join_date'),
-                TextInput::make('first_party')->label('Pihak Pertama')->default($rent->first_party)->required()->maxLength(255)->columnSpan(['md' => 2]),
-                TextInput::make('second_party')->label('Pihak Kedua')->default($rent->second_party)->required()->maxLength(255)->columnSpan(['md' => 2]),
+                TextInput::make('first_party')->label('Pihak Pertama')->default($rent->first_party)->required()->maxLength(255),
+                TextInput::make('second_party')->label('Pihak Kedua')->default($rent->second_party)->required()->maxLength(255),
                 TextInput::make('rent_per_year')->label('Sewa per Tahun')->numeric()->prefix('Rp')->default($rent->rent_per_year)->required(),
                 TextInput::make('month_before_reminder')->label('Pengingat (bulan sebelum)')->numeric()->minValue(0)->default($rent->month_before_reminder),
                 TextInput::make('cvcs_fund')->label('Dana PKP (CV.CS)')->numeric()->prefix('Rp'),
                 TextInput::make('online_fund')->label('Dana NON-PKP (Online)')->numeric()->prefix('Rp'),
                 Select::make('deduction_evidence')->label('Bukti Potong')->options(RentResource::AVAILABILITY_OPTIONS),
-                RentResource::fileUpload('deduction_evidence_file', 'File Bukti Potong'),
                 Select::make('document')->label('Dokumen Perjanjian')->options(RentResource::AVAILABILITY_OPTIONS),
+                RentResource::fileUpload('deduction_evidence_file', 'File Bukti Potong'),
                 RentResource::fileUpload('document_file', 'File Dokumen'),
-                RentResource::fileUpload('payment_evidence_file', 'File Bukti Pembayaran')->columnSpan(['md' => 2]),
-                Textarea::make('notes')->label('Catatan')->rows(3)->columnSpan(['md' => 2]),
+                RentResource::fileUpload('payment_evidence_file', 'File Bukti Pembayaran')->columnSpanFull(),
+                Textarea::make('notes')->label('Catatan')->rows(3)->columnSpanFull(),
             ]);
     }
 
@@ -123,7 +124,8 @@ class UpdatesRelationManager extends RelationManager
             ->headerActions([
                 CreateAction::make()
                     ->label('Tambah Perpanjangan')
-                    ->modalWidth(Width::FiveExtraLarge)
+                    ->slideOver()
+                    ->modalWidth(Width::TwoExtraLarge)
                     ->mutateDataUsing(fn (array $data): array => $data + ['user_id' => auth()->id()])
                     ->visible(fn (): bool => $this->canManage()),
                 // Sumo: importUpdate/templateUpdate/exportUpdate per sewa.
@@ -142,7 +144,7 @@ class UpdatesRelationManager extends RelationManager
                 )->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
             ])
             ->recordActions([
-                EditAction::make()->modalWidth(Width::FiveExtraLarge)->visible(fn (): bool => $this->canManage()),
+                EditAction::make()->slideOver()->modalWidth(Width::TwoExtraLarge)->visible(fn (): bool => $this->canManage()),
                 DeleteAction::make()->visible(fn (): bool => $this->canManage()),
                 RestoreAction::make()->hidden(fn (): bool => ! $this->canManage()),
                 ForceDeleteAction::make()->hidden(fn (): bool => ! $this->canManage()),
