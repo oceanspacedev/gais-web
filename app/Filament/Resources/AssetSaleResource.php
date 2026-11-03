@@ -282,6 +282,22 @@ class AssetSaleResource extends Resource
         return sprintf('#%d · %s · %s', $asset->id, $asset->name, $asset->businessEntity?->name ?? '-');
     }
 
+    /**
+     * Tautan ke aset hanya bila viewer boleh membukanya: pemilik lama tetap
+     * melihat baris penjualannya, tetapi asetnya sudah di luar cakupannya.
+     */
+    public static function assetUrl(AssetSale $sale): ?string
+    {
+        $asset = $sale->asset;
+        $viewer = Auth::user();
+
+        if (! $asset || ! $viewer instanceof User || ! $viewer->can('view', $asset)) {
+            return null;
+        }
+
+        return AssetResource::getUrl('view', ['record' => $asset]);
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -295,7 +311,7 @@ class AssetSaleResource extends Resource
                     ->label('Aset')
                     ->weight(FontWeight::SemiBold)
                     ->searchable(query: RelationSearch::on('asset', 'name'))
-                    ->url(fn (AssetSale $record): ?string => $record->asset ? AssetResource::getUrl('view', ['record' => $record->asset]) : null)
+                    ->url(fn (AssetSale $record): ?string => static::assetUrl($record))
                     ->placeholder('(aset dihapus)'),
                 TextColumn::make('fromBusinessEntity.name')
                     ->label('Dari')
@@ -399,8 +415,8 @@ class AssetSaleResource extends Resource
                             TextEntry::make('asset.name')
                                 ->label('Aset')
                                 ->weight(FontWeight::SemiBold)
-                                ->color('primary')
-                                ->url(fn (AssetSale $record): ?string => $record->asset ? AssetResource::getUrl('view', ['record' => $record->asset]) : null)
+                                ->color(fn (AssetSale $record): string => static::assetUrl($record) ? 'primary' : 'gray')
+                                ->url(fn (AssetSale $record): ?string => static::assetUrl($record))
                                 ->placeholder('(aset dihapus)'),
                             TextEntry::make('sold_at')
                                 ->label('Tanggal Penjualan')

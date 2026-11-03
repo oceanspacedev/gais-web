@@ -63,6 +63,12 @@ class Guide extends Page
                 ['actor' => 'pemohon', 'title' => 'BAPAB pengalihan', 'text' => 'Pemegang mengalihkan aset ke orang lain. Tetap Digunakan, pemegang berganti.'],
                 ['actor' => 'ga', 'title' => 'BAPEB pengembalian', 'text' => 'Pemegang mengembalikan aset ke staf GA. Aset kembali ke stok tanpa pemegang (Tersedia).'],
             ],
+            'sale' => [
+                ['actor' => 'sistem', 'title' => 'Aset di stok penjual', 'text' => 'Tersedia dan tanpa pemegang. Aset yang masih dipegang dikembalikan dulu lewat BA Pengembalian.'],
+                ['actor' => 'ga', 'title' => 'Catat penjualan', 'text' => 'Dari detail aset (Jual ke Badan Usaha Lain), menu Penjualan Aset, atau Impor Excel untuk banyak aset. Pembeli harus badan usaha lain; pencatat punya akses ke badan usaha penjual dan pembeli.'],
+                ['actor' => 'sistem', 'title' => 'Kepemilikan pindah', 'text' => 'Dalam satu transaksi aset menjadi milik pembeli dan masuk stoknya sebagai Tersedia tanpa pemegang. Badan usaha lama tidak lagi melihatnya di daftar aset.'],
+                ['actor' => 'sistem', 'title' => 'Riwayat tersimpan', 'text' => 'Satu baris per perpindahan: penjual, pembeli, tanggal, harga, dokumen, pencatat. Tampil di detail aset dan menu Penjualan Aset untuk kedua pihak.'],
+            ],
             'ob' => [
                 ['actor' => 'manager', 'title' => 'Atasan menugaskan', 'text' => 'Per shift dan ruangan. Tugas bisa untuk OB tertentu atau masuk kolam bersama.'],
                 ['actor' => 'executor', 'title' => 'OB mengambil tugas', 'text' => 'Tugas kolam bersama diambil lewat tombol klaim. OB hanya melihat tugasnya sendiri dan kolam bersama.'],

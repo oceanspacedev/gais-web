@@ -350,6 +350,41 @@ export default [
     },
   },
   {
+    id: 'jual-badan-usaha', // printer stok CV BERSAMA CS dijual ke CV COMPLETE SELULAR; seeder mengembalikannya saat reset
+    async run(page, r) {
+      await openMenu(page, r, 'Aset', 'assets');
+      await r.type(page.locator('input[type=search]:visible').first(), 'Printer Epson');
+      await r.pause(1500);
+      await r.click(page.getByText('Printer Epson L3210').first());
+      await page.waitForURL(/\/assets\/\d+/);
+      await r.pause(1500);
+      // Aksi jual ada di grup "Pilihan" pada header detail aset.
+      await r.click(page.locator('.fi-header').getByRole('button', { name: 'Pilihan', exact: true }).first());
+      await r.pause(600);
+      await r.click(page.getByText('Jual ke Badan Usaha Lain', { exact: true }).first());
+      await r.modal().waitFor();
+      await r.pause(800);
+      await r.select('Badan Usaha Pembeli', 'CV COMPLETE SELULAR');
+      await r.field('Harga Jual').locator('input').first().fill('');
+      await r.fill('Harga Jual', '2500000');
+      await r.fill('Catatan', 'BAST-2026-001, printer dipakai kantor CS');
+      await r.shot('form-jual', r.modal());
+      const modal = r.modal();
+      await r.click(modal.getByRole('button', { name: 'Catat Penjualan', exact: true }).last());
+      await modal.waitFor({ state: 'hidden', timeout: 30000 });
+      await r.pause(1500);
+      const history = page.locator('.fi-section', { hasText: 'Riwayat Kepemilikan' }).first();
+      await history.scrollIntoViewIfNeeded();
+      await r.pause(800);
+      await r.shot('riwayat-kepemilikan', history);
+      await openMenu(page, r, 'Penjualan Aset', 'asset-sales');
+      await r.shot('daftar-penjualan');
+      await r.action('Impor Excel');
+      await r.shot('impor-excel', r.modal());
+      await r.pause(800);
+    },
+  },
+  {
     id: 'servis',
     async run(page, r) {
       await openMenu(page, r, 'Servis Aset', 'asset-services');

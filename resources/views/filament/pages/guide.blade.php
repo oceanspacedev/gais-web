@@ -203,6 +203,7 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-13').scrollIntoView({ behavior: 'smooth' })">13. Asuransi, Sewa, dan pengingat WhatsApp</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-14').scrollIntoView({ behavior: 'smooth' })">14. Pekerjaan Vendor</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-15').scrollIntoView({ behavior: 'smooth' })">15. Import &amp; Laporan Audit stok (CSA)</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-16').scrollIntoView({ behavior: 'smooth' })">16. Penjualan aset antar badan usaha</a></li>
                     </ol>
                 </div>
 
@@ -603,6 +604,24 @@
                         <li><strong>3. Terapkan Koreksi</strong>: qty aset disesuaikan, barang baru dibuat sebagai aset di gudangnya. Barang dengan fisik 0 dinonaktifkan dari inventori (tidak dihapus). Jalankan <strong>Compare Ulang</strong> untuk memastikan semua sudah Inline.</li>
                     </ul>
                 </div>
+
+                <div class="pg-block" id="bab-16">
+                    <h2>16. Penjualan aset antar badan usaha</h2>
+                    <p>Aset yang dijual dari satu badan usaha ke badan usaha lain di dalam grup tidak keluar dari GAIS: kepemilikannya pindah ke pembeli dan setiap perpindahan tercatat sebagai riwayat. Contoh di bawah menjual satu printer dari CV BERSAMA CS ke CV COMPLETE SELULAR.</p>
+                    <x-guide.demo name="jual-badan-usaha" caption="Animasi: membuka detail printer, memilih Jual ke Badan Usaha Lain, mengisi pembeli dan harga, lalu riwayat kepemilikan dan daftar penjualan terisi." :shots="[
+                        'jual-badan-usaha-01-form-jual.png' => 'Form jual',
+                        'jual-badan-usaha-02-riwayat-kepemilikan.png' => 'Riwayat kepemilikan',
+                        'jual-badan-usaha-03-daftar-penjualan.png' => 'Daftar penjualan',
+                        'jual-badan-usaha-04-impor-excel.png' => 'Impor Excel',
+                    ]" />
+                    <ul class="pg-list">
+                        <li><strong>Syarat</strong>: aset harus di stok (<em>Tersedia</em>, tanpa pemegang); aset yang masih dipegang dikembalikan dulu lewat BA Pengembalian. Pembeli harus badan usaha lain, dan pencatat harus punya akses ke badan usaha penjual maupun pembeli.</li>
+                        <li><strong>Tiga cara mencatat</strong>: <em>Pilihan → Jual ke Badan Usaha Lain</em> di detail aset; <em>Catat Penjualan</em> di menu Aset → Penjualan Aset; atau <em>Impor Excel</em> untuk banyak aset sekaligus (unduh template dari modalnya, satu baris per aset, aset dikenali dari <code>id_aset</code> atau <code>serial_number</code>, badan usaha ditulis sesuai nama di master, satu baris salah membatalkan seluruh file).</li>
+                        <li><strong>Setelah disimpan</strong>: aset menjadi milik pembeli dan masuk stoknya sebagai <em>Tersedia</em> tanpa pemegang; badan usaha lama tidak lagi melihatnya di daftar aset. Riwayatnya tampil di seksi <em>Riwayat Kepemilikan</em> pada detail aset dan di menu Penjualan Aset, terlihat oleh penjual maupun pembeli.</li>
+                        <li><strong>Beda dengan Tandai Dijual</strong>: Tandai Dijual untuk aset yang keluar dari grup (status <em>Dijual</em>, aset berhenti aktif). Penjualan antar badan usaha menjaga aset tetap aktif di pemilik barunya.</li>
+                        <li>Baris penjualan bisa diperbaiki (tanggal, harga, dokumen BAST/invoice, catatan) dan dihapus ke Sampah; menghapus tidak membalik kepemilikan. Riwayatnya bisa diekspor ke Excel lewat <em>Ekspor Semua Penjualan</em>.</li>
+                    </ul>
+                </div>
             </section>
 
             {{-- ============ LOGIN ============ --}}
@@ -722,6 +741,11 @@
                         <li>Menyimpan ulang BA (misalnya mengunggah scan yang sudah ditandatangani) tidak memindahkan aset lagi.</li>
                         <li>PDF BA bisa diunduh dari BA itu (perlu login dan izin lihat).</li>
                     </ul>
+                </div>
+                <div class="pg-block">
+                    <h3>Penjualan antar badan usaha</h3>
+                    <p>BA memindahkan aset antar orang di satu badan usaha. Penjualan antar badan usaha memindahkan kepemilikan aset ke badan usaha lain di dalam grup; aset tetap aktif, hanya pemiliknya berganti, dan riwayatnya tersimpan per perpindahan (bab 16).</p>
+                    <x-guide.flow :steps="$flows['sale']" />
                 </div>
                 <div class="pg-block">
                     <h3>Lainnya di grup Aset</h3>

@@ -13,8 +13,11 @@ use App\Models\AssetSale;
 use App\Models\BusinessEntity;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Filament\Tables\Contracts\HasTable;
+use Filament\Tables\Table;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Livewire\Livewire;
+use Mockery;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\AssertsVisibilityContract;
@@ -230,6 +233,21 @@ class AssetSaleTest extends TestCase
         $this->assertEqualsCanonicalizing([$sale->id, $unrelated->id], AssetSaleResource::scopeToViewer(AssetSale::query()->whereKey($ids), $actor)->pluck('id')->all());
 
         $this->assertQueryAndPolicyAgree(AssetSale::class, $viewers, $ids, ['eager' => ['fromBusinessEntity', 'toBusinessEntity'], 'lazy' => []]);
+    }
+
+    public function test_asset_link_in_the_sales_table_is_hidden_from_viewers_who_cannot_open_the_asset(): void
+    {
+        $actor = $this->userWith(self::PERMISSIONS, unrestricted: true);
+        $asset = $this->stockAsset($this->alpha);
+        $sale = AssetSale::record($asset, ['to_business_entity_id' => $this->beta->id, 'sold_at' => '2026-01-10'], $actor);
+        $sale->load(['asset', 'fromBusinessEntity', 'toBusinessEntity']);
+        $column = AssetSaleResource::table(Table::make(Mockery::mock(HasTable::class)))->getColumn('asset.name');
+
+        $this->actingAs($this->userWith(self::PERMISSIONS, $this->alpha));
+        $this->assertNull($column->record($sale)->getUrl(), 'Pemilik lama melihat baris penjualan tanpa tautan ke aset yang sudah dilepas.');
+
+        $this->actingAs($this->userWith(self::PERMISSIONS, $this->beta));
+        $this->assertStringContainsString('/admin/assets/'.$asset->id, (string) $column->record($sale)->getUrl());
     }
 
     public function test_asset_detail_page_sells_to_another_entity(): void
