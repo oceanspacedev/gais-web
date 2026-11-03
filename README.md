@@ -57,7 +57,7 @@ GAIS adalah sumber data tunggal tim General Affair: siapa memegang aset apa, dok
 - Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi, pengingat, dan OTP login.
 - Query aset dari bot WhatsApp: `gais.search_asset`, `gais.asset_history`, `gais.expiring_documents`.
 - Impor data legacy sumo-web dari panel atau CLI, idempoten.
-- Import user hanya dari JSON Talenta; import Excel untuk aset, produk, asuransi, sewa, dan checksheet kendaraan.
+- Import user hanya dari JSON Talenta; import Excel untuk aset, produk, asuransi, sewa, checksheet kendaraan, dan penjualan aset antar badan usaha (massal).
 - Health check Laravel di `/up`; Horizon, Pulse, dan Log Viewer untuk pemegang permission observability.
 
 ### Di luar scope implementasi saat ini
@@ -74,7 +74,7 @@ Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::n
 
 | Grup menu | Menu | Asal | Keterangan |
 |---|---|---|---|
-| Aset | Aset, BA (asset transfers), servis aset, Import & Laporan Audit Aset, History Label QR | Shelf | Kondisi aset: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai. Pencarian daftar aset ikut mencocokkan atribut kustom (plat, serial number, IMEI) |
+| Aset | Aset, BA (asset transfers), Penjualan Aset (antar badan usaha), servis aset, Import & Laporan Audit Aset, History Label QR | Shelf | Kondisi aset: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai. Pencarian daftar aset ikut mencocokkan atribut kustom (plat, serial number, IMEI). Penjualan antar badan usaha (aksi "Jual ke Badan Usaha Lain" di detail aset) memindahkan kepemilikan ke pembeli, memasukkan aset ke stok pembeli, dan menyimpan riwayatnya per perpindahan; penjualan massal lewat Impor Excel bertemplate (`id_aset` atau `serial_number`, nama badan usaha) dan riwayatnya bisa diekspor; "Tandai Dijual" tetap untuk aset yang keluar dari grup |
 | Master Aset | Kategori, merek, vendor, atribut kustom, pintasan Lokasi | Shelf | Atribut kustom bertipe dokumen jadi sumber pengingat masa berlaku |
 | OB / Kebersihan | OB Checksheets, Ruangan OB, Shift OB, pintasan Lokasi | Shelf | Checklist kebersihan per shift dan ruangan, foto bisa diperbesar, export Excel |
 | Kendaraan | Checksheet kendaraan | Shelf | Import/export checksheet kendaraan per plat |
@@ -158,7 +158,7 @@ Semua model fitur memakai `SoftDeletes` (migrasi `2026_10_31_000002` melengkapi 
 
 Impor sumo memetakan role lama ke empat role terakhir dan menambahkan permission per divisi (HCM mengelola asuransi/sewa/master, AUDIT mengisi catatan audit, MIS-IT melihat semua pengajuan) sesuai `config/sumo-import.php`.
 
-Permission custom yang perlu diketahui: `manage_stock_asset::transfer`, `export_asset`, `import_asset`, `view_all_item::request`, `approve_accounting_item::request`, `approve_manager_item::request`, `process_item::request`, `audit_item::request`, `change_applicant_item::request`, `view_all_problem::report`, `process_problem::report`, `View:WaNotificationSettings`, `View:ScanItemRequestQr`, `View:ScanProductQr`, `View:TechnicalDocs`, `Manage:SumoImport`, `View:Horizon`, `View:LogViewer`, `Download:LogViewer`, `Delete:LogViewer`, `View:Pulse`, `impersonate_user`, dan `widget_*` untuk tiap widget dashboard. Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
+Permission custom yang perlu diketahui: `manage_stock_asset::transfer`, `export_asset`, `import_asset`, `export_asset::sale`, `import_asset::sale`, `view_all_item::request`, `approve_accounting_item::request`, `approve_manager_item::request`, `process_item::request`, `audit_item::request`, `change_applicant_item::request`, `view_all_problem::report`, `process_problem::report`, `View:WaNotificationSettings`, `View:ScanItemRequestQr`, `View:ScanProductQr`, `View:TechnicalDocs`, `Manage:SumoImport`, `View:Horizon`, `View:LogViewer`, `Download:LogViewer`, `Delete:LogViewer`, `View:Pulse`, `impersonate_user`, dan `widget_*` untuk tiap widget dashboard. Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
 
 ### Akun uji development
 

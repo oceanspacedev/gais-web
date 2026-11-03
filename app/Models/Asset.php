@@ -316,6 +316,15 @@ class Asset extends Model
         return $this->hasMany(AssetService::class);
     }
 
+    /**
+     * Riwayat kepemilikan: penjualan antar badan usaha urut kronologis
+     * (AssetSale::record() memindahkan business_entity_id ke pembeli).
+     */
+    public function sales(): HasMany
+    {
+        return $this->hasMany(AssetSale::class)->orderBy('sold_at')->orderBy('id');
+    }
+
     // Relasi ke tabel asset_transfer_details
     public function assetTransferDetails()
     {

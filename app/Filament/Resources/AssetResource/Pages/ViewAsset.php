@@ -6,6 +6,7 @@ use App\Enums\AssetCondition;
 use App\Enums\AssetTransferDocumentType;
 use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource;
+use App\Filament\Resources\AssetSaleResource;
 use App\Models\Asset;
 use App\Models\AssetAttribute;
 use App\Models\AssetQrLabelHistory;
@@ -62,6 +63,29 @@ class ViewAsset extends ViewRecord
                     ->action(function (array $data): void {
                         AssetResource::handleAttributeDocumentUpdate($this->record, $data);
                         $this->record->refresh();
+                    }),
+                // Penjualan di dalam grup: kepemilikan pindah ke badan usaha
+                // pembeli, aset tetap aktif. "Tandai Dijual" di bawah untuk
+                // aset yang keluar dari grup (status Dijual).
+                Actions\Action::make('sellToEntity')
+                    ->label('Jual ke Badan Usaha Lain')
+                    ->icon('heroicon-o-building-office-2')
+                    ->color('primary')
+                    ->visible(fn (Asset $record): bool => AssetSaleResource::canSell($record))
+                    ->modalWidth('lg')
+                    ->modalHeading(fn (): string => 'Jual ke Badan Usaha Lain: '.$this->record->name)
+                    ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli dan aset masuk stok pembeli (Tersedia, tanpa pemegang). Riwayatnya tercatat di menu Penjualan Aset.')
+                    ->modalSubmitActionLabel('Catat Penjualan')
+                    ->form(fn (): array => AssetSaleResource::sellFormSchema($this->record))
+                    ->action(function (array $data): void {
+                        $sale = AssetSaleResource::recordSale($this->record, $data);
+                        $this->record->refresh();
+
+                        Notification::make()
+                            ->title('Penjualan dicatat')
+                            ->body(sprintf('Aset kini milik %s dan masuk stoknya.', $sale->toBusinessEntity?->name ?? '-'))
+                            ->success()
+                            ->send();
                     }),
                 Actions\Action::make('markSold')
                     ->label('Tandai Dijual')

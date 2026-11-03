@@ -6,6 +6,7 @@ use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Guide;
 use App\Filament\Resources\AssetReconciliationResource;
 use App\Filament\Resources\AssetResource;
+use App\Filament\Resources\AssetSaleResource;
 use App\Filament\Resources\AssetServiceResource;
 use App\Filament\Resources\AssetTransferResource;
 use App\Filament\Resources\DivisionResource;
@@ -117,6 +118,11 @@ return [
                 'regenerateQr',
                 'updateRecipient',
                 'merge',
+            ],
+            // Penjualan antar badan usaha: ekspor riwayat dan impor massal dari Excel.
+            AssetSaleResource::class => [
+                'export',
+                'import',
             ],
             AssetTransferResource::class => [
                 'export',

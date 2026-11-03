@@ -190,7 +190,9 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 
 ### Aset
 
-- **Resource:** `AssetResource`, `AssetTransferResource` (BA), `AssetServiceResource`, `AssetReconciliationResource` (Import & Laporan Audit), `AssetQrLabelHistoryResource`
+- **Resource:** `AssetResource`, `AssetTransferResource` (BA), `AssetSaleResource` (menu Penjualan Aset, antar badan usaha), `AssetServiceResource`, `AssetReconciliationResource` (Import & Laporan Audit), `AssetQrLabelHistoryResource`
+- **Penjualan antar badan usaha:** aksi "Jual ke Badan Usaha Lain" di `ViewAsset` dan "Catat Penjualan" di daftar penjualan sama-sama memanggil `AssetSale::record()`: aset harus di stok (Tersedia, tanpa pemegang; aset yang dipegang dikembalikan dulu lewat BA Pengembalian), pembeli harus beda dari pemilik, dan badan usaha penjual maupun pembeli harus termasuk akses pencatat. Satu transaksi mencatat baris `asset_sales` lalu memindahkan `assets.business_entity_id` dan `recipient_business_entity_id` ke pembeli dengan status Tersedia, sehingga pemilik lama tidak lagi melihat asetnya sebagai aset aktif. Riwayatnya tampil di seksi "Riwayat Kepemilikan" detail aset. Kolom `assets.sold_*` tetap hanya untuk aset yang keluar dari grup (status Dijual, aksi "Tandai Dijual"). Menghapus baris penjualan (Sampah) tidak membalik kepemilikan; perbaiki lewat form aset
+- **Impor/ekspor penjualan:** tombol **Impor Excel** di daftar penjualan (`AssetSaleImport`, izin `import_asset::sale`) mencatat penjualan massal: satu baris = satu aset, dikenali dari `id_aset` atau `serial_number`, pembeli dan (opsional) penjual ditulis sesuai nama di master Badan Usaha, tanggal `d/m/Y` atau `Y-m-d`, harga boleh berpemisah ribuan. Setiap baris lewat `AssetSale::record()` sehingga aturannya sama dengan aksi di panel; baris boleh berantai; satu baris salah (`ImportStoppedException`) membatalkan seluruh file. **Ekspor Semua Penjualan** (`AssetSaleExport`, izin `export_asset::sale`) memakai kolom template di depan ditambah `id_penjualan`, `dicatat_oleh`, `dicatat_pada`, dibatasi ke penjualan yang boleh dilihat pembaca
 - **Pencarian:** kotak cari daftar aset (dan pemilih aset di form BA dan servis) juga mencocokkan semua atribut kustom aktif non-dokumen, misalnya plat nomor dan serial number. Spasi, strip, titik, dan garis miring diabaikan (`Asset::scopeWhereAnyAttribute` memakai `asset_attributes.search_value`)
 - **Logika:** `AssetReconciliationService`, `VehicleAssetReconciliationService`, `*AuditWorkbookParser/Exporter`, `AssetQrService`, `AssetQrScanService`, `AssetNotificationService`
 - **Asal:** GAIS
@@ -275,6 +277,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | `asset_attributes` | `asset_id`, `custom_attribute_id`, `value`, `search_value` (nilai dinormalisasi tanpa spasi/strip/titik/garis miring, diisi otomatis saat simpan; dipakai pencarian daftar aset) |
 | `sumo_import_runs` | `status`, `file_disk`/`file_path`, `staged`, `source_tables`, `dry_run_report`, `import_report`, `log`, `error`, `user_id`, `imported_by_id`; satu baris per unggahan di menu Impor Data Sumo |
 | `asset_transfers` | `document_type` (BA, BAPAB, BAPEB), `letter_number`, `from_user_id`, `to_user_id`, `transfer_date`, `document` |
+| `asset_sales` | `asset_id`, `from_business_entity_id`, `to_business_entity_id`, `sold_at`, `sold_price`, `document_path` (BAST/invoice), `notes`, `created_by`; satu baris per penjualan antar badan usaha, terlihat oleh badan usaha penjual maupun pembeli (`AssetSalePartyRule`) |
 | `item_requests` | `request_code`, `item_request_type_id`, `total_cost`, `po_status`, `po_number`, `client_status`, `closed_by_user_id` |
 | `problem_reports` | `code`, `status`, `client_status`, `scheduled_at`, `photo_before`, `photo_after`, `closed_by_user_id` |
 
@@ -282,14 +285,15 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 
 | Model | Relasi |
 | --- | --- |
-| `BusinessEntity` | hasMany `User`, `Asset`, `AssetTransfer`; belongsToMany `User` via `business_entity_user` |
+| `BusinessEntity` | hasMany `User`, `Asset`, `AssetTransfer`; belongsToMany `User` via `business_entity_user`; dirujuk `AssetSale` sebagai penjual (`from_business_entity_id`) dan pembeli (`to_business_entity_id`) |
 | `User` | belongsTo `BusinessEntity`, `JobTitle`, `Division`, `User` (approver) |
 | `Area` / `Division` | `Area` hasMany `Division`; `Division` hasMany `User`, `DivisionApprover`, `ItemRequestScope`, `ProblemReportScope` |
-| `Asset` | belongsTo `BusinessEntity`, `Category`, `Brand`, `AssetLocation`, `AssetCatalogItem`, `User` (`recipient_id`, `nbh_responsible_user_id`); hasMany `AssetAttribute`, `AssetService`, `AssetTransferDetail`, `VehicleChecksheet`; hasOne `AssetQr` |
+| `Asset` | belongsTo `BusinessEntity`, `Category`, `Brand`, `AssetLocation`, `AssetCatalogItem`, `User` (`recipient_id`, `nbh_responsible_user_id`); hasMany `AssetAttribute`, `AssetService`, `AssetSale` (`sales`, urut `sold_at`), `AssetTransferDetail`, `VehicleChecksheet`; hasOne `AssetQr` |
 | `AssetQr` | hasMany `AssetQrScan` |
 | `Category` | hierarki lewat `parent_id`; hasMany `Asset` |
 | `CustomAssetAttribute` | belongsTo `Category`; hasMany `AssetAttribute` (`custom_attribute_id`) |
 | `AssetTransfer` | belongsTo `BusinessEntity`, `User` (from/to); hasMany `AssetTransferDetail` → `Asset` |
+| `AssetSale` | belongsTo `Asset`, `BusinessEntity` (`fromBusinessEntity`/`toBusinessEntity`), `User` (`createdBy`); dibuat hanya lewat `AssetSale::record()` |
 | `AssetService` | belongsTo `Asset`, `Vendor`, `User`; hasMany `AssetServiceItem` |
 | `AssetReconciliation` | belongsTo `BusinessEntity`, `User` (`imported_by`), induk `parent_id`; hasMany `AssetReconciliationItem` → `Asset` (`matched_asset_id`) |
 

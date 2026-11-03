@@ -1312,6 +1312,37 @@ class AssetResource extends Resource
                                 ->visible(fn (?Asset $record): bool => filled($record?->sale_notes)),
                         ]),
 
+                    // Penjualan antar badan usaha (AssetSale), urut kronologis;
+                    // pemilik saat ini (Detail Pembelian) adalah pembeli terakhir.
+                    Section::make('Riwayat Kepemilikan')
+                        ->icon('heroicon-o-building-office-2')
+                        ->description('Penjualan antar badan usaha di dalam grup; pemilik saat ini adalah pembeli terakhir.')
+                        ->visible(fn (?Asset $record): bool => (bool) $record?->sales()->exists())
+                        ->schema([
+                            RepeatableEntry::make('sales')
+                                ->hiddenLabel()
+                                ->table([
+                                    TableColumn::make(__('Tanggal')),
+                                    TableColumn::make(__('Dari')),
+                                    TableColumn::make(__('Kepada')),
+                                    TableColumn::make(__('Harga'))->alignment(Alignment::End),
+                                    TableColumn::make(__('Dokumen')),
+                                    TableColumn::make(__('Dicatat oleh')),
+                                ])
+                                ->schema([
+                                    TextEntry::make('sold_at')->label(__('Tanggal'))->date('d M Y')->placeholder('-'),
+                                    TextEntry::make('fromBusinessEntity.name')->label(__('Dari'))->badge()->color('danger')->placeholder('-'),
+                                    TextEntry::make('toBusinessEntity.name')->label(__('Kepada'))->badge()->color('success')->placeholder('-'),
+                                    TextEntry::make('sold_price')->label(__('Harga'))->state(fn ($record) => 'Rp '.number_format($record->sold_price ?: 0, 0, ',', '.'))->alignEnd(),
+                                    TextEntry::make('document_path')
+                                        ->label(__('Dokumen'))
+                                        ->state(fn ($record): string => $record->document_path ? 'Lihat' : '-')
+                                        ->color(fn ($record): string => $record->document_path ? 'primary' : 'gray')
+                                        ->url(fn ($record): ?string => $record->document_path ? StoredFile::url($record->document_path) : null, true),
+                                    TextEntry::make('createdBy.name')->label(__('Dicatat oleh'))->placeholder('-'),
+                                ]),
+                        ]),
+
                     Section::make('Dokumen Pendukung')
                         ->icon('heroicon-o-paper-clip')
                         ->visible(fn (?Asset $record): bool => filled($record?->audit_document_path) || filled($record?->nbh_document_path) || filled($record?->sale_document_path))

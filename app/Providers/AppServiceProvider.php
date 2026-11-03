@@ -11,6 +11,7 @@ use App\Jobs\Filament\ExportCsv as RetryingExportCsv;
 use App\Jobs\Filament\ImportCsv as RetryingImportCsv;
 use App\Jobs\Filament\PrepareCsvExport as RetryingPrepareCsvExport;
 use App\Models\Area;
+use App\Models\AssetSale;
 use App\Models\AssetService;
 use App\Models\AssetTransfer;
 use App\Models\Insurance;
@@ -36,6 +37,7 @@ use App\Models\Task;
 use App\Models\UnitType;
 use App\Policies\ActivityPolicy;
 use App\Policies\AreaPolicy;
+use App\Policies\AssetSalePolicy;
 use App\Policies\AssetServicePolicy;
 use App\Policies\AssetTransferPolicy;
 use App\Policies\ExceptionPolicy;
@@ -204,6 +206,7 @@ class AppServiceProvider extends ServiceProvider
 
     protected function registerAuthorization(): void
     {
+        Gate::policy(AssetSale::class, AssetSalePolicy::class);
         Gate::policy(AssetService::class, AssetServicePolicy::class);
         Gate::policy(AssetTransfer::class, AssetTransferPolicy::class);
         Gate::policy(ObChecksheet::class, ObChecksheetPolicy::class);
