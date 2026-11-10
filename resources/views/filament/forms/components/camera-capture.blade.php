@@ -206,6 +206,10 @@
                         body: bodyData
                     });
 
+                    if (response.status === 419 || response.status === 401) {
+                        throw new Error('Sesi habis. Muat ulang halaman ini lalu ambil fotonya lagi; foto lain yang sudah diambil tetap ada.');
+                    }
+
                     if (!response.ok) {
                         const errData = await response.json().catch(() => null);
                         throw new Error(errData?.message || 'Server error ' + response.status);

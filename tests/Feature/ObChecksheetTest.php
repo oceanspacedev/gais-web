@@ -71,6 +71,35 @@ class ObChecksheetTest extends TestCase
         $this->assertNotSame($records[0]->reference_number, $records[1]->reference_number);
     }
 
+    public function test_create_page_restores_unsaved_rooms_after_a_reload(): void
+    {
+        $user = User::factory()->create();
+
+        $this->actingAs($user);
+        Gate::before(fn (): bool => true);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        // Foto diambil, lalu halaman termuat ulang sebelum Mulai ditekan.
+        Livewire::test(CreateObChecksheet::class)
+            ->fillForm(['rooms' => [['room' => 'Lobby Draf', 'before_photo' => 'ob-checksheets/before/draf.jpg']]]);
+
+        $reloaded = Livewire::test(CreateObChecksheet::class);
+
+        $this->assertSame(
+            [['room' => 'Lobby Draf', 'before_photo' => 'ob-checksheets/before/draf.jpg']],
+            array_values($reloaded->get('data.rooms')),
+        );
+
+        $reloaded->call('create')->assertHasNoFormErrors();
+
+        $this->assertSame('ob-checksheets/before/draf.jpg', ObChecksheet::query()->where('room', 'Lobby Draf')->firstOrFail()->before_photo);
+
+        // Setelah tersimpan, form berikutnya kosong lagi.
+        $fresh = array_values(Livewire::test(CreateObChecksheet::class)->get('data.rooms'));
+        $this->assertCount(1, $fresh);
+        $this->assertNull($fresh[0]['room'] ?? null);
+    }
+
     public function test_detail_photo_uses_the_current_site_address_and_the_list_shows_no_photos(): void
     {
         $user = User::factory()->create();

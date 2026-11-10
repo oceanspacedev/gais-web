@@ -14,6 +14,7 @@ use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\User;
 use App\Services\ObTaskAssignmentService;
+use App\Support\ObPhotoDraft;
 use Filament\Actions\Exports\Models\Export;
 use Filament\Facades\Filament;
 use Filament\Support\Facades\FilamentView;
@@ -275,6 +276,29 @@ class ObChecksheetAssignmentTest extends TestCase
         Livewire::test(ListObChecksheets::class)
             ->assertActionHidden('assignFromShift')
             ->assertActionHidden('assignManual');
+    }
+
+    public function test_start_all_restores_photos_taken_before_a_reload(): void
+    {
+        $officeBoy = $this->officeBoy();
+        $task = $this->pendingTask($officeBoy, 'Ruang Audit');
+
+        $this->actAs($officeBoy);
+
+        // Foto diambil di modal, lalu halaman termuat ulang sebelum disimpan.
+        Livewire::test(ListObChecksheets::class)
+            ->mountAction('startAll')
+            ->setActionData(['tasks' => [['id' => $task->id, 'room' => 'Ruang Audit', 'photo' => 'ob-checksheets/before/draf.jpg', 'notes' => null]]]);
+
+        Livewire::test(ListObChecksheets::class)
+            ->mountAction('startAll')
+            ->callMountedAction()
+            ->assertNotified('1 pekerjaan dimulai');
+
+        $this->assertSame('ob-checksheets/before/draf.jpg', $task->refresh()->before_photo);
+
+        // Draf dibuang setelah tersimpan.
+        $this->assertSame([], ObPhotoDraft::get(ObPhotoDraft::BEFORE));
     }
 
     public function test_start_all_only_starts_rooms_with_a_before_photo(): void

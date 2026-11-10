@@ -11,6 +11,7 @@ use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\User;
 use App\Services\ObTaskAssignmentService;
+use App\Support\ObPhotoDraft;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
@@ -35,6 +36,27 @@ use Illuminate\Support\Carbon;
 class ListObChecksheets extends ListRecords
 {
     use MemoizesTableQuery;
+
+    /** Modal foto massal dan draf fotonya (lihat ObPhotoDraft). */
+    private const PHOTO_DRAFTS = ['startAll' => ObPhotoDraft::BEFORE, 'finishAll' => ObPhotoDraft::AFTER];
+
+    protected bool $draftCleared = false;
+
+    /**
+     * Livewire memanggil ini di akhir setiap request: selama modal foto massal
+     * terbuka, foto yang sudah diambil disimpan sebagai draf per tugas.
+     */
+    public function dehydrate(): void
+    {
+        $mounted = $this->mountedActions === [] ? null : $this->mountedActions[array_key_last($this->mountedActions)];
+        $bucket = self::PHOTO_DRAFTS[$mounted['name'] ?? ''] ?? null;
+
+        if ($bucket === null || $this->draftCleared) {
+            return;
+        }
+
+        ObPhotoDraft::put($bucket, $this->submittedPhotos($mounted['data']['tasks'] ?? []));
+    }
 
     protected static string $resource = ObChecksheetResource::class;
 
@@ -77,8 +99,7 @@ class ListObChecksheets extends ListRecords
                     ->map(fn (ObChecksheet $task): array => [
                         'id' => $task->id,
                         'room' => $task->room,
-                        'photo' => null,
-                        'notes' => null,
+                        ...$this->draftedPhoto(ObPhotoDraft::BEFORE, $task),
                     ])
                     ->all(),
             ])
@@ -134,6 +155,8 @@ class ListObChecksheets extends ListRecords
                     $started++;
                 }
 
+                $this->clearPhotoDraft(ObPhotoDraft::BEFORE);
+
                 // Selisihnya sudah diambil OB lain sejak form dibuka (atau bukan tugas yang boleh dimulai).
                 $taken = count($submitted) - $started;
 
@@ -169,8 +192,7 @@ class ListObChecksheets extends ListRecords
                         'id' => $task->id,
                         'room' => $task->room,
                         'before' => $task->before_photo,
-                        'photo' => null,
-                        'notes' => null,
+                        ...$this->draftedPhoto(ObPhotoDraft::AFTER, $task),
                     ])
                     ->all(),
             ])
@@ -220,6 +242,8 @@ class ListObChecksheets extends ListRecords
                 foreach ($tasks as $task) {
                     $task->markAsCompleted($submitted[$task->id]['photo'], $submitted[$task->id]['notes']);
                 }
+
+                $this->clearPhotoDraft(ObPhotoDraft::AFTER);
 
                 Notification::make()
                     ->title($tasks->count().' pekerjaan selesai')
@@ -418,6 +442,24 @@ class ListObChecksheets extends ListRecords
                         ->whereDate('scheduled_date', '<=', today()));
             })
             ->orderBy('id');
+    }
+
+    /**
+     * Foto (dan catatan) tugas ini yang sudah diambil tetapi belum disimpan.
+     *
+     * @return array{photo: ?string, notes: ?string}
+     */
+    private function draftedPhoto(string $bucket, ObChecksheet $task): array
+    {
+        $draft = ObPhotoDraft::get($bucket)[$task->id] ?? [];
+
+        return ['photo' => $draft['photo'] ?? null, 'notes' => $draft['notes'] ?? null];
+    }
+
+    private function clearPhotoDraft(string $bucket): void
+    {
+        ObPhotoDraft::forget($bucket);
+        $this->draftCleared = true;
     }
 
     /**
