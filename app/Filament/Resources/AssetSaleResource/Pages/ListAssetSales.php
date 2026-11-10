@@ -43,7 +43,8 @@ class ListAssetSales extends ListRecords
                 ->modalHeading('Catat Penjualan ke Badan Usaha Lain')
                 ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli dan aset masuk stok pembeli (Tersedia, tanpa pemegang).')
                 ->modalSubmitActionLabel('Catat Penjualan')
-                ->modalWidth('lg')
+                ->slideOver()
+                ->modalWidth('md')
                 ->form([
                     Select::make('asset_id')
                         ->label('Aset')

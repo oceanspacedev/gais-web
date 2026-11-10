@@ -94,7 +94,7 @@ class AssetSaleResource extends Resource
     public static function form(Schema $form): Schema
     {
         return $form
-            ->columns(2)
+            ->columns(1)
             ->schema([
                 Placeholder::make('summary')
                     ->label('Penjualan')
@@ -390,7 +390,7 @@ class AssetSaleResource extends Resource
                 ViewAction::make(),
                 EditAction::make()
                     ->slideOver()
-                    ->modalWidth('lg'),
+                    ->modalWidth('md'),
                 DeleteAction::make()
                     ->modalDescription('Riwayat ini masuk Sampah dan bisa dipulihkan. Kepemilikan aset tidak dibalik otomatis; perbaiki badan usaha aset lewat form aset bila perlu.'),
             ])
