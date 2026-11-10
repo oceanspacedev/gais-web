@@ -8,8 +8,8 @@ use App\Filament\Resources\ObChecksheetResource\Pages\ListObChecksheets;
 use App\Filament\Resources\ObChecksheetResource\Pages\ViewObChecksheet;
 use App\Filament\Resources\ObRoomResource\Pages\ManageObRooms;
 use App\Filament\Resources\ObShiftResource\Pages\ManageObShifts;
-use App\Models\ObChecksheet;
 use App\Models\AssetLocation;
+use App\Models\ObChecksheet;
 use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\User;
@@ -294,7 +294,7 @@ class ObChecksheetAssignmentTest extends TestCase
                 ],
             ])
             ->assertHasNoActionErrors()
-            ->assertNotified('1 ruangan dimulai');
+            ->assertNotified('1 pekerjaan dimulai');
 
         $photographed->refresh();
         $skipped->refresh();
@@ -320,7 +320,7 @@ class ObChecksheetAssignmentTest extends TestCase
             ->callAction('startAll', [
                 'tasks' => [['id' => $task->id, 'room' => 'Ruang Audit', 'photo' => null, 'notes' => null]],
             ])
-            ->assertNotified('Isi foto minimal satu ruangan')
+            ->assertNotified('Isi foto minimal satu pekerjaan')
             ->assertActionHalted('startAll');
 
         $this->assertSame(ObChecksheet::STATUS_PENDING, $task->refresh()->status);
@@ -342,7 +342,7 @@ class ObChecksheetAssignmentTest extends TestCase
                     ['id' => $foreign->id, 'room' => 'Ruang Chief', 'photo' => 'ob-checksheets/before/b.jpg', 'notes' => null],
                 ],
             ])
-            ->assertNotified('1 ruangan dimulai');
+            ->assertNotified('1 pekerjaan dimulai');
 
         $this->assertSame(ObChecksheet::STATUS_IN_PROGRESS, $own->refresh()->status);
         $this->assertSame(ObChecksheet::STATUS_PENDING, $foreign->refresh()->status);
@@ -376,7 +376,7 @@ class ObChecksheetAssignmentTest extends TestCase
                 ],
             ])
             ->assertHasNoActionErrors()
-            ->assertNotified('1 ruangan selesai');
+            ->assertNotified('1 pekerjaan selesai');
 
         $done->refresh();
         $notYet->refresh();
@@ -842,7 +842,7 @@ class ObChecksheetAssignmentTest extends TestCase
                     ['id' => $untouched->id, 'room' => 'Ruang Lain', 'photo' => null, 'notes' => null],
                 ],
             ])
-            ->assertNotified('1 ruangan dimulai');
+            ->assertNotified('1 pekerjaan dimulai');
 
         $pool->refresh();
         $untouched->refresh();
@@ -869,7 +869,7 @@ class ObChecksheetAssignmentTest extends TestCase
         $sariForm
             ->setActionData(['tasks' => [['id' => $task->id, 'room' => 'Ruang Pool', 'photo' => 'ob-checksheets/before/sari.jpg', 'notes' => null]]])
             ->callMountedAction()
-            ->assertNotified('0 ruangan dimulai');
+            ->assertNotified('0 pekerjaan dimulai');
 
         $task->refresh();
         $this->assertSame($budi->id, $task->user_id);
@@ -891,7 +891,7 @@ class ObChecksheetAssignmentTest extends TestCase
                     ['id' => $future->id, 'room' => 'Ruang Besok', 'photo' => 'ob-checksheets/before/future.jpg', 'notes' => null],
                 ],
             ])
-            ->assertNotified('1 ruangan dimulai');
+            ->assertNotified('1 pekerjaan dimulai');
 
         $this->assertSame($officeBoy->id, $old->refresh()->user_id);
         $this->assertNull($future->refresh()->user_id, 'Tugas untuk hari berikutnya belum bisa diambil.');
@@ -937,7 +937,7 @@ class ObChecksheetAssignmentTest extends TestCase
             ->callAction('finishAll', [
                 'tasks' => [['id' => $task->id, 'room' => 'Ruang Pool', 'photo' => 'ob-checksheets/after/pool.jpg', 'notes' => null]],
             ])
-            ->assertNotified('1 ruangan selesai');
+            ->assertNotified('1 pekerjaan selesai');
 
         $this->assertSame(ObChecksheet::STATUS_COMPLETED, $task->refresh()->status);
     }

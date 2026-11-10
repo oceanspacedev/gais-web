@@ -70,7 +70,7 @@ class Guide extends Page
                 ['actor' => 'sistem', 'title' => 'Riwayat tersimpan', 'text' => 'Satu baris per perpindahan: penjual, pembeli, tanggal, harga, dokumen, pencatat. Tampil di detail aset dan menu Penjualan Aset untuk kedua pihak.'],
             ],
             'ob' => [
-                ['actor' => 'manager', 'title' => 'Atasan menugaskan', 'text' => 'Per shift dan ruangan. Tugas bisa untuk OB tertentu atau masuk kolam bersama.'],
+                ['actor' => 'manager', 'title' => 'Atasan menugaskan', 'text' => 'Per shift dan pekerjaan. Tugas bisa untuk OB tertentu atau masuk kolam bersama.'],
                 ['actor' => 'executor', 'title' => 'OB mengambil tugas', 'text' => 'Tugas kolam bersama diambil lewat tombol klaim. OB hanya melihat tugasnya sendiri dan kolam bersama.'],
                 ['actor' => 'executor', 'title' => 'Mulai kerja', 'text' => 'Unggah foto sebelum. Status Pending menjadi In progress dan waktu mulai tercatat.'],
                 ['actor' => 'executor', 'title' => 'Selesai', 'text' => 'Unggah foto sesudah. Status Completed dan durasi dihitung otomatis.'],

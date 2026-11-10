@@ -68,7 +68,7 @@ class ObShiftResource extends Resource
                     ->label('Lokasi')
                     ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->placeholder('Semua lokasi')
-                    ->helperText('Shift dengan nama sama boleh ada di beberapa lokasi, masing-masing dengan daftar ruangannya sendiri.')
+                    ->helperText('Shift dengan nama sama boleh ada di beberapa lokasi, masing-masing dengan daftar pekerjaannya sendiri.')
                     ->searchable()
                     ->preload()
                     ->live(),
@@ -92,8 +92,8 @@ class ObShiftResource extends Resource
                     ->default(true),
 
                 Repeater::make('shiftRooms')
-                    ->label('Daftar Ruangan')
-                    ->helperText('Ruangan ini otomatis muncul saat shift dipilih di OB Checksheet.')
+                    ->label('Daftar Pekerjaan')
+                    ->helperText('Pekerjaan ini otomatis muncul saat shift dipilih di OB Checksheet.')
                     ->relationship('shiftRooms')
                     ->orderColumn('sort_order')
                     ->simple(
@@ -113,10 +113,10 @@ class ObShiftResource extends Resource
                             ->distinct()
                             ->required()
                             ->createOptionForm(ObRoomResource::formFields())
-                            ->createOptionModalHeading('Tambah Ruangan'),
+                            ->createOptionModalHeading('Tambah Pekerjaan'),
                     )
                     ->defaultItems(1)
-                    ->addActionLabel('Tambah ruangan'),
+                    ->addActionLabel('Tambah pekerjaan'),
             ]);
     }
 
@@ -138,7 +138,7 @@ class ObShiftResource extends Resource
                     ->sortable(),
 
                 TextColumn::make('shift_rooms_count')
-                    ->label('Jumlah Ruangan')
+                    ->label('Jumlah Pekerjaan')
                     ->counts('shiftRooms')
                     ->badge()
                     ->color('gray'),

@@ -27,7 +27,7 @@ class NavigationGroupsTest extends TestCase
         );
 
         $this->assertSame(
-            ['OB Checksheets', 'Ruangan OB', 'Shift OB', AssetLocationResource::getNavigationLabel()],
+            ['OB Checksheets', 'Pekerjaan OB', 'Shift OB', AssetLocationResource::getNavigationLabel()],
             $this->labels($navigation, 'OB / Kebersihan'),
         );
         $this->assertContains(AssetLocationResource::getNavigationLabel(), $this->labels($navigation, 'Master Aset'));

@@ -388,7 +388,7 @@ class ObChecksheetTest extends TestCase
                 'total_rows' => 1,
                 'user_id' => $user->id,
             ]),
-            ['reference_number' => 'No. Referensi', 'user.name' => 'Petugas OB', 'room' => 'Nama Ruangan', 'status' => 'Status', 'duration_minutes' => 'Durasi', 'notes' => 'Catatan'],
+            ['reference_number' => 'No. Referensi', 'user.name' => 'Petugas OB', 'room' => 'Nama Pekerjaan', 'status' => 'Status', 'duration_minutes' => 'Durasi', 'notes' => 'Catatan'],
             []
         );
 

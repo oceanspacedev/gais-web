@@ -413,7 +413,7 @@
             </div>
 
             <p class="text-xs text-gray-500 dark:text-gray-400 max-w-sm mt-1">
-                Buka kamera langsung untuk bukti ruangan, atau pilih foto dari perangkat (Maks. 10MB)
+                Buka kamera langsung untuk bukti pekerjaan, atau pilih foto dari perangkat (Maks. 10MB)
             </p>
         </div>
 

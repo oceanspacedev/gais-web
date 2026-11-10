@@ -97,9 +97,9 @@ class ObChecksheetResource extends Resource
                         Grid::make(['default' => 1, 'sm' => 2, 'md' => 3])
                             ->schema([
                                 TextInput::make('room')
-                                    ->label('Nama Ruangan')
-                                    ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
-                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Nama yang cocok dengan Master Ruangan otomatis terhubung.')
+                                    ->label('Nama Pekerjaan')
+                                    ->placeholder('Ketik nama pekerjaan (contoh: Toilet Lt. 1, Pantry, Buang sampah toko)')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Nama yang cocok dengan Master Pekerjaan otomatis terhubung.')
                                     ->datalist(fn (Get $get): array => self::roomSuggestions($get('ob_shift_id')))
                                     ->required()
                                     ->maxLength(255)
@@ -150,21 +150,21 @@ class ObChecksheetResource extends Resource
 
                                 Textarea::make('notes')
                                     ->label('Catatan (Opsional)')
-                                    ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
+                                    ->placeholder('Tulis catatan jika ada hal khusus...')
                                     ->rows(2)
                                     ->columnSpanFull(),
                             ]),
                     ])
                     ->hiddenOn('create'),
 
-                Section::make('Ruangan yang Akan Dibersihkan')
-                    ->description('Tambahkan semua ruangan dan foto sebelum sekaligus. Foto sesudah diambil nanti, satu ruangan satu kali.')
+                Section::make('Pekerjaan yang Akan Dikerjakan')
+                    ->description('Tambahkan semua pekerjaan dan foto sebelum sekaligus. Foto sesudah diambil nanti, satu pekerjaan satu kali.')
                     ->visibleOn('create')
                     ->schema([
                         Select::make('ob_shift_id')
                             ->label('Shift (Opsional)')
-                            ->placeholder('Pilih shift untuk memunculkan daftar ruangannya')
-                            ->helperText('Hapus ruangan yang tidak dikerjakan. Ruangan lain tetap bisa diketik.')
+                            ->placeholder('Pilih shift untuk memunculkan daftar pekerjaannya')
+                            ->helperText('Hapus pekerjaan yang tidak dikerjakan. Pekerjaan lain tetap bisa diketik.')
                             ->options(fn (): array => ObShift::options())
                             ->searchable()
                             ->live()
@@ -174,11 +174,11 @@ class ObChecksheetResource extends Resource
                             ))
                             ->columnSpanFull(),
                         Repeater::make('rooms')
-                            ->label('Daftar ruangan')
+                            ->label('Daftar pekerjaan')
                             ->schema([
                                 TextInput::make('room')
-                                    ->label('Nama Ruangan')
-                                    ->placeholder('Ketik nama ruangan (contoh: Toilet Lt. 1, Pantry, Lobby, Ruang Rapat)')
+                                    ->label('Nama Pekerjaan')
+                                    ->placeholder('Ketik nama pekerjaan (contoh: Toilet Lt. 1, Pantry, Buang sampah toko)')
                                     ->datalist(fn (Get $get): array => self::roomSuggestions($get('../../ob_shift_id')))
                                     ->required()
                                     ->maxLength(255)
@@ -189,19 +189,19 @@ class ObChecksheetResource extends Resource
                                     ->required(),
                                 Textarea::make('notes')
                                     ->label('Catatan (Opsional)')
-                                    ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
+                                    ->placeholder('Tulis catatan jika ada hal khusus...')
                                     ->rows(4),
                             ])
                             // Di HP tetap satu kolom; di layar lebar foto dan catatan berdampingan.
                             ->columns(['default' => 1, 'md' => 2])
                             ->minItems(1)
                             ->defaultItems(1)
-                            ->addActionLabel('Tambah ruangan')
+                            ->addActionLabel('Tambah pekerjaan')
                             ->reorderable(false)
                             ->itemLabel(function (mixed $state): string {
                                 $room = is_array($state) ? ($state['room'] ?? null) : null;
 
-                                return filled($room) ? (string) $room : 'Ruangan';
+                                return filled($room) ? (string) $room : 'Pekerjaan';
                             })
                             ->columnSpanFull(),
                     ]),
@@ -230,7 +230,7 @@ class ObChecksheetResource extends Resource
                         // Baris 1: di mana dan siapa.
                         Grid::make(['default' => 2, 'lg' => 4])->schema([
                             TextEntry::make('room')
-                                ->label('Ruangan')
+                                ->label('Pekerjaan')
                                 ->weight(FontWeight::SemiBold)
                                 ->icon('heroicon-o-map-pin')
                                 ->columnSpan(['default' => 2]),
@@ -317,7 +317,7 @@ class ObChecksheetResource extends Resource
                     ]),
 
                     TextColumn::make('room')
-                        ->label('Ruangan')
+                        ->label('Pekerjaan')
                         ->searchable()
                         ->sortable()
                         ->weight(FontWeight::Bold)
@@ -408,7 +408,7 @@ class ObChecksheetResource extends Resource
                     ->query(fn (Builder $query): Builder => $query->unclaimed()),
 
                 SelectFilter::make('ob_room_id')
-                    ->label('Ruangan')
+                    ->label('Pekerjaan')
                     ->relationship('obRoom', 'name', fn (Builder $query): Builder => $query->withoutTrashed()->with('location')->orderBy('name'))
                     ->getOptionLabelFromRecordUsing(fn (ObRoom $record): string => $record->label())
                     ->searchable()
@@ -448,7 +448,7 @@ class ObChecksheetResource extends Resource
                             ->required(),
                         Textarea::make('notes')
                             ->label('Catatan (Opsional)')
-                            ->placeholder('Tulis catatan kondisi ruangan jika ada hal khusus...')
+                            ->placeholder('Tulis catatan jika ada hal khusus...')
                             ->rows(3)
                             ->columnSpanFull(),
                     ])
@@ -458,7 +458,7 @@ class ObChecksheetResource extends Resource
                             $record->loadMissing('user');
 
                             Notification::make()
-                                ->title('Ruangan sudah diambil')
+                                ->title('Pekerjaan sudah diambil')
                                 ->body("{$record->room} sudah diambil oleh {$record->user?->name}.")
                                 ->warning()
                                 ->send();
@@ -470,7 +470,7 @@ class ObChecksheetResource extends Resource
 
                         Notification::make()
                             ->title('Pembersihan Dimulai')
-                            ->body("Ruangan {$record->room} sedang dikerjakan. Ambil Foto Sesudah setelah selesai.")
+                            ->body("Pekerjaan {$record->room} sedang dikerjakan. Ambil Foto Sesudah setelah selesai.")
                             ->success()
                             ->send();
                     }),
@@ -505,8 +505,8 @@ class ObChecksheetResource extends Resource
                         Notification::make()
                             ->title('Pembersihan Selesai!')
                             ->body($record->showsDuration()
-                                ? "Ruangan {$record->room} berhasil diselesaikan (durasi: {$record->duration_minutes} menit)."
-                                : "Ruangan {$record->room} berhasil diselesaikan.")
+                                ? "Pekerjaan {$record->room} berhasil diselesaikan (durasi: {$record->duration_minutes} menit)."
+                                : "Pekerjaan {$record->room} berhasil diselesaikan.")
                             ->success()
                             ->send();
                     }),

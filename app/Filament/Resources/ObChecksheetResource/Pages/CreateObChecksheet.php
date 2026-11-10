@@ -24,8 +24,8 @@ class CreateObChecksheet extends CreateRecord
         $count = $this->createdRoomCount;
 
         return $count === 1
-            ? 'Pembersihan dimulai. Ambil Foto Sesudah untuk ruangan ini setelah selesai.'
-            : "{$count} ruangan dimulai. Ambil Foto Sesudah satu per satu setelah selesai.";
+            ? 'Pekerjaan dimulai. Ambil Foto Sesudah setelah selesai.'
+            : "{$count} pekerjaan dimulai. Ambil Foto Sesudah satu per satu setelah selesai.";
     }
 
     /**
@@ -37,7 +37,7 @@ class CreateObChecksheet extends CreateRecord
 
         if ($rooms === []) {
             throw ValidationException::withMessages([
-                'data.rooms' => 'Tambahkan minimal satu ruangan.',
+                'data.rooms' => 'Tambahkan minimal satu pekerjaan.',
             ]);
         }
 

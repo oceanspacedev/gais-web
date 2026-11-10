@@ -153,7 +153,7 @@
                         @foreach ([
                             ['Aset', 'Data aset, BA transfer (serah terima, pengalihan, pengembalian), servis, rekonsiliasi audit, riwayat label QR.'],
                             ['Master Aset', 'Merek, kategori, atribut kustom (STNK, KIR, dan sejenisnya), vendor.'],
-                            ['OB / Kebersihan', 'Checksheet kebersihan, ruangan, shift.'],
+                            ['OB / Kebersihan', 'Checksheet kebersihan, pekerjaan, shift.'],
                             ['Kendaraan', 'Catatan penggunaan kendaraan: KM, tujuan, kerusakan.'],
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
@@ -440,13 +440,13 @@
                 <div class="pg-block" id="bab-9">
                     <h2>9. OB: menugaskan dan mengerjakan</h2>
                     <h3>9.1 Atasan menugaskan per shift</h3>
-                    <x-guide.demo name="ob-tugaskan" caption="Animasi: memilih Shift Pagi, ruangannya tercentang otomatis, lalu menugaskan ke satu OB." :shots="[
+                    <x-guide.demo name="ob-tugaskan" caption="Animasi: memilih Shift Pagi, pekerjaannya tercentang otomatis, lalu menugaskan ke satu OB." :shots="[
                         'ob-tugaskan-01-daftar-tugas.png' => 'Daftar tugas',
                         'ob-tugaskan-02-form-tugaskan.png' => 'Form tugaskan',
                         'ob-tugaskan-03-tugas-dibuat.png' => 'Tugas dibuat',
                     ]" />
                     <ul class="pg-list">
-                        <li>Menu <strong>OB Checksheets</strong>, tombol <strong>Tugaskan per Shift</strong>. Ruangan dan shift diatur di menu <strong>Ruangan OB</strong> dan <strong>Shift OB</strong>.</li>
+                        <li>Menu <strong>OB Checksheets</strong>, tombol <strong>Tugaskan per Shift</strong>. Pekerjaan dan shift diatur di menu <strong>Pekerjaan OB</strong> dan <strong>Shift OB</strong>.</li>
                         <li>Kosongkan <strong>Petugas OB</strong> agar tugas masuk kolam bersama dan bisa diambil OB mana pun.</li>
                     </ul>
 
@@ -459,7 +459,7 @@
                         'ob-kerja-05-selesai.png' => 'Selesai',
                     ]" />
                     <ul class="pg-list">
-                        <li><strong>Mulai Semua &amp; Foto Sebelum</strong>: foto tiap ruangan yang mulai dikerjakan. Ruangan tanpa foto tetap <em>Belum Dikerjakan</em>.</li>
+                        <li><strong>Mulai Semua &amp; Foto Sebelum</strong>: foto tiap pekerjaan yang mulai dikerjakan. Pekerjaan tanpa foto tetap <em>Belum Dikerjakan</em>.</li>
                         <li><strong>Selesaikan Semua &amp; Foto Sesudah</strong>: foto hasil, status menjadi <em>Selesai</em> dan durasi tercatat.</li>
                         <li>Di HP, tombol <strong>Buka Kamera</strong> memotret langsung. <strong>Pilih dari Galeri</strong> memakai foto yang sudah ada. Tekan <strong>Gunakan Foto Ini</strong> sampai muncul tanda <em>Tersimpan</em>.</li>
                     </ul>
@@ -764,9 +764,9 @@
                 </div>
                 <div class="pg-block">
                     <h3>OB / Kebersihan</h3>
-                    <p class="pg-lead">Office boy mencatat pekerjaan bersih-bersih per ruangan dan shift, dengan foto sebelum dan sesudah.</p>
+                    <p class="pg-lead">Office boy mencatat tiap pekerjaan (ruangan yang dibersihkan atau tugas lain) per shift, dengan foto sebelum dan sesudah.</p>
                     <x-guide.flow :steps="$flows['ob']" />
-                    <p>Ruangan dan shift adalah master per lokasi. Satu shift bisa mencakup beberapa ruangan. Data bisa diexport.</p>
+                    <p>Pekerjaan dan shift adalah master per lokasi. Satu shift bisa mencakup beberapa pekerjaan. Data bisa diexport.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Kendaraan</h3>

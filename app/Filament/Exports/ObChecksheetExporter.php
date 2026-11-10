@@ -28,7 +28,7 @@ class ObChecksheetExporter extends Exporter
                 ->state(fn (ObChecksheet $record): string => $record->user?->name ?? 'Belum diambil'),
 
             ExportColumn::make('room')
-                ->label('Nama Ruangan'),
+                ->label('Nama Pekerjaan'),
 
             ExportColumn::make('scheduled_date')
                 ->label('Tanggal')
