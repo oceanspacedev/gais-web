@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ObChecksheetResource\Pages;
 
 use App\Filament\Resources\ObChecksheetResource;
 use App\Models\ObChecksheet;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Validation\ValidationException;
@@ -13,6 +14,19 @@ class CreateObChecksheet extends CreateRecord
     protected static string $resource = ObChecksheetResource::class;
 
     protected int $createdRoomCount = 0;
+
+    // Satu tombol saja: daftar pekerjaan sudah bisa ditambah di dalam form.
+    protected static bool $canCreateAnother = false;
+
+    public function getTitle(): string
+    {
+        return 'Mulai Pekerjaan';
+    }
+
+    protected function getCreateFormAction(): Action
+    {
+        return parent::getCreateFormAction()->label('Mulai');
+    }
 
     protected function getRedirectUrl(): string
     {

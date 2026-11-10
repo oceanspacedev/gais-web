@@ -48,12 +48,10 @@ class ObChecksheetTest extends TestCase
                     [
                         'room' => 'Lobby',
                         'before_photo' => 'ob-checksheets/before/lobby.jpg',
-                        'notes' => 'Lantai basah',
                     ],
                     [
                         'room' => 'Pantry',
                         'before_photo' => 'ob-checksheets/before/pantry.jpg',
-                        'notes' => null,
                     ],
                 ],
             ])

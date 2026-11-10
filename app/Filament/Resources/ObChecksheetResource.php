@@ -157,14 +157,15 @@ class ObChecksheetResource extends Resource
                     ])
                     ->hiddenOn('create'),
 
-                Section::make('Pekerjaan yang Akan Dikerjakan')
-                    ->description('Tambahkan semua pekerjaan dan foto sebelum sekaligus. Foto sesudah diambil nanti, satu pekerjaan satu kali.')
+                Section::make('Pekerjaan')
+                    ->description('Isi nama pekerjaan dan foto sebelum, lalu tekan Mulai.')
                     ->visibleOn('create')
                     ->schema([
                         Select::make('ob_shift_id')
                             ->label('Shift (Opsional)')
                             ->placeholder('Pilih shift untuk memunculkan daftar pekerjaannya')
-                            ->helperText('Hapus pekerjaan yang tidak dikerjakan. Pekerjaan lain tetap bisa diketik.')
+                            // Tanpa master shift aktif, pilihan ini hanya menambah isian kosong.
+                            ->visible(fn (): bool => ObShift::options() !== [])
                             ->options(fn (): array => ObShift::options())
                             ->searchable()
                             ->live()
@@ -174,29 +175,25 @@ class ObChecksheetResource extends Resource
                             ))
                             ->columnSpanFull(),
                         Repeater::make('rooms')
-                            ->label('Daftar pekerjaan')
+                            ->hiddenLabel()
                             ->schema([
                                 TextInput::make('room')
                                     ->label('Nama Pekerjaan')
-                                    ->placeholder('Ketik nama pekerjaan (contoh: Toilet Lt. 1, Pantry, Buang sampah toko)')
+                                    ->placeholder('Contoh: Toilet Lt. 1, Pantry, Buang sampah toko')
                                     ->datalist(fn (Get $get): array => self::roomSuggestions($get('../../ob_shift_id')))
                                     ->required()
                                     ->maxLength(255)
                                     ->columnSpanFull(),
+                                // Catatan tidak ditanya di sini; bisa diisi saat Foto Sesudah.
                                 CameraCapture::make('before_photo')
-                                    ->label('Foto Sebelum Pembersihan')
+                                    ->label('Foto Sebelum')
                                     ->folder('ob-checksheets/before')
-                                    ->required(),
-                                Textarea::make('notes')
-                                    ->label('Catatan (Opsional)')
-                                    ->placeholder('Tulis catatan jika ada hal khusus...')
-                                    ->rows(4),
+                                    ->required()
+                                    ->columnSpanFull(),
                             ])
-                            // Di HP tetap satu kolom; di layar lebar foto dan catatan berdampingan.
-                            ->columns(['default' => 1, 'md' => 2])
                             ->minItems(1)
                             ->defaultItems(1)
-                            ->addActionLabel('Tambah pekerjaan')
+                            ->addActionLabel('Tambah pekerjaan lain')
                             ->reorderable(false)
                             ->itemLabel(function (mixed $state): string {
                                 $room = is_array($state) ? ($state['room'] ?? null) : null;
