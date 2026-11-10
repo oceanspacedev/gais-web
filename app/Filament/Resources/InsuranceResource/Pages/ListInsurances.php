@@ -4,6 +4,7 @@ namespace App\Filament\Resources\InsuranceResource\Pages;
 
 use App\Exports\InsuranceExport;
 use App\Filament\Actions\DownloadExcelAction;
+use App\Filament\Actions\ExcelActionGroup;
 use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\InsuranceResource;
 use App\Imports\InsuranceImport;
@@ -21,15 +22,18 @@ class ListInsurances extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            ExcelImportAction::make()
-                ->label('Impor Excel')
-                ->color('gray')
-                ->use(InsuranceImport::class)
-                ->sampleExcel(sampleData: [InsuranceImport::sampleRow()], fileName: 'template-asuransi.xlsx')
-                ->visible(fn (): bool => auth()->user()?->can('import', Insurance::class) ?? false),
-            // Sumo: /insurance/export, kolom template impor termasuk id.
-            DownloadExcelAction::make('exportAll', 'Ekspor Semua Asuransi', fn (): InsuranceExport => new InsuranceExport)
-                ->visible(fn (): bool => auth()->user()?->can('export', Insurance::class) ?? false),
+            ExcelActionGroup::make([
+                ExcelImportAction::make()
+                    ->label('Impor Excel')
+                    ->icon(ExcelActionGroup::IMPORT_ICON)
+                    ->color('gray')
+                    ->use(InsuranceImport::class)
+                    ->sampleExcel(sampleData: [InsuranceImport::sampleRow()], fileName: 'template-asuransi.xlsx')
+                    ->visible(fn (): bool => auth()->user()?->can('import', Insurance::class) ?? false),
+                // Sumo: /insurance/export, kolom template impor termasuk id.
+                DownloadExcelAction::make('exportAll', 'Ekspor Semua Asuransi', fn (): InsuranceExport => new InsuranceExport)
+                    ->visible(fn (): bool => auth()->user()?->can('export', Insurance::class) ?? false),
+            ]),
             CreateAction::make(),
         ];
     }

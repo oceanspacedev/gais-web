@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ProductResource\Pages;
 
 use App\Exports\ProductExport;
 use App\Filament\Actions\DownloadExcelAction;
+use App\Filament\Actions\ExcelActionGroup;
 use App\Filament\Resources\ProductResource;
 use App\Imports\ProductImport;
 use App\Models\Product;
@@ -18,15 +19,18 @@ class ManageProducts extends ManageRecords
     protected function getHeaderActions(): array
     {
         return [
-            ExcelImportAction::make()
-                ->label('Impor Excel')
-                ->color('gray')
-                ->use(ProductImport::class)
-                ->sampleExcel(sampleData: [ProductImport::sampleRow()], fileName: 'template-barang.xlsx')
-                ->visible(fn (): bool => auth()->user()?->can('import', Product::class) ?? false),
-            // Sumo: /product/export, kolom sama dengan template impor.
-            DownloadExcelAction::make('exportAll', 'Ekspor Semua Barang', fn (): ProductExport => new ProductExport)
-                ->visible(fn (): bool => auth()->user()?->can('export', Product::class) ?? false),
+            ExcelActionGroup::make([
+                ExcelImportAction::make()
+                    ->label('Impor Excel')
+                    ->icon(ExcelActionGroup::IMPORT_ICON)
+                    ->color('gray')
+                    ->use(ProductImport::class)
+                    ->sampleExcel(sampleData: [ProductImport::sampleRow()], fileName: 'template-barang.xlsx')
+                    ->visible(fn (): bool => auth()->user()?->can('import', Product::class) ?? false),
+                // Sumo: /product/export, kolom sama dengan template impor.
+                DownloadExcelAction::make('exportAll', 'Ekspor Semua Barang', fn (): ProductExport => new ProductExport)
+                    ->visible(fn (): bool => auth()->user()?->can('export', Product::class) ?? false),
+            ]),
             CreateAction::make()->slideOver()->modalWidth('lg'),
         ];
     }

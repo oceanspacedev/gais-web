@@ -47,8 +47,9 @@ class ListObChecksheets extends ListRecords
             $this->assignManualAction(),
             ExportAction::make()
                 ->exporter(ObChecksheetExporter::class)
-                ->label('Export')
-                ->color('warning')
+                ->label('Ekspor Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
                 ->visible(fn () => auth()->user()?->can('export', ObChecksheet::class) ?? false),
             Actions\CreateAction::make(),
         ];

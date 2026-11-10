@@ -22,8 +22,9 @@ class ListAssetServices extends ListRecords
         return [
             ExportAction::make()
                 ->exporter(AssetServiceExporter::class)
-                ->label('Export')
-                ->color('warning')
+                ->label('Ekspor Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
                 ->visible(fn () => auth()->user()?->can('export', AssetService::class) ?? true),
             CreateAction::make()
                 ->label('Tambah Servis Aset'),

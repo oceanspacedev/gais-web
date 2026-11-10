@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AssetSaleResource\Pages;
 
 use App\Exports\AssetSaleExport;
 use App\Filament\Actions\DownloadExcelAction;
+use App\Filament\Actions\ExcelActionGroup;
 use App\Filament\Resources\AssetSaleResource;
 use App\Imports\AssetSaleImport;
 use App\Models\Asset;
@@ -24,18 +25,21 @@ class ListAssetSales extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            // Penjualan massal: satu baris Excel = satu aset, lewat AssetSale::record().
-            ExcelImportAction::make('importSales')
-                ->label('Impor Excel')
-                ->color('gray')
-                ->modalHeading('Impor Penjualan Aset')
-                ->modalDescription('Unggah Excel berkolom template: satu baris = satu aset yang dijual ke badan usaha lain. Aset dikenali dari id_aset atau serial_number; badan usaha ditulis sesuai nama di master. Kepemilikan langsung berpindah ke pembeli, dan satu baris salah membatalkan seluruh file.')
-                ->use(AssetSaleImport::class)
-                ->sampleExcel(sampleData: [AssetSaleImport::sampleRow()], fileName: 'template-penjualan-aset.xlsx', sampleButtonLabel: 'Unduh template')
-                ->uploadField(fn (FileUpload $upload): FileUpload => $upload->label('File Excel'))
-                ->visible(fn (): bool => auth()->user()?->can('import', AssetSale::class) ?? false),
-            DownloadExcelAction::make('exportAll', 'Ekspor Semua Penjualan', fn (): AssetSaleExport => new AssetSaleExport)
-                ->visible(fn (): bool => auth()->user()?->can('export', AssetSale::class) ?? false),
+            ExcelActionGroup::make([
+                // Penjualan massal: satu baris Excel = satu aset, lewat AssetSale::record().
+                ExcelImportAction::make('importSales')
+                    ->label('Impor Excel')
+                    ->icon(ExcelActionGroup::IMPORT_ICON)
+                    ->color('gray')
+                    ->modalHeading('Impor Penjualan Aset')
+                    ->modalDescription('Unggah Excel berkolom template: satu baris = satu aset yang dijual ke badan usaha lain. Aset dikenali dari id_aset atau serial_number; badan usaha ditulis sesuai nama di master. Kepemilikan langsung berpindah ke pembeli, dan satu baris salah membatalkan seluruh file.')
+                    ->use(AssetSaleImport::class)
+                    ->sampleExcel(sampleData: [AssetSaleImport::sampleRow()], fileName: 'template-penjualan-aset.xlsx', sampleButtonLabel: 'Unduh template')
+                    ->uploadField(fn (FileUpload $upload): FileUpload => $upload->label('File Excel'))
+                    ->visible(fn (): bool => auth()->user()?->can('import', AssetSale::class) ?? false),
+                DownloadExcelAction::make('exportAll', 'Ekspor Semua Penjualan', fn (): AssetSaleExport => new AssetSaleExport)
+                    ->visible(fn (): bool => auth()->user()?->can('export', AssetSale::class) ?? false),
+            ]),
             Action::make('record')
                 ->label('Catat Penjualan')
                 ->icon('heroicon-o-plus')

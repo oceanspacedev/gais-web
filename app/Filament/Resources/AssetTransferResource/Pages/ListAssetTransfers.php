@@ -21,8 +21,9 @@ class ListAssetTransfers extends ListRecords
     {
         return [
             ExportAction::make()
-                ->label('Export')
-                ->color('warning')
+                ->label('Ekspor Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
                 ->exporter(AssetTransferDetailExporter::class)
                 ->chunkSize(250)
                 ->columnMappingColumns(2)

@@ -4,6 +4,7 @@ namespace App\Filament\Resources\RentResource\Pages;
 
 use App\Exports\RentExport;
 use App\Filament\Actions\DownloadExcelAction;
+use App\Filament\Actions\ExcelActionGroup;
 use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\RentResource;
 use App\Imports\RentImport;
@@ -21,15 +22,18 @@ class ListRents extends ListRecords
     protected function getHeaderActions(): array
     {
         return [
-            ExcelImportAction::make()
-                ->label('Impor Excel')
-                ->color('gray')
-                ->use(RentImport::class)
-                ->sampleExcel(sampleData: [RentImport::sampleRow()], fileName: 'template-sewa.xlsx')
-                ->visible(fn (): bool => auth()->user()?->can('import', Rent::class) ?? false),
-            // Sumo: /rent/export, kolom sama dengan template impor.
-            DownloadExcelAction::make('exportAll', 'Ekspor Semua Sewa', fn (): RentExport => new RentExport)
-                ->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
+            ExcelActionGroup::make([
+                ExcelImportAction::make()
+                    ->label('Impor Excel')
+                    ->icon(ExcelActionGroup::IMPORT_ICON)
+                    ->color('gray')
+                    ->use(RentImport::class)
+                    ->sampleExcel(sampleData: [RentImport::sampleRow()], fileName: 'template-sewa.xlsx')
+                    ->visible(fn (): bool => auth()->user()?->can('import', Rent::class) ?? false),
+                // Sumo: /rent/export, kolom sama dengan template impor.
+                DownloadExcelAction::make('exportAll', 'Ekspor Semua Sewa', fn (): RentExport => new RentExport)
+                    ->visible(fn (): bool => auth()->user()?->can('export', Rent::class) ?? false),
+            ]),
             CreateAction::make(),
         ];
     }
