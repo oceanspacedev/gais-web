@@ -146,9 +146,14 @@ class User extends Authenticatable implements FilamentUser, HasName
         return $registrar->rememberCheck($this, $name, $guardName, fn (): bool => $this->checkPermissionToUncached($permission, $guardName));
     }
 
+    /**
+     * Semua karyawan boleh masuk, termasuk yang belum diberi role: tanpa role
+     * mereka hanya mendapat akses dasar (Lapor Gangguan miliknya dan Panduan);
+     * menu dan widget lain tetap dijaga izin Shield.
+     */
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->roles()->exists();
+        return true;
     }
 
     /**

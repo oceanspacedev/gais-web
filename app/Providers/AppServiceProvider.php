@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Access\BaselineAccess;
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\EmailLogin;
 use App\Filament\Auth\Pages\PhoneLogin;
@@ -234,6 +235,8 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProductCategory::class, ProductCategoryPolicy::class);
         Gate::policy(Rent::class, RentPolicy::class);
         Gate::policy(UnitType::class, UnitTypePolicy::class);
+
+        BaselineAccess::register();
     }
 
     /**

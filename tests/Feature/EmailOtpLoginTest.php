@@ -328,13 +328,11 @@ class EmailOtpLoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_unknown_shared_or_unauthorized_email_gets_no_code_and_no_hint(): void
+    public function test_unknown_or_shared_email_gets_no_code_and_no_hint(): void
     {
         $this->registeredUser('shared@example.test', 'Pertama');
         $this->registeredUser('SHARED@example.test', 'Kedua');
-        $this->registeredUser('norole@example.test', 'Tanpa Role', withRole: false);
-
-        foreach (['unknown@example.test', 'shared@example.test', 'norole@example.test'] as $email) {
+        foreach (['unknown@example.test', 'shared@example.test'] as $email) {
             // Sama seperti login WhatsApp, halaman tidak mengungkap apakah email terdaftar.
             $this->requestCode($email)->set('data.otp', '123456')
                 ->call('verify')->assertHasFormErrors(['otp'])->assertNoRedirect();
