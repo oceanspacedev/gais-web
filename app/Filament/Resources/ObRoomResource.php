@@ -37,7 +37,7 @@ class ObRoomResource extends Resource
 
     protected static ?string $model = ObRoom::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-home-modern';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-list-bullet';
 
     protected static string|\UnitEnum|null $navigationGroup = 'OB / Kebersihan';
 
