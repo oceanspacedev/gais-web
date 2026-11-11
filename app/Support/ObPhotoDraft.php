@@ -18,6 +18,9 @@ final class ObPhotoDraft
 
     public const AFTER = 'after';
 
+    /** Isian checklist laporan security yang belum dikirim. */
+    public const SECURITY = 'security';
+
     private const HOURS = 12;
 
     /**

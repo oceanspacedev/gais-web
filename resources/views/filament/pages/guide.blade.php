@@ -154,6 +154,7 @@
                             ['Aset', 'Data aset, BA transfer (serah terima, pengalihan, pengembalian), servis, rekonsiliasi audit, riwayat label QR.'],
                             ['Master Aset', 'Merek, kategori, atribut kustom (STNK, KIR, dan sejenisnya), vendor.'],
                             ['OB / Kebersihan', 'Checksheet kebersihan, pekerjaan, shift.'],
+                            ['Security', 'Laporan jaga security: checklist keamanan, kelistrikan, aset, kebersihan, temuan, foto/video.'],
                             ['Kendaraan', 'Catatan penggunaan kendaraan: KM, tujuan, kerusakan.'],
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
@@ -769,6 +770,11 @@
                     <p>Pekerjaan dan shift adalah master per lokasi. Satu shift bisa mencakup beberapa pekerjaan. Data bisa diexport.</p>
                 </div>
                 <div class="pg-block">
+                    <h3>Security</h3>
+                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist keamanan, kelistrikan, kondisi aset, dan kebersihan, lalu temuan kejadian bila ada.</p>
+                    <p>Lampiran bisa foto atau video (maksimal 10 file, 50 MB per file). Petugas hanya melihat laporannya sendiri; atasan dengan izin Lihat Data Semua User melihat semuanya. Data bisa diexport.</p>
+                </div>
+                <div class="pg-block">
                     <h3>Kendaraan</h3>
                     <p>Satu baris per pemakaian: kendaraan (terhubung ke data aset), nomor referensi, PIC, plat, tujuan, KM awal dan akhir, jam berangkat dan kembali, foto, serta laporan kerusakan. Jarak dan durasi dihitung otomatis. Tersedia import dari Excel.</p>
                 </div>
@@ -824,6 +830,7 @@
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>
                             <tr><td><code>office_boy</code></td><td>OB</td><td>Melihat dan membuat OB checksheet.</td></tr>
+                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya.</td></tr>
                             <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
                         </tbody>
                     </table>

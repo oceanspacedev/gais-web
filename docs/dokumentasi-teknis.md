@@ -209,6 +209,12 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 - **Logika:** `ObTaskAssignmentService`
 - **Asal:** GAIS
 
+### Security
+
+- **Resource:** `SecurityChecksheetResource`
+- **Logika:** butir checklist di `SecurityChecksheet::CHECKLIST`, jawaban tersimpan sebagai JSON; lampiran foto/video lewat `FileUpload` (batas unggah sementara Livewire dinaikkan di `AppServiceProvider::configureLivewireUploads()`)
+- **Asal:** GAIS
+
 ### Kendaraan
 
 - **Resource:** `VehicleChecksheetResource`
@@ -303,6 +309,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | --- | --- |
 | `ObShift` / `ObRoom` | many-to-many via `ob_shift_rooms` |
 | `ObChecksheet` | belongsTo `User`, `ObRoom`, `ObShift` |
+| `SecurityChecksheet` | belongsTo `User` |
 | `Task` | belongsTo `Vendor`, `User`, `BusinessEntity` |
 | `ItemRequest` | belongsTo `User`, `ItemRequestType`, `BusinessEntity`; hasMany `ItemRequestDetail` (→ `Product`), `ItemRequestApproval`, `ItemRequestLog` |
 | `ItemRequestType` | belongsTo `Division` (`pic_division_id`) |

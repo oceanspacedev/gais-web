@@ -9,6 +9,7 @@ use App\Filament\Resources\AssetLocationResource;
 use App\Filament\Resources\AssetResource\Widgets\CustomAssetWidget;
 use App\Filament\Resources\ObChecksheetResource\Pages\ListObChecksheets;
 use App\Filament\Resources\ObChecksheetResource\Pages\ViewObChecksheet;
+use App\Filament\Resources\SecurityChecksheetResource\Pages\ViewSecurityChecksheet;
 use Apriansyahrs\MekayaTheme\Livewire\MekayaSidebar;
 use Apriansyahrs\MekayaTheme\MekayaPlugin;
 use Asmit\ResizedColumn\ResizedColumnPlugin;
@@ -51,17 +52,18 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn () => view('auth.login-extra'),
             )
-            // Foto OB Checksheet bisa diklik untuk diperbesar.
+            // Foto OB Checksheet dan lampiran Security Checksheet bisa diklik untuk diperbesar.
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.ob-checksheet.image-lightbox'),
-                scopes: [ListObChecksheets::class, ViewObChecksheet::class],
+                scopes: [ListObChecksheets::class, ViewObChecksheet::class, ViewSecurityChecksheet::class],
             )
             // Menu dikelompokkan per modul; urutan grup mengikuti daftar ini.
             ->navigationGroups([
                 NavigationGroup::make('Aset'),
                 NavigationGroup::make('Master Aset'),
                 NavigationGroup::make('OB / Kebersihan'),
+                NavigationGroup::make('Security'),
                 NavigationGroup::make('Kendaraan'),
                 NavigationGroup::make('Pekerjaan Vendor'),
                 NavigationGroup::make('Pengajuan Barang'),

@@ -16,6 +16,7 @@ use App\Filament\Resources\ObChecksheetResource;
 use App\Filament\Resources\ProblemReportResource;
 use App\Filament\Resources\ProductResource;
 use App\Filament\Resources\RentResource;
+use App\Filament\Resources\SecurityChecksheetResource;
 use App\Filament\Resources\SumoImportRunResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
@@ -148,6 +149,12 @@ return [
                 'deleteAll',
                 // Menugaskan pembersihan ke OB dan mengganti petugasnya.
                 'assign',
+            ],
+            SecurityChecksheetResource::class => [
+                'export',
+                'viewAll',
+                'updateAll',
+                'deleteAll',
             ],
             // Alur pengajuan barang: tahap Accounting, Manager, Executor, catatan audit, ganti pemohon.
             ItemRequestResource::class => [

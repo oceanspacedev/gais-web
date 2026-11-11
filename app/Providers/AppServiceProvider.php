@@ -6,6 +6,7 @@ use App\Access\BaselineAccess;
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\EmailLogin;
 use App\Filament\Auth\Pages\PhoneLogin;
+use App\Filament\Resources\SecurityChecksheetResource;
 use App\Jobs\Filament\CreateXlsxFile as RetryingCreateXlsxFile;
 use App\Jobs\Filament\ExportCompletion as RetryingExportCompletion;
 use App\Jobs\Filament\ExportCsv as RetryingExportCsv;
@@ -34,6 +35,7 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Rent;
 use App\Models\RentUpdate;
+use App\Models\SecurityChecksheet;
 use App\Models\Task;
 use App\Models\UnitType;
 use App\Policies\ActivityPolicy;
@@ -62,6 +64,7 @@ use App\Policies\ProductPolicy;
 use App\Policies\RentPolicy;
 use App\Policies\RentUpdatePolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SecurityChecksheetPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\UnitTypePolicy;
 use App\Services\ItemRequestWorkflow;
@@ -211,6 +214,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(AssetService::class, AssetServicePolicy::class);
         Gate::policy(AssetTransfer::class, AssetTransferPolicy::class);
         Gate::policy(ObChecksheet::class, ObChecksheetPolicy::class);
+        Gate::policy(SecurityChecksheet::class, SecurityChecksheetPolicy::class);
         Gate::policy(ObRoom::class, ObRoomPolicy::class);
         Gate::policy(ObShift::class, ObShiftPolicy::class);
         Gate::policy(Activity::class, ActivityPolicy::class);
@@ -242,12 +246,16 @@ class AppServiceProvider extends ServiceProvider
     /**
      * Keep Livewire temp uploads on the private local disk (not public/),
      * so they are not web-accessible and do not depend on public/ subdirectory perms.
+     * Batas unggah sementara dinaikkan dari 12 MB bawaan Livewire supaya video
+     * lampiran laporan security lolos; tiap field tetap punya maxSize sendiri.
      */
     protected function configureLivewireUploads(): void
     {
         config([
             'livewire.temporary_file_upload.disk' => 'local',
             'livewire.temporary_file_upload.directory' => 'livewire-tmp',
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.SecurityChecksheetResource::MAX_ATTACHMENT_KB],
+            'livewire.temporary_file_upload.max_upload_time' => 15,
         ]);
     }
 
