@@ -5,6 +5,9 @@ namespace Tests\Feature;
 use App\Enums\AssetServiceStatus;
 use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource;
+use App\Filament\Resources\AssetServiceResource\Pages\CreateAssetService;
+use App\Filament\Resources\AssetServiceResource\Pages\EditAssetService;
+use App\Filament\Resources\AssetServiceResource\Pages\ListAssetServices;
 use App\Models\Asset;
 use App\Models\AssetService;
 use App\Models\AssetServiceItem;
@@ -13,6 +16,7 @@ use App\Models\User;
 use App\Models\Vendor;
 use Filament\Actions\Exports\Models\Export;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class AssetServiceTest extends TestCase
@@ -188,7 +192,7 @@ class AssetServiceTest extends TestCase
         $this->assertContains('total_cost', $columnNames);
 
         $exporter = new AssetServiceExporter(
-            new \Filament\Actions\Exports\Models\Export,
+            new Export,
             [],
             []
         );
@@ -345,6 +349,117 @@ class AssetServiceTest extends TestCase
         $this->assertTrue($queryA->contains('id', $serviceA->id));
         $this->assertFalse($queryA->contains('id', $serviceB->id));
     }
+
+    public function test_service_can_be_created_for_asset_outside_the_asset_list(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        Livewire::test(CreateAssetService::class)
+            ->fillForm([
+                'asset_source' => 'external',
+                'external_asset_name' => 'Printer Epson L3210 Toko',
+                'external_asset_serial_number' => 'EPS-0099',
+                'service_date' => now()->toDateString(),
+                'provider_type' => 'internal',
+                'serviced_by_user_id' => $admin->id,
+                'issue_description' => 'Hasil cetak bergaris',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $service = AssetService::where('external_asset_name', 'Printer Epson L3210 Toko')->firstOrFail();
+
+        $this->assertNull($service->asset_id);
+        $this->assertTrue($service->isExternalAsset());
+        $this->assertSame('Printer Epson L3210 Toko', $service->asset_display_name);
+        $this->assertSame('EPS-0099', $service->asset_display_serial_number);
+    }
+
+    public function test_external_asset_name_is_required_when_source_is_external(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        Livewire::test(CreateAssetService::class)
+            ->fillForm([
+                'asset_source' => 'external',
+                'service_date' => now()->toDateString(),
+                'provider_type' => 'internal',
+                'serviced_by_user_id' => $admin->id,
+                'issue_description' => 'Tanpa nama aset',
+            ])
+            ->call('create')
+            ->assertHasFormErrors(['external_asset_name' => 'required']);
+    }
+
+    public function test_switching_service_to_external_asset_clears_registered_asset(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        $service = AssetService::create([
+            'asset_id' => $this->createTestAsset()->id,
+            'provider_type' => 'internal',
+            'serviced_by_user_id' => $admin->id,
+            'service_date' => now()->toDateString(),
+            'issue_description' => 'Salah pilih aset',
+            'created_by' => $admin->id,
+        ]);
+
+        Livewire::test(EditAssetService::class, ['record' => $service->getRouteKey()])
+            ->assertFormSet(['asset_source' => 'registered'])
+            ->fillForm([
+                'asset_source' => 'external',
+                'external_asset_name' => 'Genset Sewaan',
+            ])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $service->refresh();
+        $this->assertNull($service->asset_id);
+        $this->assertSame('Genset Sewaan', $service->external_asset_name);
+
+        Livewire::test(EditAssetService::class, ['record' => $service->getRouteKey()])
+            ->assertFormSet(['asset_source' => 'external']);
+    }
+
+    public function test_external_asset_service_shows_in_list_view_and_search(): void
+    {
+        $admin = User::factory()->create();
+        $admin->assignRole('admin');
+        $this->actingAs($admin);
+
+        $external = AssetService::create([
+            'external_asset_name' => 'Dispenser Pantry Lt 2',
+            'provider_type' => 'internal',
+            'service_date' => now()->toDateString(),
+            'issue_description' => 'Air panas tidak keluar',
+            'created_by' => $admin->id,
+        ]);
+        $registered = AssetService::create([
+            'asset_id' => $this->createTestAsset()->id,
+            'provider_type' => 'internal',
+            'service_date' => now()->toDateString(),
+            'issue_description' => 'Keyboard macet',
+            'created_by' => $admin->id,
+        ]);
+
+        Livewire::test(ListAssetServices::class)
+            ->searchTable('Dispenser Pantry')
+            ->assertCanSeeTableRecords([$external])
+            ->assertCanNotSeeTableRecords([$registered])
+            ->searchTable(null)
+            ->filterTable('asset_source', 'external')
+            ->assertCanSeeTableRecords([$external])
+            ->assertCanNotSeeTableRecords([$registered]);
+
+        $this->get(AssetServiceResource::getUrl('view', ['record' => $external]))
+            ->assertSuccessful()
+            ->assertSeeText('Dispenser Pantry Lt 2')
+            ->assertSeeText('Di luar daftar aset');
+    }
 }
-
-

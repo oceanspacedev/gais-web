@@ -294,7 +294,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | `CustomAssetAttribute` | belongsTo `Category`; hasMany `AssetAttribute` (`custom_attribute_id`) |
 | `AssetTransfer` | belongsTo `BusinessEntity`, `User` (from/to); hasMany `AssetTransferDetail` → `Asset` |
 | `AssetSale` | belongsTo `Asset`, `BusinessEntity` (`fromBusinessEntity`/`toBusinessEntity`), `User` (`createdBy`); dibuat hanya lewat `AssetSale::record()` |
-| `AssetService` | belongsTo `Asset`, `Vendor`, `User`; hasMany `AssetServiceItem` |
+| `AssetService` | belongsTo `Asset` (opsional: servis aset di luar daftar menyimpan `external_asset_name` / `external_asset_serial_number` dengan `asset_id` kosong), `Vendor`, `User`; hasMany `AssetServiceItem` |
 | `AssetReconciliation` | belongsTo `BusinessEntity`, `User` (`imported_by`), induk `parent_id`; hasMany `AssetReconciliationItem` → `Asset` (`matched_asset_id`) |
 
 ### Relasi modul operasional

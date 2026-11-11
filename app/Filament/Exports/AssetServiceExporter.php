@@ -23,10 +23,16 @@ class AssetServiceExporter extends Exporter
                 ->label('No. Servis'),
 
             ExportColumn::make('asset.name')
-                ->label('Nama Aset'),
+                ->label('Nama Aset')
+                ->state(fn (AssetService $record): ?string => $record->asset_display_name),
 
             ExportColumn::make('asset.serial_number')
-                ->label('No. Seri / IMEI'),
+                ->label('No. Seri / IMEI')
+                ->state(fn (AssetService $record): ?string => $record->asset_display_serial_number),
+
+            ExportColumn::make('asset_source')
+                ->label('Sumber Aset')
+                ->state(fn (AssetService $record): string => $record->isExternalAsset() ? 'Di Luar Daftar' : 'Terdaftar'),
 
             ExportColumn::make('provider_type')
                 ->label('Tipe Pelaksana')

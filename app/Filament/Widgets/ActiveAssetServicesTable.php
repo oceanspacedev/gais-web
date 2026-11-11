@@ -38,7 +38,7 @@ class ActiveAssetServicesTable extends TableWidget
             ->emptyStateDescription('Semua servis aset sudah selesai atau belum ada yang dicatat.')
             ->columns([
                 TextColumn::make('service_number')->label('No. Servis')->weight('bold')->url(fn (AssetService $record): string => AssetServiceResource::getUrl('view', ['record' => $record])),
-                TextColumn::make('asset.name')->label('Aset')->placeholder('-')->limit(24),
+                TextColumn::make('asset_display_name')->label('Aset')->placeholder('-')->limit(24),
                 TextColumn::make('status')->label('Status')->badge()
                     ->formatStateUsing(fn (AssetServiceStatus $state): string => $state->label())
                     ->color(fn (AssetServiceStatus $state): string => $state->color()),

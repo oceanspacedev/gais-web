@@ -21,6 +21,8 @@ class AssetService extends Model
     protected $fillable = [
         'service_number',
         'asset_id',
+        'external_asset_name',
+        'external_asset_serial_number',
         'provider_type',
         'serviced_by_user_id',
         'vendor_id',
@@ -77,6 +79,47 @@ class AssetService extends Model
     public function asset(): BelongsTo
     {
         return $this->belongsTo(Asset::class)->withTrashed();
+    }
+
+    /**
+     * Servis untuk aset yang tidak terdaftar di daftar aset: identitasnya
+     * disimpan di external_asset_name / external_asset_serial_number.
+     */
+    public function isExternalAsset(): bool
+    {
+        return $this->asset_id === null;
+    }
+
+    public function getAssetDisplayNameAttribute(): ?string
+    {
+        return $this->isExternalAsset() ? $this->external_asset_name : $this->asset?->name;
+    }
+
+    public function getAssetDisplaySerialNumberAttribute(): ?string
+    {
+        return $this->isExternalAsset() ? $this->external_asset_serial_number : $this->asset?->serial_number;
+    }
+
+    /**
+     * Rapikan data form: sumber "luar" mengosongkan asset_id, sumber
+     * "terdaftar" mengosongkan identitas aset luar, supaya satu servis
+     * tidak pernah menunjuk dua aset sekaligus.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
+     */
+    public static function normalizeAssetSource(array $data): array
+    {
+        if (($data['asset_source'] ?? 'registered') === 'external') {
+            $data['asset_id'] = null;
+        } else {
+            $data['external_asset_name'] = null;
+            $data['external_asset_serial_number'] = null;
+        }
+
+        unset($data['asset_source']);
+
+        return $data;
     }
 
     public function servicedByUser(): BelongsTo

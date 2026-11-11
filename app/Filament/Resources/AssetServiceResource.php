@@ -28,6 +28,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -75,15 +76,30 @@ class AssetServiceResource extends Resource
 
                 Section::make('Informasi Aset & Waktu Servis')
                     ->schema([
-                        TextInput::make('service_number')
-                            ->label('Nomor Servis')
-                            ->default(fn () => AssetService::generateServiceNumber())
-                            ->disabled()
-                            ->dehydrated()
-                            ->required(),
+                        ToggleButtons::make('asset_source')
+                            ->label('Aset yang diservis ada di daftar aset?')
+                            ->options([
+                                'registered' => 'Ya, aset terdaftar',
+                                'external' => 'Tidak, aset di luar daftar',
+                            ])
+                            ->icons([
+                                'registered' => 'heroicon-o-archive-box',
+                                'external' => 'heroicon-o-pencil-square',
+                            ])
+                            ->inline()
+                            ->default('registered')
+                            ->afterStateHydrated(fn (ToggleButtons $component, ?AssetService $record) => $component->state(
+                                $record?->exists && $record->isExternalAsset() ? 'external' : 'registered'
+                            ))
+                            ->required()
+                            ->live()
+                            ->columnSpanFull(),
 
                         Select::make('asset_id')
                             ->label('Aset yang Diservis')
+                            ->visible(fn (callable $get) => $get('asset_source') !== 'external')
+                            ->helperText('Tidak ketemu? Pilih "Tidak, aset di luar daftar" di atas lalu ketik namanya.')
+                            ->columnSpan(['default' => 1, 'md' => 2])
                             ->relationship('asset', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
@@ -115,6 +131,37 @@ class AssetServiceResource extends Resource
 
                                 return $asset->name.$suffix;
                             })
+                            ->required(),
+
+                        TextInput::make('external_asset_name')
+                            ->label('Nama Aset')
+                            ->placeholder('mis. Printer Epson L3210 milik toko')
+                            ->helperText('Aset ini hanya dicatat di servis, tidak masuk daftar aset.')
+                            // Saran dari nama aset luar yang pernah dicatat, supaya penulisannya konsisten.
+                            ->datalist(fn (): array => static::getEloquentQuery()
+                                ->whereNull('asset_id')
+                                ->whereNotNull('external_asset_name')
+                                ->latest('id')
+                                ->limit(200)
+                                ->pluck('external_asset_name')
+                                ->unique()
+                                ->take(50)
+                                ->values()
+                                ->all())
+                            ->maxLength(255)
+                            ->visible(fn (callable $get) => $get('asset_source') === 'external')
+                            ->required(),
+
+                        TextInput::make('external_asset_serial_number')
+                            ->label('No. Seri / IMEI / Plat Nomor')
+                            ->maxLength(150)
+                            ->visible(fn (callable $get) => $get('asset_source') === 'external'),
+
+                        TextInput::make('service_number')
+                            ->label('Nomor Servis')
+                            ->default(fn () => AssetService::generateServiceNumber())
+                            ->disabled()
+                            ->dehydrated()
                             ->required(),
 
                         DatePicker::make('service_date')
@@ -299,8 +346,17 @@ class AssetServiceResource extends Resource
 
                 TextColumn::make('asset.name')
                     ->label('Aset')
-                    ->description(fn (AssetService $record): string => $record->asset?->serial_number ? "SN: {$record->asset->serial_number}" : '')
-                    ->searchable(query: RelationSearch::on('asset', 'name'))
+                    ->state(fn (AssetService $record): ?string => $record->asset_display_name)
+                    ->description(fn (AssetService $record): string => implode(' · ', array_filter([
+                        $record->isExternalAsset() ? 'Di luar daftar aset' : null,
+                        $record->asset_display_serial_number ? "SN: {$record->asset_display_serial_number}" : null,
+                    ])))
+                    ->placeholder('-')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(
+                        fn (Builder $q) => RelationSearch::on('asset', 'name')($q, $search)
+                            ->orWhere('external_asset_name', 'like', "%{$search}%")
+                            ->orWhere('external_asset_serial_number', 'like', "%{$search}%")
+                    ))
                     ->sortable(),
 
                 TextColumn::make('provider_label')
@@ -359,6 +415,18 @@ class AssetServiceResource extends Resource
                     ->label('Status Servis')
                     ->options(AssetServiceStatus::options()),
 
+                SelectFilter::make('asset_source')
+                    ->label('Sumber Aset')
+                    ->options([
+                        'registered' => 'Aset Terdaftar',
+                        'external' => 'Aset di Luar Daftar',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'registered' => $query->whereNotNull('asset_id'),
+                        'external' => $query->whereNull('asset_id'),
+                        default => $query,
+                    }),
+
                 SelectFilter::make('provider_type')
                     ->label('Tipe Pelaksana')
                     ->options([
@@ -375,7 +443,7 @@ class AssetServiceResource extends Resource
                     ->button()
                     ->size('sm')
                     ->modalWidth('3xl')
-                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: '.($record->asset?->name ?? $record->service_number))
+                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: '.($record->asset_display_name ?? $record->service_number))
                     ->modalSubmitActionLabel('Simpan & Selesaikan')
                     ->visible(function (AssetService $record) {
                         $user = auth()->user();
@@ -517,7 +585,7 @@ class AssetServiceResource extends Resource
 
                         Notification::make()
                             ->title('Servis Selesai!')
-                            ->body("Servis untuk aset {$record->asset?->name} ({$record->service_number}) telah diselesaikan.")
+                            ->body("Servis untuk aset {$record->asset_display_name} ({$record->service_number}) telah diselesaikan.")
                             ->success()
                             ->send();
                     }),
@@ -549,8 +617,9 @@ class AssetServiceResource extends Resource
                 Section::make('Detail Servis Aset')
                     ->schema([
                         TextEntry::make('service_number')->label('No. Servis')->weight('bold'),
-                        TextEntry::make('asset.name')->label('Nama Aset'),
-                        TextEntry::make('asset.serial_number')->label('No. Seri / IMEI')->placeholder('-'),
+                        TextEntry::make('asset_display_name')->label('Nama Aset')->placeholder('-')
+                            ->helperText(fn (AssetService $record): ?string => $record->isExternalAsset() ? 'Di luar daftar aset' : null),
+                        TextEntry::make('asset_display_serial_number')->label('No. Seri / IMEI')->placeholder('-'),
                         TextEntry::make('status')->label('Status')->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
                         TextEntry::make('provider_label')->label('Pelaksana Servis'),
                         TextEntry::make('contact_number')->label('Kontak')->placeholder('-'),
