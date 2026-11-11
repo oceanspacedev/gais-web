@@ -18,6 +18,7 @@ class Task extends Model
     protected $fillable = [
         'code',
         'business_entity_id',
+        'user_id',
         'work_timestamp',
         'name',
         'description',
@@ -34,6 +35,9 @@ class Task extends Model
         return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
+    /**
+     * PIC pekerjaan, yaitu user yang membuatnya (lihat booted()).
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -49,6 +53,11 @@ class Task extends Model
     {
         // Handle saat Task dibuat
         static::creating(function ($task) {
+            // PIC = user yang membuat pekerjaan; diisi otomatis, tidak dipilih di form.
+            if (empty($task->user_id) && auth()->check()) {
+                $task->user_id = auth()->id();
+            }
+
             $task->code = static::generateTaskCode($task);
         });
 

@@ -108,16 +108,6 @@ class TaskResource extends Resource
                             ->preload()
                             ->required(),
 
-                        Select::make('user_id')
-                            ->label('PIC')
-                            ->relationship('user', 'name')
-                            ->searchable()
-                            ->preload()
-                            ->required()
-                            ->default(fn () => auth()->id())
-                            // ->disabled(fn() => !auth()->user()->hasRole('super_admin'))
-                            ->dehydrated(true),
-
                         Textarea::make('description')
                             ->label('Deskripsi')
                             ->required()
@@ -168,7 +158,13 @@ class TaskResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('user.name')
                     ->label('PIC')
+                    ->placeholder('-')
                     ->searchable(query: RelationSearch::on('user', 'name'))
+                    ->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')
+                    ->label('Tanggal Dibuat')
+                    ->dateTime('d/m/Y H:i')
+                    ->sortable()
                     ->toggleable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label('Status') // Label in Indonesian
@@ -185,10 +181,6 @@ class TaskResource extends Resource
                     ->translateLabel()
                     ->getStateUsing(fn ($record) => $record && $record->document_upload ? 'Dokumen' : '-')
                     ->icon('heroicon-o-document-text')
-                    ->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('created_at')
-                    ->dateTime()
-                    ->sortable()
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('updated_at')
                     ->dateTime()
