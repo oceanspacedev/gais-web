@@ -68,6 +68,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name')->unique();
             $table->string('format')->nullable();
@@ -77,6 +78,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         Schema::create('categories', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->unsignedBigInteger('parent_id')->nullable();
@@ -84,6 +86,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         Schema::create('custom_asset_attributes', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('type')->default('text');
@@ -110,6 +113,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         Schema::create('asset_locations', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('address')->nullable();
@@ -118,6 +122,7 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->date('purchase_date')->nullable();
             $table->unsignedBigInteger('business_entity_id')->nullable();

@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -15,7 +18,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ItemRequestType extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'name',
@@ -35,7 +38,7 @@ class ItemRequestType extends Model
 
     public function picDivision(): BelongsTo
     {
-        return $this->belongsTo(Division::class, 'pic_division_id');
+        return $this->belongsTo(Division::class, 'pic_division_id')->withTrashed();
     }
 
     public function requests(): HasMany
@@ -46,5 +49,13 @@ class ItemRequestType extends Model
     public function scopeActive(Builder $query): Builder
     {
         return $query->where('is_active', true);
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

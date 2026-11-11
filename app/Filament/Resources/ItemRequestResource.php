@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ItemRequestApprovalType;
 use App\Enums\ItemRequestClientStatus;
 use App\Enums\ItemRequestExecutorDecision;
@@ -9,6 +10,7 @@ use App\Exceptions\ItemRequestException;
 use App\Filament\Resources\ItemRequestResource\Pages;
 use App\Filament\Resources\ItemRequestResource\RelationManagers\DetailsRelationManager;
 use App\Models\ItemRequest;
+use App\Models\ItemRequestApproval;
 use App\Models\ItemRequestType;
 use App\Models\Product;
 use App\Models\User;
@@ -21,6 +23,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -36,25 +41,30 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 /**
  * Pengajuan barang (sumo: menu PENGAJUAN). Alur per tahap ada di
- * ItemRequestWorkflow; siapa melihat apa ada di ItemRequestVisibility.
+ * ItemRequestWorkflow; siapa melihat apa ada di ItemRequest::visibility().
  */
 class ItemRequestResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ItemRequest::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shopping-cart';
@@ -80,33 +90,6 @@ class ItemRequestResource extends Resource
         $count = static::getEloquentQuery()->where('client_status', ItemRequestClientStatus::Waiting->value)->count();
 
         return $count > 0 ? (string) $count : null;
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery()->withoutGlobalScopes([SoftDeletingScope::class]);
-
-        return static::scopeToViewer($query, auth()->user());
-    }
-
-    /**
-     * Aturan lihat yang sama dengan menu ini, juga dipakai tab di halaman user.
-     */
-    public static function scopeToViewer(Builder $query, mixed $viewer): Builder
-    {
-        if (! $viewer instanceof User) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        $query->visibleTo($viewer);
-
-        if (! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('item_requests.business_entity_id')
-                ->orWhereIn('item_requests.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
     }
 
     public static function form(Schema $form): Schema
@@ -192,21 +175,37 @@ class ItemRequestResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        $canAudit = fn (): bool => auth()->user()?->can('audit', ItemRequest::class) ?? false;
+        $hasDocuments = fn (ItemRequest $record): bool => (bool) $record->type?->requires_attachment
+            || (bool) $record->type?->requires_accounting_approval
+            || filled($record->request_file)
+            || filled($record->request_file_2);
+
+        // Kiri: data pengajuan, dokumen, catatan. Kanan: alur approval per tahap.
         return $infolist
-            ->columns(1)
+            ->columns(['default' => 1, 'lg' => 3])
             ->schema([
-                Section::make('Ringkasan')
-                    ->schema([
-                        Grid::make(3)->schema([
-                            TextEntry::make('request_code')->label('Kode')->badge()->color('primary'),
-                            TextEntry::make('type.name')->label('Tipe'),
-                            TextEntry::make('client_status')->label('Status Akhir')->badge(),
-                            TextEntry::make('user.name')->label('Pemohon')->placeholder('-'),
-                            TextEntry::make('user.division.name')->label('Divisi')->placeholder('-'),
-                            TextEntry::make('requested_at')->label('Tanggal')->dateTime('d/m/Y H:i'),
-                            IconEntry::make('po_status')->label('Status PO')->boolean()->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
-                            TextEntry::make('po_number')->label('Nomor PO')->placeholder('-')->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
-                            TextEntry::make('grand_total')->label('Total')->state(fn (ItemRequest $record): string => 'Rp '.number_format($record->grandTotal(), 0, ',', '.')),
+                Group::make([
+                    Section::make('Informasi Pengajuan')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('user.name')->label('Pemohon')->placeholder('-')->weight(FontWeight::SemiBold)
+                                    ->helperText(fn (ItemRequest $record): ?string => $record->user?->division?->name),
+                                TextEntry::make('requested_at')->label('Tanggal Pengajuan')->dateTime('d M Y, H:i'),
+                                TextEntry::make('client_status')->label('Status')->badge(),
+                                TextEntry::make('type.name')->label('Tipe Pengajuan'),
+                                TextEntry::make('grand_total')->label('Total')->weight(FontWeight::Bold)->color('primary')
+                                    ->state(fn (ItemRequest $record): string => 'Rp '.number_format($record->grandTotal(), 0, ',', '.')),
+                                TextEntry::make('closedBy.name')->label('Ditutup Oleh')->placeholder('-'),
+                            ]),
+                        ]),
+
+                    Section::make('Dokumen & PO')
+                        ->icon('heroicon-o-paper-clip')
+                        ->visible($hasDocuments)
+                        ->columns(['default' => 1, 'sm' => 2])
+                        ->schema([
                             TextEntry::make('request_file')->label('File Persetujuan')
                                 ->state(fn (ItemRequest $record): string => LegacyUpload::fileName($record->request_file) ?? '-')
                                 ->url(fn (ItemRequest $record): ?string => LegacyUpload::url(LegacyUpload::REQUEST_DIR, $record->request_file), true)
@@ -215,25 +214,47 @@ class ItemRequestResource extends Resource
                                 ->state(fn (ItemRequest $record): string => LegacyUpload::fileName($record->request_file_2) ?? '-')
                                 ->url(fn (ItemRequest $record): ?string => LegacyUpload::url(LegacyUpload::REQUEST_DIR, $record->request_file_2), true)
                                 ->icon(fn (ItemRequest $record): ?string => filled($record->request_file_2) ? 'heroicon-o-paper-clip' : null),
-                            TextEntry::make('closedBy.name')->label('Ditutup Oleh')->placeholder('-'),
+                            IconEntry::make('po_status')->label('Status PO')->boolean()->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
+                            TextEntry::make('po_number')->label('Nomor PO')->placeholder('-')->visible(fn (ItemRequest $record): bool => (bool) $record->type?->requires_accounting_approval),
                         ]),
-                        TextEntry::make('notes')->label('Catatan Executor')->placeholder('-')->columnSpanFull(),
-                        TextEntry::make('user_notes')->label('Catatan Pemohon')->placeholder('-')->columnSpanFull(),
-                        TextEntry::make('audit_notes')->label('Catatan Audit')->placeholder('-')->columnSpanFull()
-                            ->visible(fn (): bool => auth()->user()?->can('audit', ItemRequest::class) ?? false),
-                    ]),
 
-                Section::make('Riwayat Approval')
-                    ->schema([
-                        RepeatableEntry::make('approvals')
-                            ->hiddenLabel()
-                            ->schema([
-                                TextEntry::make('approval_type')->label('Tahap')->badge(),
-                                TextEntry::make('approver.name')->label('Oleh')->placeholder('Belum'),
-                                TextEntry::make('approved_at')->label('Waktu')->dateTime('d/m/Y H:i')->placeholder('-'),
-                            ])
-                            ->columns(3),
-                    ]),
+                    // Catatan yang kosong tidak ditampilkan supaya halaman tidak penuh tanda "-".
+                    Section::make('Catatan')
+                        ->icon('heroicon-o-chat-bubble-left-ellipsis')
+                        ->visible(fn (ItemRequest $record): bool => filled($record->notes) || filled($record->user_notes) || ($canAudit() && filled($record->audit_notes)))
+                        ->schema([
+                            TextEntry::make('user_notes')->label('Catatan Pemohon')->visible(fn (ItemRequest $record): bool => filled($record->user_notes)),
+                            TextEntry::make('notes')->label('Catatan Executor')->visible(fn (ItemRequest $record): bool => filled($record->notes)),
+                            TextEntry::make('audit_notes')->label('Catatan Audit')
+                                ->visible(fn (ItemRequest $record): bool => $canAudit() && filled($record->audit_notes)),
+                        ]),
+                ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
+
+                Group::make([
+                    Section::make('Riwayat Approval')
+                        ->icon('heroicon-o-check-badge')
+                        ->schema([
+                            // Tahap Accounting hanya tampil kalau tipenya memang butuh, sama seperti ringkasan di tabel.
+                            RepeatableEntry::make('approvals')
+                                ->hiddenLabel()
+                                ->state(fn (ItemRequest $record) => $record->approvals
+                                    ->filter(fn (ItemRequestApproval $approval): bool => $approval->approval_type !== ItemRequestApprovalType::Accounting
+                                        || (bool) $record->type?->requires_accounting_approval)
+                                    ->values())
+                                ->schema([
+                                    Grid::make(['default' => 2])->schema([
+                                        TextEntry::make('approval_type')->hiddenLabel()->badge()->color('gray'),
+                                        TextEntry::make('approved_at')->hiddenLabel()->dateTime('d/m/Y H:i')
+                                            ->size(TextSize::Small)->color('gray')->alignEnd(),
+                                    ]),
+                                    TextEntry::make('approver.name')->hiddenLabel()
+                                        ->state(fn (ItemRequestApproval $record): string => $record->isApproved() ? ($record->approver?->name ?? '-') : 'Menunggu')
+                                        ->icon(fn (ItemRequestApproval $record): string => $record->isApproved() ? 'heroicon-m-check-circle' : 'heroicon-m-clock')
+                                        ->iconColor(fn (ItemRequestApproval $record): string => $record->isApproved() ? 'success' : 'gray')
+                                        ->color(fn (ItemRequestApproval $record): ?string => $record->isApproved() ? null : 'gray'),
+                                ]),
+                        ]),
+                ])->columnSpan(1)->extraAttributes(['class' => 'gais-fill-column']),
             ]);
     }
 
@@ -258,7 +279,8 @@ class ItemRequestResource extends Resource
             ])
             ->defaultSort('requested_at', 'desc')
             ->filters([
-                SelectFilter::make('item_request_type_id')->label('Tipe')->relationship('type', 'name')->preload(),
+                TrashedFilter::make(),
+                SelectFilter::make('item_request_type_id')->label('Tipe')->relationship('type', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
                 SelectFilter::make('client_status')->label('Status Akhir')->options(ItemRequestClientStatus::options()),
                 Filter::make('awaiting_executor')
                     ->label('Belum diproses executor')
@@ -279,6 +301,7 @@ class ItemRequestResource extends Resource
                     ->visible(fn (): bool => auth()->user()?->can('viewAll', ItemRequest::class) ?? false),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 ActionGroup::make([
                     ...static::workflowActions(),
@@ -295,6 +318,8 @@ class ItemRequestResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([
@@ -316,7 +341,7 @@ class ItemRequestResource extends Resource
         $workflow = app(ItemRequestWorkflow::class);
         $user = fn (): ?User => auth()->user();
 
-        return [
+        $actions = [
             Action::make('statusPo')
                 ->label('Status PO (Accounting)')
                 ->icon('heroicon-o-banknotes')
@@ -343,6 +368,7 @@ class ItemRequestResource extends Resource
                 ->modalHeading('Setujui pengajuan ini?')
                 ->modalDescription('Jumlah barang yang belum diisi akan disetujui sesuai jumlah yang diminta. Ubah jumlah per barang lebih dulu bila perlu.')
                 ->visible(fn (ItemRequest $record) => ($user()?->can('approveManager', ItemRequest::class) ?? false)
+                    && $workflow->canApproveQuantity($user(), $record)
                     && ! $record->isApproved(ItemRequestApprovalType::Manager)
                     && ! in_array($record->client_status, [ItemRequestClientStatus::Accepted, ItemRequestClientStatus::Cancelled], true))
                 ->action(fn (ItemRequest $record) => static::runWorkflow(fn () => $workflow->approveManager($record, $user()), 'Pengajuan telah disetujui.')),
@@ -354,6 +380,7 @@ class ItemRequestResource extends Resource
                 ->modalHeading('Proses pengajuan')
                 ->modalWidth('md')
                 ->visible(fn (ItemRequest $record) => ($user()?->can('process', ItemRequest::class) ?? false)
+                    && $workflow->executorMayProcess($record)
                     && ! in_array($record->client_status, [ItemRequestClientStatus::Accepted], true))
                 ->form(fn (ItemRequest $record): array => [
                     Radio::make('decision')->label('Keputusan')->options(ItemRequestExecutorDecision::class)->default(static::defaultDecision($record))->required(),
@@ -428,6 +455,8 @@ class ItemRequestResource extends Resource
                     'Pemohon diubah dan dicatat di log.',
                 )),
         ];
+
+        return $actions;
     }
 
     public static function getRelations(): array
@@ -476,9 +505,11 @@ class ItemRequestResource extends Resource
 
     private static function approvalSummary(ItemRequest $record): string
     {
+        $pending = app(ItemRequestWorkflow::class)->pendingStageBeforeExecutor($record);
+
         return collect(ItemRequestApprovalType::cases())
             ->filter(fn (ItemRequestApprovalType $type): bool => $type !== ItemRequestApprovalType::Accounting || (bool) $record->type?->requires_accounting_approval)
-            ->map(fn (ItemRequestApprovalType $type): string => ($record->isApproved($type) ? '✓ ' : '○ ').$type->label())
+            ->map(fn (ItemRequestApprovalType $type): string => ($record->isApproved($type) ? '✓ ' : ($type === $pending ? '⏳ ' : '○ ')).$type->label())
             ->implode('  ');
     }
 

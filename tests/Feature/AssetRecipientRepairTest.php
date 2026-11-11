@@ -254,12 +254,14 @@ class AssetRecipientRepairTest extends TestCase
         });
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->timestamps();
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('condition_status')->default(AssetCondition::Available->value);
@@ -283,6 +285,7 @@ class AssetRecipientRepairTest extends TestCase
         AssetIdentitySchema::ensure();
 
         Schema::create('asset_transfers', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id');
             $table->string('document_type', 32)->nullable();

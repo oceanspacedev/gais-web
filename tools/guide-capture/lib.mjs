@@ -10,7 +10,7 @@ export const PORT = 8099;
 export const BASE = `http://127.0.0.1:${PORT}`;
 export const PHP = process.env.PHP_BIN || 'C:/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe';
 
-// Server Laravel khusus capture: DB terpisah, queue sync, tidak menyentuh db_shelf.
+// Server Laravel khusus capture: DB terpisah, queue sync, tidak menyentuh DB utama.
 export async function startServer(db) {
   if (!db.includes('capture')) throw new Error(`DB "${db}" bukan DB capture; nama harus mengandung "capture".`);
   resetPermissionCache(db);
@@ -58,7 +58,7 @@ export function resetData(db) {
   // Hapus data buatan bagian-bagian capture, lalu seed ulang: aset stok kembali Tersedia, akun contoh lengkap lagi.
   const tables = ['item_request_logs', 'item_request_approvals', 'item_request_details', 'item_requests', 'problem_reports',
     'asset_transfer_details', 'asset_transfers', 'asset_service_items', 'asset_services', 'ob_checksheets', 'vehicle_checksheets',
-    'insurance_updates', 'insurances', 'rent_updates', 'rents', 'asset_reconciliation_items', 'asset_reconciliations', 'tasks'];
+    'insurance_updates', 'insurances', 'rent_updates', 'rents', 'asset_reconciliation_items', 'asset_reconciliations', 'tasks', 'asset_sales'];
   const code = String.raw`App\Models\Asset::withoutGlobalScopes()->where(fn ($q) => $q->where('name', 'like', 'Toyota Avanza%')->orWhere('name', 'like', '%GRAN MAX%')->orWhere('name', 'TINTA PRINTER EPSON 003'))->get()->each->forceDelete();`
     + String.raw` App\Models\CustomAssetAttribute::where('name', 'Dokumen STNK Mobil')->delete();`
     + String.raw` App\Models\User::where('email', 'like', '%@contoh.test')->delete();`

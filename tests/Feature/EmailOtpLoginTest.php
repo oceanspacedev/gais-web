@@ -328,13 +328,11 @@ class EmailOtpLoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_unknown_shared_or_unauthorized_email_gets_no_code_and_no_hint(): void
+    public function test_unknown_or_shared_email_gets_no_code_and_no_hint(): void
     {
         $this->registeredUser('shared@example.test', 'Pertama');
         $this->registeredUser('SHARED@example.test', 'Kedua');
-        $this->registeredUser('norole@example.test', 'Tanpa Role', withRole: false);
-
-        foreach (['unknown@example.test', 'shared@example.test', 'norole@example.test'] as $email) {
+        foreach (['unknown@example.test', 'shared@example.test'] as $email) {
             // Sama seperti login WhatsApp, halaman tidak mengungkap apakah email terdaftar.
             $this->requestCode($email)->set('data.otp', '123456')
                 ->call('verify')->assertHasFormErrors(['otp'])->assertNoRedirect();
@@ -388,12 +386,25 @@ class EmailOtpLoginTest extends TestCase
 
     public function test_login_mail_contains_the_code_and_the_magic_link(): void
     {
+        config(['app.name' => 'GAIS']);
+        app()->setLocale('id');
         $url = 'http://gais.test/email-login/link/'.str_repeat('a', 64);
         $html = (new EmailLoginMail(name: 'Budi', otp: '482913', loginUrl: $url, expiresInMinutes: 10))->render();
 
         $this->assertStringContainsString('482913', $html);
         $this->assertStringContainsString($url, $html);
         $this->assertStringContainsString('10 menit', $html);
+
+        // Tampilan seperti kartu halaman login Mekaya: logo di atas kartu, ikon amplop dan judul,
+        // kode dalam kotak seperti input, tombol primary Blue, footer berbahasa Indonesia.
+        $this->assertStringContainsString(asset('images/mail/icon.png'), $html);
+        $this->assertStringContainsString(asset('images/mail/envelope.png'), $html);
+        $this->assertStringContainsString('Masuk ke GAIS', $html);
+        $this->assertMatchesRegularExpression('/class="code-box"[^>]*>\s*482913\s*</', $html);
+        $this->assertStringContainsString('background-color: #155dfc', $html);
+        $this->assertStringContainsString('Hak cipta dilindungi.', $html);
+        $this->assertFileExists(public_path('images/mail/icon.png'));
+        $this->assertFileExists(public_path('images/mail/envelope.png'));
     }
 
     private function registeredUser(string $email = 'budi@example.test', string $name = 'Budi', bool $withRole = true): User

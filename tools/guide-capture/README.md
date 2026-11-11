@@ -64,4 +64,5 @@ Lalu tampilkan di panduan: `<x-guide.demo name="nama-bagian" caption="..." :shot
 - Navigasi Filament memakai `wire:navigate`, jadi tunggu URL dengan `waitUntil: 'commit'` (helper `waitPage` di `sections.mjs`), bukan event `load`.
 - Cache permission Spatie dipakai bersama DB utama; skrip mengosongkannya sebelum dan sesudah capture.
 - Jika langkah gagal, screenshot kegagalan disimpan di `fail.png` (di-ignore git).
+- Di macOS: `setup-db` belum bisa dipakai (memanggil `mysql.exe`/`mysqldump.exe`), jadi perbarui DB capture dengan `DB_DATABASE=db_gais_capture php artisan migrate --force` lalu `permission:cache-reset`; jalankan capture dengan `PHP_BIN="$(which php)" node capture.mjs ...` karena default `PHP_BIN` adalah path Laragon Windows.
 - `migrate:fresh` pada DB kosong gagal karena dua migrasi tabel `settings`, itu sebabnya `setup-db` menyalin struktur dari DB utama.

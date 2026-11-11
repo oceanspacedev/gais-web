@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class TaskPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class TaskPolicy
      */
     public function view(User $user, Task $task): bool
     {
-        return $user->can('view_task');
+        return $user->can('view_task') && $this->visible($user, $task);
     }
 
     /**
@@ -39,7 +40,7 @@ class TaskPolicy
      */
     public function update(User $user, Task $task): bool
     {
-        return $user->can('update_task');
+        return $user->can('update_task') && $this->editable($user, $task);
     }
 
     /**
@@ -47,7 +48,7 @@ class TaskPolicy
      */
     public function delete(User $user, Task $task): bool
     {
-        return $user->can('delete_task');
+        return $user->can('delete_task') && $this->editable($user, $task);
     }
 
     /**
@@ -63,7 +64,7 @@ class TaskPolicy
      */
     public function forceDelete(User $user, Task $task): bool
     {
-        return $user->can('force_delete_task');
+        return $user->can('force_delete_task') && $this->visible($user, $task);
     }
 
     /**
@@ -79,7 +80,7 @@ class TaskPolicy
      */
     public function restore(User $user, Task $task): bool
     {
-        return $user->can('restore_task');
+        return $user->can('restore_task') && $this->visible($user, $task);
     }
 
     /**
@@ -95,7 +96,7 @@ class TaskPolicy
      */
     public function replicate(User $user, Task $task): bool
     {
-        return $user->can('replicate_task');
+        return $user->can('replicate_task') && $this->editable($user, $task);
     }
 
     /**

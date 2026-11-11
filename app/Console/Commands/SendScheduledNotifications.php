@@ -45,8 +45,10 @@ class SendScheduledNotifications extends Command
 
     protected function handleRelativeDateNotification($attribute)
     {
+        // Aset di Sampah tidak diingatkan; baris atributnya tetap ada karena aset hanya soft delete.
         $assetAttributes = $attribute->assetAttributes()
             ->whereNotNull('attribute_value')
+            ->whereHas('asset', fn ($asset) => $asset->withoutTrashed())
             ->with(['asset.assetLocation'])
             ->get();
 

@@ -63,19 +63,20 @@ return [
             ]) : [],
         ],
 
-        // Database legacy sumo-web (Web Gais lama) yang dibaca `php artisan sumo:import`.
-        // Lihat database/sumo/README.md. Default mengikuti DB_* selain nama database.
+        // Staging data legacy sumo-web (Web Gais lama) yang dibaca `php artisan sumo:import`.
+        // Lihat database/sumo/README.md. Default: tabel berawalan sumo_dump_ di database DB_*;
+        // isi SUMO_DB_DATABASE (dan SUMO_DB_PREFIX= kosong) untuk database staging tersendiri.
         'sumo' => [
             'driver' => 'mysql',
             'host' => env('SUMO_DB_HOST', env('DB_HOST', '127.0.0.1')),
             'port' => env('SUMO_DB_PORT', env('DB_PORT', '3306')),
-            'database' => env('SUMO_DB_DATABASE', 'db_sumo'),
+            'database' => env('SUMO_DB_DATABASE', env('DB_DATABASE', 'forge')),
             'username' => env('SUMO_DB_USERNAME', env('DB_USERNAME', 'forge')),
             'password' => env('SUMO_DB_PASSWORD', env('DB_PASSWORD', '')),
             'unix_socket' => env('SUMO_DB_SOCKET', env('DB_SOCKET', '')),
             'charset' => 'utf8mb4',
             'collation' => 'utf8mb4_unicode_ci',
-            'prefix' => env('SUMO_DB_PREFIX', ''),
+            'prefix' => env('SUMO_DB_PREFIX', 'sumo_dump_'),
             'prefix_indexes' => true,
             'strict' => false,
             'engine' => null,

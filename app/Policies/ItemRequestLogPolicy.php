@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\ItemRequestLog;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ItemRequestLogPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -17,7 +18,7 @@ class ItemRequestLogPolicy
 
     public function view(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('view_item::request::log');
+        return $user->can('view_item::request::log') && $this->visible($user, $itemRequestLog);
     }
 
     public function create(User $user): bool
@@ -27,12 +28,12 @@ class ItemRequestLogPolicy
 
     public function update(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('update_item::request::log');
+        return $user->can('update_item::request::log') && $this->editable($user, $itemRequestLog);
     }
 
     public function delete(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('delete_item::request::log');
+        return $user->can('delete_item::request::log') && $this->editable($user, $itemRequestLog);
     }
 
     public function deleteAny(User $user): bool
@@ -42,7 +43,7 @@ class ItemRequestLogPolicy
 
     public function forceDelete(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('force_delete_item::request::log');
+        return $user->can('force_delete_item::request::log') && $this->visible($user, $itemRequestLog);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -52,7 +53,7 @@ class ItemRequestLogPolicy
 
     public function restore(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('restore_item::request::log');
+        return $user->can('restore_item::request::log') && $this->visible($user, $itemRequestLog);
     }
 
     public function restoreAny(User $user): bool
@@ -62,7 +63,7 @@ class ItemRequestLogPolicy
 
     public function replicate(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('replicate_item::request::log');
+        return $user->can('replicate_item::request::log') && $this->editable($user, $itemRequestLog);
     }
 
     public function reorder(User $user): bool

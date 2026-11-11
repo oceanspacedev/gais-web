@@ -14,7 +14,6 @@
     "require": {
         "php": "^8.2",
         "asmit/resized-column": "^3.0",
-        "awcodes/overlook": "^3.0",
         "barryvdh/laravel-dompdf": "^3.1",
         "bezhansalleh/filament-exceptions": "^4.0",
         "bezhansalleh/filament-language-switch": "^4.0",

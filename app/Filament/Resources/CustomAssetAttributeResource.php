@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\CustomAssetAttributeResource\Pages;
 use App\Models\Category;
 use App\Models\CustomAssetAttribute;
@@ -9,6 +10,9 @@ use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
@@ -20,6 +24,8 @@ use Filament\Tables\Table;
 
 class CustomAssetAttributeResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = CustomAssetAttribute::class;
 
     public static function getModelLabel(): string
@@ -244,6 +250,7 @@ class CustomAssetAttributeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                Tables\Filters\TrashedFilter::make(),
                 Tables\Filters\SelectFilter::make('type')
                     ->label('Tipe Input')
                     ->options(CustomAssetAttribute::typeOptions()),
@@ -259,10 +266,13 @@ class CustomAssetAttributeResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

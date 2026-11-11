@@ -15,11 +15,11 @@ class ObShiftRoom extends Model
 
     public function shift(): BelongsTo
     {
-        return $this->belongsTo(ObShift::class, 'ob_shift_id');
+        return $this->belongsTo(ObShift::class, 'ob_shift_id')->withTrashed();
     }
 
     public function room(): BelongsTo
     {
-        return $this->belongsTo(ObRoom::class, 'ob_room_id');
+        return $this->belongsTo(ObRoom::class, 'ob_room_id')->withTrashed();
     }
 }

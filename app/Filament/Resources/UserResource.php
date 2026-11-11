@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\RelationManagers\AssetTransfersRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\HeldAssetsRelationManager;
@@ -38,6 +39,8 @@ use STS\FilamentImpersonate\Actions\Impersonate;
 
 class UserResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = User::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-users';
@@ -68,7 +71,9 @@ class UserResource extends Resource
 
         return $form
             ->schema([
+                // 3 isian per baris di desktop supaya form tidak memanjang.
                 Section::make('Informasi Pengguna')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         TextInput::make('name')
                             ->required()
@@ -101,7 +106,7 @@ class UserResource extends Resource
                         // terbuka walau tabel divisi belum ada (lihat PhoneOtpLoginTest).
                         Select::make('division_id')
                             ->label('Divisi')
-                            ->relationship('division', 'name')
+                            ->relationship('division', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload(false),
                         Select::make('approver_user_id')
@@ -116,8 +121,9 @@ class UserResource extends Resource
                             ->tel()
                             ->placeholder('081234567890')
                             ->disabled($fromTalenta)
-                            ->helperText(fn (?User $record): string => $talentaHint($record)
-                                ?? 'Dipakai untuk pengingat aset via WhatsApp dan login OTP. Kosongkan untuk menonaktifkan login WhatsApp.')
+                            // Penjelasan umum di ikon (i); teks di bawah hanya untuk kunci Talenta.
+                            ->helperText($talentaHint)
+                            ->hintIcon('heroicon-o-information-circle', tooltip: 'Dipakai untuk pengingat aset via WhatsApp dan login OTP. Kosongkan untuk menonaktifkan login WhatsApp.')
                             ->afterStateHydrated(function (TextInput $component, ?User $record) use ($canManageAccess): void {
                                 if ($canManageAccess && $record && blank($record->whatsapp_number) && filled($record->whatsapp_login_number)) {
                                     $component->state($record->whatsapp_login_number);
@@ -133,6 +139,7 @@ class UserResource extends Resource
                             ->dehydrated(false),
                     ]),
                 Section::make('Akses & Keamanan')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         TextInput::make('username')
                             ->maxLength(255)
@@ -170,6 +177,7 @@ class UserResource extends Resource
                             ->saveRelationshipsUsing(fn (User $record, $state) => static::syncAssignableRoles($record, array_filter((array) $state)))
                             ->preload()
                             ->searchable()
+                            ->columnSpan(['md' => 2])
                             ->visible($canManageAccess),
                     ])->visible($canManageAccess),
                 // Izin sendiri, terpisah dari "Kelola Akses": pemegangnya belum tentu
@@ -182,7 +190,7 @@ class UserResource extends Resource
                             ->live(),
                         CheckboxList::make('accessibleBusinessEntities')
                             ->label('Akses Badan Usaha')
-                            ->relationship('accessibleBusinessEntities', 'name')
+                            ->relationship('accessibleBusinessEntities', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->helperText('Badan usaha asal pengguna selalu termasuk. Centang badan usaha lain yang boleh dilihat dan dikelola pengguna ini.')
                             ->searchable()
                             ->bulkToggleable()
@@ -190,6 +198,7 @@ class UserResource extends Resource
                                 'default' => 1,
                                 'sm' => 2,
                                 'lg' => 3,
+                                'xl' => 4,
                             ])
                             ->visible(fn (Get $get): bool => ! $get('access_all_business_entities')),
                     ])->visible(fn (): bool => static::viewerMayManageBusinessEntityAccess()),
@@ -201,7 +210,7 @@ class UserResource extends Resource
         $canManageAccess = Auth::user()->can('manageAccess', User::class);
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'businessEntity', 'accessibleBusinessEntities']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['roles', 'businessEntity', 'accessibleBusinessEntities', 'approver']))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -223,6 +232,10 @@ class UserResource extends Resource
                 TextColumn::make('jobTitle.title')->translateLabel()->sortable()->searchable(query: RelationSearch::on('jobTitle', 'title'))->toggleable(),
                 TextColumn::make('division.name')
                     ->label('Divisi')
+                    ->placeholder('-')
+                    ->toggleable(),
+                TextColumn::make('approver.name')
+                    ->label('Atasan')
                     ->placeholder('-')
                     ->toggleable(),
                 TextColumn::make('employee_id')
@@ -249,7 +262,7 @@ class UserResource extends Resource
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('jobTitle')
-                    ->relationship('jobTitle', 'title')
+                    ->relationship('jobTitle', 'title', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->label('Job Title')
                     ->searchable()
                     ->preload(),
@@ -296,34 +309,6 @@ class UserResource extends Resource
             'edit' => Pages\EditUser::route('/{record}/edit'),
             'view' => Pages\ViewUser::route('/{record}'),
         ];
-    }
-
-    /**
-     * Akun super admin hanya terlihat oleh super admin. Cakupan badan usaha
-     * berlaku untuk semua viewer, sama seperti UserPolicy: yang punya akses
-     * semua badan usaha melihat semuanya, yang lain hanya user di badan usaha
-     * yang bisa ia akses (plus akunnya sendiri).
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = static::viewer();
-
-        if (! $viewer->isSuperAdmin()) {
-            $query->whereDoesntHave('roles', function (Builder $query): void {
-                $query->where('name', config('filament-shield.super_admin.name', 'super_admin'));
-            });
-        }
-
-        if ($viewer->hasUnrestrictedBusinessEntityAccess()) {
-            return $query;
-        }
-
-        return $query->where(function (Builder $query) use ($viewer): void {
-            $viewer
-                ->limitToAccessibleBusinessEntities($query, 'users.business_entity_id')
-                ->orWhere($viewer->getQualifiedKeyName(), $viewer->getKey());
-        });
     }
 
     /**
@@ -442,60 +427,36 @@ class UserResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        $canManageAccess = Auth::user()?->can('manageAccess', User::class) ?? false;
+
+        // Satu kotak selebar layar, 4 isian per baris; nama sudah jadi judul halaman.
         return $infolist
+            ->columns(1)
             ->schema([
-                Section::make('User Information')
-                    ->description('Details about the user')
+                Section::make('Informasi Pengguna')
+                    ->icon('heroicon-o-user')
                     ->schema([
-                        Grid::make(2) // 2-column layout for better readability
-                            ->schema([
-                                TextEntry::make('name')
-                                    ->label('Full Name')
-                                    ->columnSpan(1),
-                                TextEntry::make('email')
-                                    ->label('Email Address')
-                                    ->columnSpan(1),
-                                TextEntry::make('employee_id')
-                                    ->label('Employee ID')
-                                    ->placeholder('-')
-                                    ->columnSpan(1),
-                                TextEntry::make('whatsapp_number')
-                                    ->label('Nomor WhatsApp')
-                                    ->placeholder('-')
-                                    ->columnSpan(1),
-                            ]),
-                    ]),
-
-                Section::make('Professional Information')
-                    ->description('Business and Job details')
-                    ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextEntry::make('businessEntity.name')
-                                    ->label(__('Business Entity'))
-                                    ->placeholder('-')
-                                    ->columnSpan(1),
-                                TextEntry::make('jobTitle.title')
-                                    ->label('Job Title')
-                                    ->placeholder('-')
-                                    ->columnSpan(1),
-                                TextEntry::make('business_entity_access')
-                                    ->label(__('Business Entity Access'))
-                                    ->badge()
-                                    ->color('gray')
-                                    ->state(fn (User $record): array => static::businessEntityAccessLabels($record))
-                                    ->placeholder('-')
-                                    ->columnSpan(2),
-                            ]),
-                    ]),
-
-                Section::make('Timestamps')
-                    ->description('Creation and update times')
-                    ->schema([
-                        TextEntry::make('created_at')
-                            ->label('Created At')
-                            ->dateTime()
-                            ->columnSpan(2),
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('email')->label('Email')->placeholder('-'),
+                            TextEntry::make('whatsapp_number')->label('Nomor WhatsApp')->placeholder('-'),
+                            TextEntry::make('employee_id')->label('Employee ID')->placeholder('-'),
+                            TextEntry::make('username')->label('Username')->placeholder('-')->visible($canManageAccess),
+                            TextEntry::make('businessEntity.name')->label('Badan Usaha')->placeholder('-'),
+                            TextEntry::make('jobTitle.title')->label('Jabatan')->placeholder('-'),
+                            TextEntry::make('division.name')->label('Divisi')->placeholder('-'),
+                            TextEntry::make('approver.name')->label('Atasan (approver pengajuan)')->placeholder('-'),
+                            TextEntry::make('roles.name')->label('Roles')->badge()->placeholder('-')
+                                ->columnSpan(['default' => 2])
+                                ->visible($canManageAccess),
+                            TextEntry::make('created_at')->label('Dibuat')->dateTime('d M Y, H:i'),
+                            TextEntry::make('business_entity_access')
+                                ->label('Akses Badan Usaha')
+                                ->badge()
+                                ->color('gray')
+                                ->state(fn (User $record): array => static::businessEntityAccessLabels($record))
+                                ->placeholder('-')
+                                ->columnSpanFull(),
+                        ]),
                     ]),
             ]);
     }

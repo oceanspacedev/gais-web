@@ -2,14 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\ItemRequest;
 use App\Models\User;
-use App\Support\ItemRequestVisibility;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ItemRequestPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -18,7 +18,7 @@ class ItemRequestPolicy
 
     public function view(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('view_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('view_item::request') && $this->visible($user, $itemRequest);
     }
 
     public function create(User $user): bool
@@ -28,12 +28,12 @@ class ItemRequestPolicy
 
     public function update(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('update_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('update_item::request') && $this->editable($user, $itemRequest);
     }
 
     public function delete(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('delete_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('delete_item::request') && $this->editable($user, $itemRequest);
     }
 
     public function deleteAny(User $user): bool
@@ -43,7 +43,7 @@ class ItemRequestPolicy
 
     public function forceDelete(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('force_delete_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('force_delete_item::request') && $this->visible($user, $itemRequest);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -53,7 +53,7 @@ class ItemRequestPolicy
 
     public function restore(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('restore_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('restore_item::request') && $this->visible($user, $itemRequest);
     }
 
     public function restoreAny(User $user): bool
@@ -63,7 +63,7 @@ class ItemRequestPolicy
 
     public function replicate(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('replicate_item::request') && $this->isVisibleTo($user, $itemRequest);
+        return $user->can('replicate_item::request') && $this->editable($user, $itemRequest);
     }
 
     public function reorder(User $user): bool
@@ -125,14 +125,5 @@ class ItemRequestPolicy
     public function changeApplicant(User $user): bool
     {
         return $user->can('change_applicant_item::request');
-    }
-
-    /**
-     * Record yang tidak termasuk cakupan user (visibleTo) atau badan usahanya
-     * ditolak. Model yang belum tersimpan, yaitu cek izin saja, tidak dibatasi.
-     */
-    private function isVisibleTo(User $user, ItemRequest $itemRequest): bool
-    {
-        return ! $itemRequest->exists || ItemRequestVisibility::allows($user, $itemRequest);
     }
 }

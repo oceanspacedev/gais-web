@@ -2,16 +2,20 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Cache;
 
 class BusinessEntity extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = ['name', 'format', 'color', 'letterhead'];
 
@@ -72,5 +76,13 @@ class BusinessEntity extends Model
     public function accessUsers(): BelongsToMany
     {
         return $this->belongsToMany(User::class)->withTimestamps();
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

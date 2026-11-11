@@ -90,6 +90,7 @@ class PhoneOtpLoginTest extends TestCase
         });
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
         });
@@ -100,6 +101,7 @@ class PhoneOtpLoginTest extends TestCase
             $table->timestamps();
         });
         Schema::create('job_titles', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('title');
         });
@@ -235,14 +237,15 @@ class PhoneOtpLoginTest extends TestCase
         $this->assertGuest();
     }
 
-    public function test_registered_number_without_panel_access_is_rejected(): void
+    public function test_employee_without_a_role_can_still_log_in(): void
     {
-        $this->registeredUser(withRole: false);
+        // Semua karyawan boleh masuk; tanpa role mereka hanya mendapat akses dasar.
+        $user = $this->registeredUser(withRole: false);
 
         $this->sendOtp()->set('data.otp', $this->code())->call('verify')
-            ->assertHasFormErrors(['phone']);
+            ->assertHasNoFormErrors();
 
-        $this->assertGuest();
+        $this->assertAuthenticatedAs($user);
     }
 
     public function test_invalid_otp_does_not_login_or_consume_challenge(): void

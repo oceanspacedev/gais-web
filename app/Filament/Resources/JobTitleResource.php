@@ -2,17 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\JobTitleResource\Pages;
 use App\Models\JobTitle;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
 class JobTitleResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = JobTitle::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-briefcase';
@@ -39,17 +49,20 @@ class JobTitleResource extends Resource
                 TextColumn::make('title')->searchable(),
             ])
             ->filters([
-                //
+                Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make()
+                RestoreAction::make(),
+                EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
-                \Filament\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

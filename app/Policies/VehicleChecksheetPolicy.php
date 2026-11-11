@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\User;
 use App\Models\VehicleChecksheet;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class VehicleChecksheetPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class VehicleChecksheetPolicy
      */
     public function view(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('view_vehicle::checksheet');
+        return $user->can('view_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -39,7 +40,7 @@ class VehicleChecksheetPolicy
      */
     public function update(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('update_vehicle::checksheet');
+        return $user->can('update_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**
@@ -47,7 +48,7 @@ class VehicleChecksheetPolicy
      */
     public function delete(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('delete_vehicle::checksheet');
+        return $user->can('delete_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**
@@ -63,7 +64,7 @@ class VehicleChecksheetPolicy
      */
     public function forceDelete(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('force_delete_vehicle::checksheet');
+        return $user->can('force_delete_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -79,7 +80,7 @@ class VehicleChecksheetPolicy
      */
     public function restore(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('restore_vehicle::checksheet');
+        return $user->can('restore_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -95,7 +96,7 @@ class VehicleChecksheetPolicy
      */
     public function replicate(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('replicate_vehicle::checksheet');
+        return $user->can('replicate_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**

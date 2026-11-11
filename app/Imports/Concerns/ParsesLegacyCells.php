@@ -62,10 +62,16 @@ trait ParsesLegacyCells
 
             $value = trim((string) $value);
 
+            // Carbon melempar InvalidFormatException bila formatnya tidak cocok, jadi
+            // tiap format dicoba sendiri-sendiri.
             foreach (['d/m/Y', 'd-m-Y', 'Y-m-d', 'd/m/Y H:i:s', 'Y-m-d H:i:s'] as $format) {
-                $parsed = Carbon::createFromFormat($format, $value);
+                try {
+                    $parsed = Carbon::createFromFormat($format, $value);
+                } catch (Throwable) {
+                    continue;
+                }
 
-                if ($parsed !== false && $parsed->format($format) === $value) {
+                if ($parsed->format($format) === $value) {
                     return $parsed->toDateString();
                 }
             }

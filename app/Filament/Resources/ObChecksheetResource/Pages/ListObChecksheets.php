@@ -11,6 +11,7 @@ use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\User;
 use App\Services\ObTaskAssignmentService;
+use App\Support\ObPhotoDraft;
 use Filament\Actions;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
@@ -36,6 +37,27 @@ class ListObChecksheets extends ListRecords
 {
     use MemoizesTableQuery;
 
+    /** Modal foto massal dan draf fotonya (lihat ObPhotoDraft). */
+    private const PHOTO_DRAFTS = ['startAll' => ObPhotoDraft::BEFORE, 'finishAll' => ObPhotoDraft::AFTER];
+
+    protected bool $draftCleared = false;
+
+    /**
+     * Livewire memanggil ini di akhir setiap request: selama modal foto massal
+     * terbuka, foto yang sudah diambil disimpan sebagai draf per tugas.
+     */
+    public function dehydrate(): void
+    {
+        $mounted = $this->mountedActions === [] ? null : $this->mountedActions[array_key_last($this->mountedActions)];
+        $bucket = self::PHOTO_DRAFTS[$mounted['name'] ?? ''] ?? null;
+
+        if ($bucket === null || $this->draftCleared) {
+            return;
+        }
+
+        ObPhotoDraft::put($bucket, $this->submittedPhotos($mounted['data']['tasks'] ?? []));
+    }
+
     protected static string $resource = ObChecksheetResource::class;
 
     protected function getHeaderActions(): array
@@ -47,8 +69,9 @@ class ListObChecksheets extends ListRecords
             $this->assignManualAction(),
             ExportAction::make()
                 ->exporter(ObChecksheetExporter::class)
-                ->label('Export')
-                ->color('warning')
+                ->label('Ekspor Excel')
+                ->icon('heroicon-o-arrow-down-tray')
+                ->color('gray')
                 ->visible(fn () => auth()->user()?->can('export', ObChecksheet::class) ?? false),
             Actions\CreateAction::make(),
         ];
@@ -66,7 +89,7 @@ class ListObChecksheets extends ListRecords
             ->color('warning')
             ->visible(fn (): bool => $this->startableTasks()->exists())
             ->modalHeading('Foto Sebelum Pembersihan')
-            ->modalDescription('Foto ruangan yang akan dikerjakan. Ruangan tanpa foto tetap Belum Dikerjakan. Ruangan yang tidak ada nama petugasnya menjadi milik OB yang lebih dulu mengirim fotonya.')
+            ->modalDescription('Foto pekerjaan yang akan dikerjakan. Pekerjaan tanpa foto tetap Belum Dikerjakan. Pekerjaan yang tidak ada nama petugasnya menjadi milik OB yang lebih dulu mengirim fotonya.')
             ->modalWidth('2xl')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('Simpan & Mulai')
@@ -76,8 +99,7 @@ class ListObChecksheets extends ListRecords
                     ->map(fn (ObChecksheet $task): array => [
                         'id' => $task->id,
                         'room' => $task->room,
-                        'photo' => null,
-                        'notes' => null,
+                        ...$this->draftedPhoto(ObPhotoDraft::BEFORE, $task),
                     ])
                     ->all(),
             ])
@@ -109,7 +131,7 @@ class ListObChecksheets extends ListRecords
 
                 if ($submitted === []) {
                     Notification::make()
-                        ->title('Isi foto minimal satu ruangan')
+                        ->title('Isi foto minimal satu pekerjaan')
                         ->danger()
                         ->send();
 
@@ -133,14 +155,16 @@ class ListObChecksheets extends ListRecords
                     $started++;
                 }
 
+                $this->clearPhotoDraft(ObPhotoDraft::BEFORE);
+
                 // Selisihnya sudah diambil OB lain sejak form dibuka (atau bukan tugas yang boleh dimulai).
                 $taken = count($submitted) - $started;
 
                 $notification = Notification::make()
-                    ->title($started.' ruangan dimulai')
+                    ->title($started.' pekerjaan dimulai')
                     ->body($taken > 0
-                        ? $taken.' ruangan sudah diambil OB lain.'
-                        : 'Ambil Foto Sesudah setelah ruangan selesai dibersihkan.');
+                        ? $taken.' pekerjaan sudah diambil OB lain.'
+                        : 'Ambil Foto Sesudah setelah pekerjaan selesai.');
 
                 ($started > 0 ? $notification->success() : $notification->warning())->send();
             });
@@ -157,7 +181,7 @@ class ListObChecksheets extends ListRecords
             ->color('success')
             ->visible(fn (): bool => $this->todayTasks(ObChecksheet::STATUS_IN_PROGRESS)->exists())
             ->modalHeading('Foto Sesudah Pembersihan')
-            ->modalDescription('Foto ruangan yang sudah selesai. Ruangan tanpa foto tetap Sedang Dikerjakan.')
+            ->modalDescription('Foto pekerjaan yang sudah selesai. Pekerjaan tanpa foto tetap Sedang Dikerjakan.')
             ->modalWidth('2xl')
             ->modalAutofocus(false)
             ->modalSubmitActionLabel('Simpan & Selesaikan')
@@ -168,8 +192,7 @@ class ListObChecksheets extends ListRecords
                         'id' => $task->id,
                         'room' => $task->room,
                         'before' => $task->before_photo,
-                        'photo' => null,
-                        'notes' => null,
+                        ...$this->draftedPhoto(ObPhotoDraft::AFTER, $task),
                     ])
                     ->all(),
             ])
@@ -205,7 +228,7 @@ class ListObChecksheets extends ListRecords
 
                 if ($submitted === []) {
                     Notification::make()
-                        ->title('Isi foto minimal satu ruangan')
+                        ->title('Isi foto minimal satu pekerjaan')
                         ->danger()
                         ->send();
 
@@ -220,8 +243,10 @@ class ListObChecksheets extends ListRecords
                     $task->markAsCompleted($submitted[$task->id]['photo'], $submitted[$task->id]['notes']);
                 }
 
+                $this->clearPhotoDraft(ObPhotoDraft::AFTER);
+
                 Notification::make()
-                    ->title($tasks->count().' ruangan selesai')
+                    ->title($tasks->count().' pekerjaan selesai')
                     ->success()
                     ->send();
             });
@@ -252,8 +277,8 @@ class ListObChecksheets extends ListRecords
                         array_map('strval', array_keys($this->shiftRoomOptions($state))),
                     )),
                 CheckboxList::make('room_ids')
-                    ->label('Ruangan')
-                    ->helperText('Hilangkan centang ruangan yang tidak perlu dikerjakan.')
+                    ->label('Pekerjaan')
+                    ->helperText('Hilangkan centang pekerjaan yang tidak perlu dikerjakan.')
                     ->options(fn (Get $get): array => $this->shiftRoomOptions($get('ob_shift_id')))
                     ->visible(fn (Get $get): bool => filled($get('ob_shift_id')))
                     ->bulkToggleable()
@@ -311,8 +336,8 @@ class ListObChecksheets extends ListRecords
                     ->searchable()
                     ->live(),
                 Repeater::make('rooms')
-                    ->label('Ruangan')
-                    ->helperText('Pilih dari saran Master Ruangan atau ketik nama ruangan lain.')
+                    ->label('Pekerjaan')
+                    ->helperText('Pilih dari saran Master Pekerjaan atau ketik nama pekerjaan lain.')
                     ->simple(
                         TextInput::make('room')
                             ->placeholder('Contoh: Ruang Meeting Finance')
@@ -322,7 +347,7 @@ class ListObChecksheets extends ListRecords
                     )
                     ->minItems(1)
                     ->defaultItems(1)
-                    ->addActionLabel('Tambah ruangan'),
+                    ->addActionLabel('Tambah pekerjaan'),
             ])
             ->action(function (array $data, ObTaskAssignmentService $assignments): void {
                 abort_unless($this->canAssign(), 403);
@@ -378,7 +403,7 @@ class ListObChecksheets extends ListRecords
     {
         Notification::make()
             ->title($result['created'].' tugas dibuat')
-            ->body($result['skipped'] > 0 ? $result['skipped'].' ruangan sudah ditugaskan pada tanggal itu dan dilewati.' : null)
+            ->body($result['skipped'] > 0 ? $result['skipped'].' pekerjaan sudah ditugaskan pada tanggal itu dan dilewati.' : null)
             ->success()
             ->send();
     }
@@ -390,7 +415,7 @@ class ListObChecksheets extends ListRecords
      */
     private function todayTasks(string $status): Builder
     {
-        return ObChecksheet::query()
+        return ObChecksheetResource::scopeToViewer(ObChecksheet::query(), auth()->user())
             ->where('user_id', auth()->id())
             ->where('status', $status)
             ->whereDate('scheduled_date', today())
@@ -405,7 +430,7 @@ class ListObChecksheets extends ListRecords
      */
     private function startableTasks(): Builder
     {
-        return ObChecksheet::query()
+        return ObChecksheetResource::scopeToViewer(ObChecksheet::query(), auth()->user())
             ->where('status', ObChecksheet::STATUS_PENDING)
             ->where(function (Builder $query): void {
                 $query
@@ -417,6 +442,24 @@ class ListObChecksheets extends ListRecords
                         ->whereDate('scheduled_date', '<=', today()));
             })
             ->orderBy('id');
+    }
+
+    /**
+     * Foto (dan catatan) tugas ini yang sudah diambil tetapi belum disimpan.
+     *
+     * @return array{photo: ?string, notes: ?string}
+     */
+    private function draftedPhoto(string $bucket, ObChecksheet $task): array
+    {
+        $draft = ObPhotoDraft::get($bucket)[$task->id] ?? [];
+
+        return ['photo' => $draft['photo'] ?? null, 'notes' => $draft['notes'] ?? null];
+    }
+
+    private function clearPhotoDraft(string $bucket): void
+    {
+        ObPhotoDraft::forget($bucket);
+        $this->draftCleared = true;
     }
 
     /**

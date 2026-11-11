@@ -2,12 +2,20 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\CategoryResource\Pages;
 use App\Models\Category;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -15,6 +23,8 @@ use Illuminate\Database\Eloquent\Builder;
 
 class CategoryResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Category::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-tag';
@@ -49,17 +59,20 @@ class CategoryResource extends Resource
                 TextColumn::make('updated_at')->translateLabel()->dateTime()->sortable(),
             ])
             ->filters([
-                //
+                Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make()
+                RestoreAction::make(),
+                EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
-                \Filament\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -71,7 +84,10 @@ class CategoryResource extends Resource
         ];
     }
 
-    public static function getEloquentQuery(): Builder
+    /**
+     * Daftar hanya menampilkan kategori yang punya induk.
+     */
+    protected static function baseVisibleQuery(): Builder
     {
         return parent::getEloquentQuery()->whereNotNull('parent_id');
     }

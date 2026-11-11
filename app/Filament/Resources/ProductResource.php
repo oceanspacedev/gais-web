@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ProductResource\Pages;
 use App\Models\Product;
 use App\Support\LegacyUpload;
@@ -10,6 +11,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -19,7 +23,9 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rules\Unique;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -29,6 +35,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
  */
 class ProductResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Product::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-cube';
@@ -70,13 +78,13 @@ class ProductResource extends Resource
                     ->minValue(0),
                 Select::make('product_category_id')
                     ->label('Kategori')
-                    ->relationship('category', 'name')
+                    ->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload()
                     ->required(),
                 Select::make('unit_type_id')
                     ->label('Satuan')
-                    ->relationship('unitType', 'name')
+                    ->relationship('unitType', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload()
                     ->required(),
@@ -118,10 +126,12 @@ class ProductResource extends Resource
             ])
             ->defaultSort('name')
             ->filters([
-                SelectFilter::make('product_category_id')->label('Kategori')->relationship('category', 'name')->preload(),
-                SelectFilter::make('unit_type_id')->label('Satuan')->relationship('unitType', 'name')->preload(),
+                TrashedFilter::make(),
+                SelectFilter::make('product_category_id')->label('Kategori')->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
+                SelectFilter::make('unit_type_id')->label('Satuan')->relationship('unitType', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 Action::make('printQr')
                     ->label('QR')
                     ->icon('heroicon-o-qr-code')
@@ -132,6 +142,8 @@ class ProductResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([

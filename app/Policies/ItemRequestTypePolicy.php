@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\ItemRequestType;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ItemRequestTypePolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -17,7 +18,7 @@ class ItemRequestTypePolicy
 
     public function view(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('view_item::request::type');
+        return $user->can('view_item::request::type') && $this->visible($user, $itemRequestType);
     }
 
     public function create(User $user): bool
@@ -27,12 +28,12 @@ class ItemRequestTypePolicy
 
     public function update(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('update_item::request::type');
+        return $user->can('update_item::request::type') && $this->editable($user, $itemRequestType);
     }
 
     public function delete(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('delete_item::request::type');
+        return $user->can('delete_item::request::type') && $this->editable($user, $itemRequestType);
     }
 
     public function deleteAny(User $user): bool
@@ -42,7 +43,7 @@ class ItemRequestTypePolicy
 
     public function forceDelete(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('force_delete_item::request::type');
+        return $user->can('force_delete_item::request::type') && $this->visible($user, $itemRequestType);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -52,7 +53,7 @@ class ItemRequestTypePolicy
 
     public function restore(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('restore_item::request::type');
+        return $user->can('restore_item::request::type') && $this->visible($user, $itemRequestType);
     }
 
     public function restoreAny(User $user): bool
@@ -62,7 +63,7 @@ class ItemRequestTypePolicy
 
     public function replicate(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('replicate_item::request::type');
+        return $user->can('replicate_item::request::type') && $this->editable($user, $itemRequestType);
     }
 
     public function reorder(User $user): bool

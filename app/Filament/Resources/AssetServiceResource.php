@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetServiceStatus;
 use App\Filament\Exports\AssetServiceExporter;
 use App\Filament\Resources\AssetServiceResource\Pages;
@@ -16,6 +17,9 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ExportBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -24,6 +28,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Forms\Components\ToggleButtons;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
@@ -36,11 +41,14 @@ use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\RecordActionsPosition;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 
 class AssetServiceResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetService::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-wrench-screwdriver';
@@ -68,16 +76,31 @@ class AssetServiceResource extends Resource
 
                 Section::make('Informasi Aset & Waktu Servis')
                     ->schema([
-                        TextInput::make('service_number')
-                            ->label('Nomor Servis')
-                            ->default(fn () => AssetService::generateServiceNumber())
-                            ->disabled()
-                            ->dehydrated()
-                            ->required(),
+                        ToggleButtons::make('asset_source')
+                            ->label('Aset yang diservis ada di daftar aset?')
+                            ->options([
+                                'registered' => 'Ya, aset terdaftar',
+                                'external' => 'Tidak, aset di luar daftar',
+                            ])
+                            ->icons([
+                                'registered' => 'heroicon-o-archive-box',
+                                'external' => 'heroicon-o-pencil-square',
+                            ])
+                            ->inline()
+                            ->default('registered')
+                            ->afterStateHydrated(fn (ToggleButtons $component, ?AssetService $record) => $component->state(
+                                $record?->exists && $record->isExternalAsset() ? 'external' : 'registered'
+                            ))
+                            ->required()
+                            ->live()
+                            ->columnSpanFull(),
 
                         Select::make('asset_id')
                             ->label('Aset yang Diservis')
-                            ->relationship('asset', 'name')
+                            ->visible(fn (callable $get) => $get('asset_source') !== 'external')
+                            ->helperText('Tidak ketemu? Pilih "Tidak, aset di luar daftar" di atas lalu ketik namanya.')
+                            ->columnSpan(['default' => 1, 'md' => 2])
+                            ->relationship('asset', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->getSearchResultsUsing(function (string $search): array {
@@ -108,6 +131,37 @@ class AssetServiceResource extends Resource
 
                                 return $asset->name.$suffix;
                             })
+                            ->required(),
+
+                        TextInput::make('external_asset_name')
+                            ->label('Nama Aset')
+                            ->placeholder('mis. Printer Epson L3210 milik toko')
+                            ->helperText('Aset ini hanya dicatat di servis, tidak masuk daftar aset.')
+                            // Saran dari nama aset luar yang pernah dicatat, supaya penulisannya konsisten.
+                            ->datalist(fn (): array => static::getEloquentQuery()
+                                ->whereNull('asset_id')
+                                ->whereNotNull('external_asset_name')
+                                ->latest('id')
+                                ->limit(200)
+                                ->pluck('external_asset_name')
+                                ->unique()
+                                ->take(50)
+                                ->values()
+                                ->all())
+                            ->maxLength(255)
+                            ->visible(fn (callable $get) => $get('asset_source') === 'external')
+                            ->required(),
+
+                        TextInput::make('external_asset_serial_number')
+                            ->label('No. Seri / IMEI / Plat Nomor')
+                            ->maxLength(150)
+                            ->visible(fn (callable $get) => $get('asset_source') === 'external'),
+
+                        TextInput::make('service_number')
+                            ->label('Nomor Servis')
+                            ->default(fn () => AssetService::generateServiceNumber())
+                            ->disabled()
+                            ->dehydrated()
                             ->required(),
 
                         DatePicker::make('service_date')
@@ -150,7 +204,7 @@ class AssetServiceResource extends Resource
 
                         Select::make('vendor_id')
                             ->label('Vendor Terdaftar')
-                            ->relationship('vendor', 'name')
+                            ->relationship('vendor', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
                             ->preload()
                             ->visible(fn (callable $get) => $get('provider_type') === 'vendor'),
@@ -292,8 +346,17 @@ class AssetServiceResource extends Resource
 
                 TextColumn::make('asset.name')
                     ->label('Aset')
-                    ->description(fn (AssetService $record): string => $record->asset?->serial_number ? "SN: {$record->asset->serial_number}" : '')
-                    ->searchable(query: RelationSearch::on('asset', 'name'))
+                    ->state(fn (AssetService $record): ?string => $record->asset_display_name)
+                    ->description(fn (AssetService $record): string => implode(' · ', array_filter([
+                        $record->isExternalAsset() ? 'Di luar daftar aset' : null,
+                        $record->asset_display_serial_number ? "SN: {$record->asset_display_serial_number}" : null,
+                    ])))
+                    ->placeholder('-')
+                    ->searchable(query: fn (Builder $query, string $search): Builder => $query->where(
+                        fn (Builder $q) => RelationSearch::on('asset', 'name')($q, $search)
+                            ->orWhere('external_asset_name', 'like', "%{$search}%")
+                            ->orWhere('external_asset_serial_number', 'like', "%{$search}%")
+                    ))
                     ->sortable(),
 
                 TextColumn::make('provider_label')
@@ -347,9 +410,22 @@ class AssetServiceResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('status')
                     ->label('Status Servis')
                     ->options(AssetServiceStatus::options()),
+
+                SelectFilter::make('asset_source')
+                    ->label('Sumber Aset')
+                    ->options([
+                        'registered' => 'Aset Terdaftar',
+                        'external' => 'Aset di Luar Daftar',
+                    ])
+                    ->query(fn (Builder $query, array $data): Builder => match ($data['value'] ?? null) {
+                        'registered' => $query->whereNotNull('asset_id'),
+                        'external' => $query->whereNull('asset_id'),
+                        default => $query,
+                    }),
 
                 SelectFilter::make('provider_type')
                     ->label('Tipe Pelaksana')
@@ -359,6 +435,7 @@ class AssetServiceResource extends Resource
                     ]),
             ])
             ->actions([
+                RestoreAction::make(),
                 Action::make('completeService')
                     ->label('Selesaikan')
                     ->icon('heroicon-o-check-circle')
@@ -366,7 +443,7 @@ class AssetServiceResource extends Resource
                     ->button()
                     ->size('sm')
                     ->modalWidth('3xl')
-                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: '.($record->asset?->name ?? $record->service_number))
+                    ->modalHeading(fn (AssetService $record) => 'Selesaikan Servis: '.($record->asset_display_name ?? $record->service_number))
                     ->modalSubmitActionLabel('Simpan & Selesaikan')
                     ->visible(function (AssetService $record) {
                         $user = auth()->user();
@@ -508,7 +585,7 @@ class AssetServiceResource extends Resource
 
                         Notification::make()
                             ->title('Servis Selesai!')
-                            ->body("Servis untuk aset {$record->asset?->name} ({$record->service_number}) telah diselesaikan.")
+                            ->body("Servis untuk aset {$record->asset_display_name} ({$record->service_number}) telah diselesaikan.")
                             ->success()
                             ->send();
                     }),
@@ -521,6 +598,8 @@ class AssetServiceResource extends Resource
             ], position: RecordActionsPosition::BeforeColumns)
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->exporter(AssetServiceExporter::class)
                         ->label('Export Dipilih'),
@@ -538,8 +617,9 @@ class AssetServiceResource extends Resource
                 Section::make('Detail Servis Aset')
                     ->schema([
                         TextEntry::make('service_number')->label('No. Servis')->weight('bold'),
-                        TextEntry::make('asset.name')->label('Nama Aset'),
-                        TextEntry::make('asset.serial_number')->label('No. Seri / IMEI')->placeholder('-'),
+                        TextEntry::make('asset_display_name')->label('Nama Aset')->placeholder('-')
+                            ->helperText(fn (AssetService $record): ?string => $record->isExternalAsset() ? 'Di luar daftar aset' : null),
+                        TextEntry::make('asset_display_serial_number')->label('No. Seri / IMEI')->placeholder('-'),
                         TextEntry::make('status')->label('Status')->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
                         TextEntry::make('provider_label')->label('Pelaksana Servis'),
                         TextEntry::make('contact_number')->label('Kontak')->placeholder('-'),
@@ -581,25 +661,13 @@ class AssetServiceResource extends Resource
             ]);
     }
 
-    public static function getEloquentQuery(): Builder
+    /**
+     * Aturan lihat (pembuat, teknisi, "Lihat Data Semua User") ada di
+     * AssetService::visibility(); di sini hanya eager load.
+     */
+    protected static function baseVisibleQuery(): Builder
     {
-        $query = parent::getEloquentQuery()->with('asset.attributes');
-        $user = auth()->user();
-
-        if (! $user) {
-            return $query;
-        }
-
-        // Pengawas / Admin dapat melihat seluruh servis aset
-        if ($user->can('viewAll', AssetService::class)) {
-            return $query;
-        }
-
-        // User biasa hanya melihat data servis yang dibuat olehnya atau ditugaskan kepadanya
-        return $query->where(function ($q) use ($user) {
-            $q->where('created_by', $user->id)
-                ->orWhere('serviced_by_user_id', $user->id);
-        });
+        return parent::getEloquentQuery()->with('asset.attributes');
     }
 
     public static function getRelations(): array

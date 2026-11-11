@@ -2,16 +2,19 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\DivisionResource\Pages;
 use App\Models\Area;
 use App\Models\Division;
 use App\Models\ItemRequestType;
+use App\Models\ProblemReportCategory;
 use App\Models\User;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
 use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
 use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
 use Filament\Resources\Resource;
@@ -20,10 +23,11 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class DivisionResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Division::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office';
@@ -92,7 +96,7 @@ class DivisionResource extends Resource
                     }),
 
                 Section::make('Cakupan Pengajuan Barang')
-                    ->description('Pengajuan mana yang boleh dilihat dan diproses executor/manager di divisi ini. Kosongkan tipe atau area untuk "semua". Tanpa baris, anggota divisi hanya melihat pengajuannya sendiri.')
+                    ->description('Pengajuan mana yang boleh dilihat dan diproses executor/manager di divisi ini. Kosongkan tipe atau area untuk "semua". Tanpa baris, anggota divisi hanya melihat pengajuannya sendiri. Centang "Menyetujui jumlah" bila divisi ini yang menyetujui jumlah (tahap Manager): executor baru bisa memproses pengajuan di cakupan itu setelah divisi ini menyetujui.')
                     ->collapsible()
                     ->schema([
                         Forms\Components\Repeater::make('itemRequestScopes')
@@ -108,6 +112,34 @@ class DivisionResource extends Resource
                                     ->placeholder('Semua area')
                                     ->options(fn (): array => Area::query()->orderBy('name')->pluck('name', 'id')->all())
                                     ->searchable(),
+                                Forms\Components\Toggle::make('approves_quantity')
+                                    ->label('Menyetujui jumlah')
+                                    ->helperText('Tahap Manager wajib; executor menunggu divisi ini.')
+                                    ->inline(false),
+                            ])
+                            ->columns(3)
+                            ->defaultItems(0)
+                            ->addActionLabel('Tambah cakupan'),
+                    ]),
+
+                Section::make('Cakupan Laporan Gangguan')
+                    ->description('Jenis gangguan yang dilihat pemegang izin "Lihat Data Semua User" di divisi ini. Tanpa baris, mereka melihat semua jenis. Centang "Kecualikan" untuk melihat semua jenis kecuali yang dipilih; laporan tanpa jenis ikut tersembunyi bagi divisi yang dibatasi.')
+                    ->collapsible()
+                    ->schema([
+                        Forms\Components\Repeater::make('problemReportScopes')
+                            ->hiddenLabel()
+                            ->relationship('problemReportScopes')
+                            ->schema([
+                                Forms\Components\Select::make('problem_report_category_id')
+                                    ->label('Jenis gangguan')
+                                    ->options(fn (): array => ProblemReportCategory::query()->orderBy('name')->pluck('name', 'id')->all())
+                                    ->required()
+                                    ->distinct()
+                                    ->searchable(),
+                                Forms\Components\Toggle::make('excluded')
+                                    ->label('Kecualikan')
+                                    ->helperText('Semua jenis kecuali yang ini.')
+                                    ->inline(false),
                             ])
                             ->columns(2)
                             ->defaultItems(0)
@@ -148,6 +180,11 @@ class DivisionResource extends Resource
                     ->counts('itemRequestScopes')
                     ->badge()
                     ->color('gray'),
+                Tables\Columns\TextColumn::make('problem_report_scopes_count')
+                    ->label('Cakupan Gangguan')
+                    ->counts('problemReportScopes')
+                    ->badge()
+                    ->color('gray'),
                 Tables\Columns\TextColumn::make('created_at')
                     ->label('Tanggal Dibuat')
                     ->dateTime()
@@ -157,11 +194,12 @@ class DivisionResource extends Resource
             ->filters([
                 Tables\Filters\SelectFilter::make('area_id')
                     ->label('Area')
-                    ->relationship('area', 'name')
+                    ->relationship('area', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->preload(),
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('lg'),
@@ -181,13 +219,5 @@ class DivisionResource extends Resource
         return [
             'index' => Pages\ManageDivisions::route('/'),
         ];
-    }
-
-    public static function getEloquentQuery(): Builder
-    {
-        return parent::getEloquentQuery()
-            ->withoutGlobalScopes([
-                SoftDeletingScope::class,
-            ]);
     }
 }

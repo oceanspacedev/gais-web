@@ -2,20 +2,27 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\UnitTypeResource\Pages;
 use App\Models\UnitType;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 class UnitTypeResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = UnitType::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-scale';
@@ -68,7 +75,11 @@ class UnitTypeResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('name')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
@@ -76,6 +87,8 @@ class UnitTypeResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

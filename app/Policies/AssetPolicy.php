@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Asset;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AssetPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class AssetPolicy
      */
     public function view(User $user, Asset $asset): bool
     {
-        return $user->can('view_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('view_asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -39,7 +40,7 @@ class AssetPolicy
      */
     public function update(User $user, Asset $asset): bool
     {
-        return $user->can('update_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('update_asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -47,7 +48,7 @@ class AssetPolicy
      */
     public function delete(User $user, Asset $asset): bool
     {
-        return $user->can('delete_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('delete_asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -63,7 +64,7 @@ class AssetPolicy
      */
     public function forceDelete(User $user, Asset $asset): bool
     {
-        return $user->can('force_delete_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('force_delete_asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -79,7 +80,7 @@ class AssetPolicy
      */
     public function restore(User $user, Asset $asset): bool
     {
-        return $user->can('restore_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('restore_asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -95,7 +96,7 @@ class AssetPolicy
      */
     public function replicate(User $user, Asset $asset): bool
     {
-        return $user->can('replicate_asset') && $this->withinBusinessEntityScope($user, $asset);
+        return $user->can('replicate_asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -151,15 +152,5 @@ class AssetPolicy
     public function merge(User $user): bool
     {
         return $user->can('merge_asset');
-    }
-
-    /**
-     * Record di luar badan usaha yang bisa diakses user ditolak (lihat
-     * Asset::isAccessibleBy). Model yang belum tersimpan, yaitu cek
-     * izin saja, tidak dibatasi.
-     */
-    private function withinBusinessEntityScope(User $user, Asset $asset): bool
-    {
-        return ! $asset->exists || $asset->isAccessibleBy($user);
     }
 }

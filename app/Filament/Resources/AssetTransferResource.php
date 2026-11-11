@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetCondition;
 use App\Enums\AssetTransferDocumentType;
 use App\Filament\Resources\AssetTransferResource\Pages;
@@ -18,6 +19,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -25,6 +29,7 @@ use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -33,10 +38,12 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\Indicator;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
@@ -47,6 +54,8 @@ use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class AssetTransferResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = AssetTransfer::class;
 
     /**
@@ -294,8 +303,9 @@ class AssetTransferResource extends Resource
             ])
             ->defaultSort('created_at', 'desc')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('businessEntity')
-                    ->relationship('businessEntity', 'name')
+                    ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
@@ -355,6 +365,7 @@ class AssetTransferResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                RestoreAction::make(),
                 Action::make('download')
                     ->label('Template')
                     ->url(fn (AssetTransfer $record): string => route('asset-transfer.download', $record))
@@ -385,21 +396,11 @@ class AssetTransferResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    /**
-     * Pengguna dengan akses badan usaha terbatas hanya melihat BA dari badan
-     * usaha yang bisa diaksesnya.
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query;
     }
 
     public static function getRelations(): array
@@ -421,65 +422,70 @@ class AssetTransferResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        // Satu kolom selebar layar: isinya sedikit, jadi kolom samping hanya menyisakan ruang kosong.
         return $infolist
+            ->columns(1)
             ->schema([
-                Section::make('📄 Informasi Transfer Aset')
+                Section::make('Informasi Berita Acara')
+                    ->icon('heroicon-o-document-text')
                     ->schema([
-                        Grid::make(2)
-                            ->schema([
-                                TextEntry::make('letter_number')
-                                    ->label('Nomor Surat')
-                                    ->extraAttributes([
-                                        'style' => 'font-weight: bold; color: #1a202c;',
-                                    ]),
-                                TextEntry::make('status')
-                                    ->label('Jenis Berita Acara')
-                                    ->badge()
-                                    ->colors(AssetTransferDocumentType::colors()),
-                                TextEntry::make('fromUser.name')
-                                    ->label('Dari Pengguna')
-                                    ->icon('heroicon-o-user')
-                                    ->columnSpan(1),
-                                TextEntry::make('toUser.name')
-                                    ->label('Ke Pengguna')
-                                    ->icon('heroicon-o-user')
-                                    ->columnSpan(1),
-                                TextEntry::make('transfer_date')
-                                    ->label('Tanggal Transfer')
-                                    ->date()
-                                    ->formatStateUsing(fn ($state) => Carbon::parse($state)->format('d M Y'))
-                                    ->extraAttributes(['style' => 'font-weight: bold;']),
-                                TextEntry::make('businessEntity.name')
-                                    ->label('Entitas Bisnis')
-                                    ->icon('heroicon-o-briefcase'),
-                                TextEntry::make('document')
-                                    ->label('Dokumen')
-                                    ->url(fn ($record) => $record->document ? StoredFile::url($record->document) : null, true)
-                                    ->openUrlInNewTab()
-                                    ->icon('heroicon-o-document')
-                                    ->getStateUsing(fn ($record) => $record && $record->document ? 'Unduh Dokumen' : 'Tidak Ada Dokumen')
-                                    ->extraAttributes(['style' => 'font-weight:bold;color:#007bff;']),
-                            ]),
-                    ])
-                    ->columns(2)
-                    ->collapsible(),
-                Section::make('📦 Detail Aset yang Ditransfer')
+                        Grid::make(['default' => 2, 'lg' => 3])->schema([
+                            TextEntry::make('status')
+                                ->label('Jenis Berita Acara')
+                                ->badge()
+                                ->colors(AssetTransferDocumentType::colors())
+                                ->columnSpan(['default' => 2, 'lg' => 1]),
+                            TextEntry::make('transfer_date')
+                                ->label('Tanggal Transfer')
+                                ->date('d M Y')
+                                ->weight(FontWeight::SemiBold),
+                            TextEntry::make('businessEntity.name')
+                                ->label('Entitas Bisnis')
+                                ->placeholder('-'),
+                            TextEntry::make('fromUser.name')
+                                ->label('Dari')
+                                ->icon('heroicon-o-arrow-up-right')
+                                ->weight(FontWeight::SemiBold)
+                                ->helperText(fn (AssetTransfer $record): ?string => $record->fromUser?->jobTitle?->name)
+                                ->placeholder('-'),
+                            TextEntry::make('toUser.name')
+                                ->label('Kepada')
+                                ->icon('heroicon-o-arrow-down-left')
+                                ->iconColor('success')
+                                ->weight(FontWeight::SemiBold)
+                                ->helperText(fn (AssetTransfer $record): ?string => $record->toUser?->jobTitle?->name)
+                                ->placeholder('-'),
+                            TextEntry::make('document')
+                                ->label('BA Bertanda Tangan')
+                                ->state(fn (AssetTransfer $record): string => $record->document ? 'Unduh Dokumen' : 'Belum diunggah')
+                                ->url(fn (AssetTransfer $record): ?string => $record->document ? StoredFile::url($record->document) : null, true)
+                                ->icon(fn (AssetTransfer $record): ?string => $record->document ? 'heroicon-o-arrow-down-tray' : null)
+                                ->color(fn (AssetTransfer $record): string => $record->document ? 'primary' : 'gray'),
+                        ]),
+                    ]),
+
+                Section::make('Aset yang Ditransfer')
+                    ->icon('heroicon-o-cube')
+                    ->description(fn (AssetTransfer $record): string => $record->details->count().' aset')
                     ->schema([
                         RepeatableEntry::make('details')
-                            ->schema([
-                                Grid::make(2)
-                                    ->schema([
-                                        TextEntry::make('asset.name')
-                                            ->label('Nama Aset')
-                                            ->extraAttributes(['style' => 'font-weight: bold;']),
-                                        TextEntry::make('equipment')
-                                            ->label('Keterangan Peralatan'),
-                                    ]),
+                            ->hiddenLabel()
+                            ->table([
+                                TableColumn::make('Nama Aset'),
+                                TableColumn::make('Keterangan Peralatan'),
                             ])
-                            ->columnSpan(2),
-                    ])
-                    ->collapsible()
-                    ->columns(2),
+                            ->schema([
+                                // Label dipakai saat tabel jadi kartu di layar sempit.
+                                TextEntry::make('asset.name')
+                                    ->label('Nama Aset')
+                                    ->weight(FontWeight::SemiBold)
+                                    ->placeholder('(aset dihapus)')
+                                    ->url(fn ($record): ?string => $record->asset ? AssetResource::getUrl('view', ['record' => $record->asset]) : null),
+                                TextEntry::make('equipment')
+                                    ->label('Keterangan Peralatan')
+                                    ->placeholder('-'),
+                            ]),
+                    ]),
             ]);
     }
 
@@ -599,8 +605,7 @@ class AssetTransferResource extends Resource
     protected static function assetQuery(AssetTransferDocumentType $type, mixed $fromUserId): Builder
     {
         $viewer = Auth::user();
-        $query = Asset::query()
-            ->when($viewer instanceof User, fn (Builder $query): Builder => $query->accessibleBy($viewer));
+        $query = AssetResource::scopeToViewer(Asset::query(), $viewer);
 
         if ($type->dispatchesFromStock()) {
             return $query

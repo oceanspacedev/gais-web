@@ -2,15 +2,18 @@
 
 namespace App\Providers;
 
+use App\Access\BaselineAccess;
 use App\Enums\BadgeColor;
 use App\Filament\Auth\Pages\EmailLogin;
 use App\Filament\Auth\Pages\PhoneLogin;
+use App\Filament\Resources\SecurityChecksheetResource;
 use App\Jobs\Filament\CreateXlsxFile as RetryingCreateXlsxFile;
 use App\Jobs\Filament\ExportCompletion as RetryingExportCompletion;
 use App\Jobs\Filament\ExportCsv as RetryingExportCsv;
 use App\Jobs\Filament\ImportCsv as RetryingImportCsv;
 use App\Jobs\Filament\PrepareCsvExport as RetryingPrepareCsvExport;
 use App\Models\Area;
+use App\Models\AssetSale;
 use App\Models\AssetService;
 use App\Models\AssetTransfer;
 use App\Models\Insurance;
@@ -32,10 +35,12 @@ use App\Models\Product;
 use App\Models\ProductCategory;
 use App\Models\Rent;
 use App\Models\RentUpdate;
+use App\Models\SecurityChecksheet;
 use App\Models\Task;
 use App\Models\UnitType;
 use App\Policies\ActivityPolicy;
 use App\Policies\AreaPolicy;
+use App\Policies\AssetSalePolicy;
 use App\Policies\AssetServicePolicy;
 use App\Policies\AssetTransferPolicy;
 use App\Policies\ExceptionPolicy;
@@ -59,8 +64,10 @@ use App\Policies\ProductPolicy;
 use App\Policies\RentPolicy;
 use App\Policies\RentUpdatePolicy;
 use App\Policies\RolePolicy;
+use App\Policies\SecurityChecksheetPolicy;
 use App\Policies\TaskPolicy;
 use App\Policies\UnitTypePolicy;
+use App\Services\ItemRequestWorkflow;
 use App\Support\IndexedPermissionRegistrar;
 use App\Support\MekayaAssets;
 use App\Support\ObservabilityAccess;
@@ -69,13 +76,19 @@ use Apriansyahrs\MekayaTheme\Mekaya;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
 use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
+use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
 use Filament\Actions\ExportBulkAction;
 use Filament\Actions\Exports\Jobs\CreateXlsxFile;
 use Filament\Actions\Exports\Jobs\ExportCompletion;
 use Filament\Actions\Exports\Jobs\ExportCsv;
 use Filament\Actions\Exports\Jobs\PrepareCsvExport;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
 use Filament\Actions\Imports\Jobs\ImportCsv;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Resources\Resource;
@@ -84,9 +97,11 @@ use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Support\Facades\FilamentColor;
 use Filament\Tables\Columns\ImageColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Filament\Widgets\Widget;
 use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
@@ -131,6 +146,10 @@ class AppServiceProvider extends ServiceProvider
         // Spatie mendaftarkan registrarnya saat boot, jadi penggantinya juga di sini.
         $this->app->singleton(PermissionRegistrar::class, IndexedPermissionRegistrar::class);
 
+        // Satu instance per request: memo once() cakupan "menyetujui jumlah" dipakai
+        // bersama oleh tabel, aksi, relation manager, dan widget pengajuan.
+        $this->app->scoped(ItemRequestWorkflow::class);
+
         Livewire::component('phone-login', PhoneLogin::class);
         Livewire::component('email-login', EmailLogin::class);
         ObservabilityAccess::register();
@@ -155,6 +174,22 @@ class AppServiceProvider extends ServiceProvider
         // Pencarian tabel sudah di bawah ~200 ms, jadi tunggu ketikan lebih singkat dari bawaan 500 ms.
         Table::configureUsing(fn (Table $table) => $table->searchDebounce('300ms'));
 
+        // Record di Sampah hanya-baca: setiap aksi ber-record disembunyikan kecuali Lihat, Pulihkan, dan Hapus permanen.
+        Action::configureUsing(function (Action $action): void {
+            if ($action instanceof ViewAction || $action instanceof RestoreAction || $action instanceof ForceDeleteAction) {
+                return;
+            }
+
+            $action->hidden(fn (?Model $record): bool => $record instanceof Model && method_exists($record, 'trashed') && $record->trashed());
+        });
+
+        // Soft delete adalah standar semua fitur; istilahnya sama di panel, panduan, dan dokumentasi.
+        TrashedFilter::configureUsing(fn (TrashedFilter $filter) => $filter->label('Sampah'));
+        RestoreAction::configureUsing(fn (RestoreAction $action) => $action->label('Pulihkan'));
+        RestoreBulkAction::configureUsing(fn (RestoreBulkAction $action) => $action->label('Pulihkan yang dipilih'));
+        ForceDeleteAction::configureUsing(fn (ForceDeleteAction $action) => $action->label('Hapus permanen'));
+        ForceDeleteBulkAction::configureUsing(fn (ForceDeleteBulkAction $action) => $action->label('Hapus permanen yang dipilih'));
+
         LanguageSwitch::configureUsing(function (LanguageSwitch $switch) {
             $switch
                 ->locales(['id', 'en'])
@@ -175,9 +210,11 @@ class AppServiceProvider extends ServiceProvider
 
     protected function registerAuthorization(): void
     {
+        Gate::policy(AssetSale::class, AssetSalePolicy::class);
         Gate::policy(AssetService::class, AssetServicePolicy::class);
         Gate::policy(AssetTransfer::class, AssetTransferPolicy::class);
         Gate::policy(ObChecksheet::class, ObChecksheetPolicy::class);
+        Gate::policy(SecurityChecksheet::class, SecurityChecksheetPolicy::class);
         Gate::policy(ObRoom::class, ObRoomPolicy::class);
         Gate::policy(ObShift::class, ObShiftPolicy::class);
         Gate::policy(Activity::class, ActivityPolicy::class);
@@ -202,17 +239,23 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(ProductCategory::class, ProductCategoryPolicy::class);
         Gate::policy(Rent::class, RentPolicy::class);
         Gate::policy(UnitType::class, UnitTypePolicy::class);
+
+        BaselineAccess::register();
     }
 
     /**
      * Keep Livewire temp uploads on the private local disk (not public/),
      * so they are not web-accessible and do not depend on public/ subdirectory perms.
+     * Batas unggah sementara dinaikkan dari 12 MB bawaan Livewire supaya video
+     * lampiran laporan security lolos; tiap field tetap punya maxSize sendiri.
      */
     protected function configureLivewireUploads(): void
     {
         config([
             'livewire.temporary_file_upload.disk' => 'local',
             'livewire.temporary_file_upload.directory' => 'livewire-tmp',
+            'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.SecurityChecksheetResource::MAX_ATTACHMENT_KB],
+            'livewire.temporary_file_upload.max_upload_time' => 15,
         ]);
     }
 

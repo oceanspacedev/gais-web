@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ProductPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -17,7 +18,7 @@ class ProductPolicy
 
     public function view(User $user, Product $product): bool
     {
-        return $user->can('view_product');
+        return $user->can('view_product') && $this->visible($user, $product);
     }
 
     public function create(User $user): bool
@@ -27,12 +28,12 @@ class ProductPolicy
 
     public function update(User $user, Product $product): bool
     {
-        return $user->can('update_product');
+        return $user->can('update_product') && $this->editable($user, $product);
     }
 
     public function delete(User $user, Product $product): bool
     {
-        return $user->can('delete_product');
+        return $user->can('delete_product') && $this->editable($user, $product);
     }
 
     public function deleteAny(User $user): bool
@@ -42,7 +43,7 @@ class ProductPolicy
 
     public function forceDelete(User $user, Product $product): bool
     {
-        return $user->can('force_delete_product');
+        return $user->can('force_delete_product') && $this->visible($user, $product);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -52,7 +53,7 @@ class ProductPolicy
 
     public function restore(User $user, Product $product): bool
     {
-        return $user->can('restore_product');
+        return $user->can('restore_product') && $this->visible($user, $product);
     }
 
     public function restoreAny(User $user): bool
@@ -62,7 +63,7 @@ class ProductPolicy
 
     public function replicate(User $user, Product $product): bool
     {
-        return $user->can('replicate_product');
+        return $user->can('replicate_product') && $this->editable($user, $product);
     }
 
     public function reorder(User $user): bool

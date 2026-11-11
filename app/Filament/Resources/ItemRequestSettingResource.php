@@ -2,17 +2,23 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ItemRequestSettingResource\Pages;
 use App\Models\ItemRequestSetting;
+use Carbon\Carbon;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 /**
@@ -20,6 +26,8 @@ use Filament\Tables\Table;
  */
 class ItemRequestSettingResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ItemRequestSetting::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-calendar-days';
@@ -45,14 +53,17 @@ class ItemRequestSettingResource extends Resource
             ->schema([
                 DatePicker::make('request_month')
                     ->label('Bulan Pengajuan')
-                    ->helperText('Pilih tanggal 1 bulan yang dimaksud.')
+                    ->helperText('Tanggal berapa pun yang dipilih disimpan sebagai tanggal 1 bulan itu (sumo: pilihan bulan).')
+                    ->displayFormat('F Y')
                     ->required()
-                    ->native(false),
-                DatePicker::make('open_date')->label('Tanggal Buka')->required()->native(false),
-                DatePicker::make('closed_date')->label('Tanggal Tutup')->required()->native(false)->afterOrEqual('open_date'),
+                    ->native(false)
+                    ->dehydrateStateUsing(fn (mixed $state): ?string => filled($state) ? Carbon::parse($state)->startOfMonth()->toDateString() : null),
+                DatePicker::make('open_date')->label('Tanggal Buka')->displayFormat('d/m/Y')->required()->native(false),
+                DatePicker::make('closed_date')->label('Tanggal Tutup')->displayFormat('d/m/Y')->required()->native(false)->afterOrEqual('open_date'),
                 TextInput::make('request_detail')
                     ->label('Keterangan')
                     ->placeholder('Contoh: Pengajuan ATK Bulanan (di luar tanggal tidak diproses)')
+                    ->required()
                     ->maxLength(255),
             ]);
     }
@@ -67,12 +78,20 @@ class ItemRequestSettingResource extends Resource
                 TextColumn::make('request_detail')->label('Keterangan')->wrap(),
             ])
             ->defaultSort('request_month', 'desc')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()->slideOver()->modalWidth('md'),
                 DeleteAction::make(),
             ])
             ->toolbarActions([
-                BulkActionGroup::make([DeleteBulkAction::make()]),
+                BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    DeleteBulkAction::make(),
+                ]),
             ]);
     }
 

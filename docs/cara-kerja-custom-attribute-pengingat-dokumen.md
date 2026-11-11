@@ -9,7 +9,7 @@ Dokumentasi ini menjelaskan langkah-demi-langkah (step-by-step) cara membuat dan
 Langkah pertama adalah membuat atribut baru di sistem agar bisa digunakan pada form pendataan Aset. Pada contoh ini, kita membuat Atribut untuk **Dokumen STNK Mobil**.
 
 ### Langkah-langkah:
-1. Login ke sistem admin di `http://web-shelf.test/admin/login` (atau alamat sistem yang sesuai) menggunakan akun berhak akses Admin.
+1. Login ke sistem admin di `http://gais-web.test/admin/login` (atau alamat sistem yang sesuai) menggunakan akun berhak akses Admin.
 2. Pada menu sidebar sebelah kiri (grup **Master Aset**), klik menu **Custom Aset Attribute**.
 3. Klik tombol **Buat** di pojok kanan atas daftar.
 

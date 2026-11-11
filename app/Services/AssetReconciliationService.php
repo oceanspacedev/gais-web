@@ -716,13 +716,20 @@ class AssetReconciliationService
             throw new LogicException("Gudang {$item->external_location_code} belum dipetakan.");
         }
 
-        return AssetLocation::firstOrCreate(
+        // Kode gudang unik di database termasuk baris di Sampah: gudang terhapus dipulihkan, bukan digandakan.
+        $location = AssetLocation::withTrashed()->firstOrCreate(
             ['external_code' => $item->external_location_code],
             [
                 'name' => $item->external_location_code,
                 'description' => "Dibuat otomatis dari rekonsiliasi {$reconciliation->uuid}",
             ],
         );
+
+        if ($location->trashed()) {
+            $location->restore();
+        }
+
+        return $location;
     }
 
     private function catalogItemForApply(AssetReconciliation $reconciliation, AssetReconciliationItem $item): AssetCatalogItem

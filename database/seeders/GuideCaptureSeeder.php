@@ -87,12 +87,16 @@ class GuideCaptureSeeder extends Seeder
                 'category_id' => Category::where('name', $category)->value('id'),
                 'brand_id' => Brand::where('name', $brand)->value('id'),
                 'business_entity_id' => $entity,
+                // Penanda stok ikut dikembalikan (penjualan antar badan usaha memindahkannya ke pembeli).
+                'recipient_business_entity_id' => $entity,
                 'purchase_date' => '2026-01-15',
                 'condition_status' => AssetCondition::Available,
                 'recipient_id' => null,
             ],
         );
         $asset('Laptop Lenovo ThinkPad E14', 'LAPTOP', 'Lenovo');
+        // Penjualan antar badan usaha (panduan bab 16): printer stok yang dijual ke CV COMPLETE SELULAR; seed mengembalikannya ke CV BERSAMA CS.
+        $asset('Printer Epson L3210', 'PRINTER', 'Epson');
 
         // Kendaraan: pilihan "Plat Nomor" di checksheet diambil dari atribut aset bernama persis "Plat Nomor".
         $motor = Category::firstOrCreate(['name' => 'MOTOR', 'parent_id' => $parent->id]);

@@ -2,9 +2,11 @@
 
 declare(strict_types=1);
 
+use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Guide;
 use App\Filament\Resources\AssetReconciliationResource;
 use App\Filament\Resources\AssetResource;
+use App\Filament\Resources\AssetSaleResource;
 use App\Filament\Resources\AssetServiceResource;
 use App\Filament\Resources\AssetTransferResource;
 use App\Filament\Resources\DivisionResource;
@@ -14,13 +16,13 @@ use App\Filament\Resources\ObChecksheetResource;
 use App\Filament\Resources\ProblemReportResource;
 use App\Filament\Resources\ProductResource;
 use App\Filament\Resources\RentResource;
+use App\Filament\Resources\SecurityChecksheetResource;
 use App\Filament\Resources\SumoImportRunResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
 use App\Models\SumoImportRun;
 use App\Support\ObservabilityAccess;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
-use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
 use Filament\Widgets\FilamentInfoWidget;
 
@@ -65,6 +67,7 @@ return [
         'generate' => true,
         'methods' => [
             'viewAny', 'view', 'create', 'update', 'delete', 'deleteAny',
+            'restore', 'restoreAny', 'forceDelete', 'forceDeleteAny',
         ],
         'single_parameter_methods' => [
             'viewAny',
@@ -117,6 +120,11 @@ return [
                 'updateRecipient',
                 'merge',
             ],
+            // Penjualan antar badan usaha: ekspor riwayat dan impor massal dari Excel.
+            AssetSaleResource::class => [
+                'export',
+                'import',
+            ],
             AssetTransferResource::class => [
                 'export',
                 // BA Serah Terima/Pengembalian atas nama staf GA mana pun.
@@ -141,6 +149,12 @@ return [
                 'deleteAll',
                 // Menugaskan pembersihan ke OB dan mengganti petugasnya.
                 'assign',
+            ],
+            SecurityChecksheetResource::class => [
+                'export',
+                'viewAll',
+                'updateAll',
+                'deleteAll',
             ],
             // Alur pengajuan barang: tahap Accounting, Manager, Executor, catatan audit, ganti pemohon.
             ItemRequestResource::class => [

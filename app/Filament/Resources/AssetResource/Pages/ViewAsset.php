@@ -6,12 +6,14 @@ use App\Enums\AssetCondition;
 use App\Enums\AssetTransferDocumentType;
 use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource;
+use App\Filament\Resources\AssetSaleResource;
 use App\Models\Asset;
 use App\Models\AssetAttribute;
+use App\Models\AssetQrLabelHistory;
+use App\Models\AssetService;
 use App\Models\AssetTransferDetail;
 use App\Models\User;
 use App\Models\VehicleChecksheet;
-use App\Models\AssetQrLabelHistory;
 use App\Services\AssetQrLabelHistoryService;
 use App\Services\AssetQrService;
 use Carbon\Carbon;
@@ -33,9 +35,21 @@ class ViewAsset extends ViewRecord
         $this->record->loadMissing('qr');
     }
 
+    public function getTitle(): string
+    {
+        return $this->getRecord()->name ?: 'Detail Aset';
+    }
+
+    public function getSubheading(): ?string
+    {
+        $record = $this->getRecord();
+
+        return collect([$record->category?->name, $record->condition_status_label])->filter()->implode(' · ') ?: null;
+    }
+
     protected function getActions(): array
     {
-        return [
+        $actions = [
             Actions\ActionGroup::make([
                 Actions\Action::make('updateAttributeDocument')
                     ->label('Perbarui Dokumen (STNK/KIR)')
@@ -43,12 +57,36 @@ class ViewAsset extends ViewRecord
                     ->color('warning')
                     ->visible(fn (): bool => AssetResource::hasDocumentExpiryAttributes($this->record))
                     ->modalWidth('lg')
-                    ->modalHeading(fn (): string => 'Perbarui Dokumen: ' . $this->record->name)
+                    ->modalHeading(fn (): string => 'Perbarui Dokumen: '.$this->record->name)
                     ->modalSubmitActionLabel('Simpan Pembaruan')
                     ->form(fn (): array => AssetResource::attributeDocumentUpdateFormSchema($this->record))
                     ->action(function (array $data): void {
                         AssetResource::handleAttributeDocumentUpdate($this->record, $data);
                         $this->record->refresh();
+                    }),
+                // Penjualan di dalam grup: kepemilikan pindah ke badan usaha
+                // pembeli, aset tetap aktif. "Tandai Dijual" di bawah untuk
+                // aset yang keluar dari grup (status Dijual).
+                Actions\Action::make('sellToEntity')
+                    ->label('Jual ke Badan Usaha Lain')
+                    ->icon('heroicon-o-building-office-2')
+                    ->color('primary')
+                    ->visible(fn (Asset $record): bool => AssetSaleResource::canSell($record))
+                    ->slideOver()
+                    ->modalWidth('md')
+                    ->modalHeading(fn (): string => 'Jual ke Badan Usaha Lain: '.$this->record->name)
+                    ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli dan aset masuk stok pembeli (Tersedia, tanpa pemegang). Riwayatnya tercatat di menu Penjualan Aset.')
+                    ->modalSubmitActionLabel('Catat Penjualan')
+                    ->form(fn (): array => AssetSaleResource::sellFormSchema($this->record))
+                    ->action(function (array $data): void {
+                        $sale = AssetSaleResource::recordSale($this->record, $data);
+                        $this->record->refresh();
+
+                        Notification::make()
+                            ->title('Penjualan dicatat')
+                            ->body(sprintf('Aset kini milik %s dan masuk stoknya.', $sale->toBusinessEntity?->name ?? '-'))
+                            ->success()
+                            ->send();
                     }),
                 Actions\Action::make('markSold')
                     ->label('Tandai Dijual')
@@ -196,7 +234,7 @@ class ViewAsset extends ViewRecord
                             ->live()
                             ->afterStateUpdated(function (callable $set, $state) {
                                 if ($state) {
-                                    $allIds = AssetTransferDetail::where('asset_id', $state)->pluck('id')->toArray();
+                                    $allIds = $this->liveTransferDetails($state)->pluck('id')->toArray();
                                     $conflicts = $this->detectConflictingTransferDetails((int) $this->record->id, (int) $state);
                                     $conflictIds = $conflicts['source'] ?? [];
                                     $safeIds = array_values(array_diff($allIds, $conflictIds));
@@ -214,7 +252,7 @@ class ViewAsset extends ViewRecord
                                 }
 
                                 $source = $this->mergeableAssets()
-                                    ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+                                    ->withCount(['attributes', 'assetTransferDetails' => fn ($details) => $details->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed()), 'vehicleChecksheets'])
                                     ->find($sourceId);
 
                                 if (! $source) {
@@ -240,7 +278,7 @@ class ViewAsset extends ViewRecord
                                 $conflicts = $this->detectConflictingTransferDetails((int) $this->record->id, (int) $sourceId);
                                 $conflictIds = $conflicts['source'] ?? [];
 
-                                return AssetTransferDetail::where('asset_id', $sourceId)
+                                return $this->liveTransferDetails($sourceId)
                                     ->with(['assetTransfer' => fn ($q) => $q->with('fromUser', 'toUser')])
                                     ->get()
                                     ->mapWithKeys(function (AssetTransferDetail $detail) use ($conflictIds) {
@@ -263,7 +301,7 @@ class ViewAsset extends ViewRecord
                             ->helperText('Transfer bertanda ⚠️ KONFLIK otomatis tidak terpilih.')
                             ->columns(1)
                             ->visible(fn (callable $get): bool => filled($get('source_asset_id'))
-                                && AssetTransferDetail::where('asset_id', $get('source_asset_id'))->exists()),
+                                && $this->liveTransferDetails($get('source_asset_id'))->exists()),
                         Placeholder::make('target_conflicts_preview')
                             ->label('Transfer Aset Target yang Akan Dihapus (Konflik)')
                             ->content(function (callable $get): string {
@@ -323,46 +361,55 @@ class ViewAsset extends ViewRecord
                 ->icon('heroicon-m-ellipsis-vertical')
                 ->color('gray')
                 ->button(),
-            Actions\Action::make('printQrLabel')
-                ->label('Print Label QR')
-                ->icon('heroicon-o-printer')
-                ->url(fn (): string => route('assets.qr-label.print', $this->record))
-                ->openUrlInNewTab(),
-            Actions\Action::make('downloadQrLabel')
-                ->label('Download Label QR (PDF)')
+            // Tiga aksi QR digabung satu menu supaya header tidak penuh tombol.
+            Actions\ActionGroup::make([
+                Actions\Action::make('printQrLabel')
+                    ->label('Print Label QR')
+                    ->icon('heroicon-o-printer')
+                    ->url(fn (): string => route('assets.qr-label.print', $this->record))
+                    ->openUrlInNewTab(),
+                Actions\Action::make('downloadQrLabel')
+                    ->label('Download Label QR (PDF)')
+                    ->icon('heroicon-o-qr-code')
+                    ->action(function () {
+                        /** @var Asset $asset */
+                        $asset = $this->record;
+
+                        $history = app(AssetQrLabelHistoryService::class)->record(
+                            auth()->user(),
+                            AssetQrLabelHistory::ACTION_DOWNLOAD_PDF,
+                            [$asset],
+                        );
+
+                        abort_unless($history, 500);
+
+                        return app(AssetQrLabelHistoryService::class)->download($history);
+                    }),
+                Actions\Action::make('regenerateQr')
+                    ->label('Regenerate QR')
+                    ->icon('heroicon-o-arrow-path')
+                    ->color('danger')
+                    ->requiresConfirmation()
+                    ->visible(fn (): bool => auth()->user()?->can('regenerateQr', Asset::class) ?? false)
+                    ->action(function (): void {
+                        app(AssetQrService::class)->regenerate($this->record);
+                        $this->record->refresh()->load('qr');
+
+                        Notification::make()
+                            ->title('QR diganti')
+                            ->body('Stiker lama tidak berlaku. Cetak ulang label.')
+                            ->success()
+                            ->send();
+                    }),
+            ])
+                ->label('Label QR')
                 ->icon('heroicon-o-qr-code')
-                ->action(function () {
-                    /** @var Asset $asset */
-                    $asset = $this->record;
-
-                    $history = app(AssetQrLabelHistoryService::class)->record(
-                        auth()->user(),
-                        AssetQrLabelHistory::ACTION_DOWNLOAD_PDF,
-                        [$asset],
-                    );
-
-                    abort_unless($history, 500);
-
-                    return app(AssetQrLabelHistoryService::class)->download($history);
-                }),
-            Actions\Action::make('regenerateQr')
-                ->label('Regenerate QR')
-                ->icon('heroicon-o-arrow-path')
-                ->color('danger')
-                ->requiresConfirmation()
-                ->visible(fn (): bool => auth()->user()?->can('regenerateQr', Asset::class) ?? false)
-                ->action(function (): void {
-                    app(AssetQrService::class)->regenerate($this->record);
-                    $this->record->refresh()->load('qr');
-
-                    Notification::make()
-                        ->title('QR diganti')
-                        ->body('Stiker lama tidak berlaku. Cetak ulang label.')
-                        ->success()
-                        ->send();
-                }),
+                ->color('gray')
+                ->button(),
             Actions\EditAction::make(),
         ];
+
+        return $actions;
     }
 
     /**
@@ -377,7 +424,7 @@ class ViewAsset extends ViewRecord
      */
     protected function detectConflictingTransferDetails(int $targetAssetId, int $sourceAssetId): array
     {
-        $targetDetails = AssetTransferDetail::where('asset_id', $targetAssetId)
+        $targetDetails = $this->liveTransferDetails($targetAssetId)
             ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
@@ -389,7 +436,7 @@ class ViewAsset extends ViewRecord
                 'date' => $d->assetTransfer?->transfer_date,
             ]);
 
-        $sourceDetails = AssetTransferDetail::where('asset_id', $sourceAssetId)
+        $sourceDetails = $this->liveTransferDetails($sourceAssetId)
             ->with('assetTransfer')
             ->get()
             ->map(fn ($d) => [
@@ -485,9 +532,7 @@ class ViewAsset extends ViewRecord
     {
         $user = auth()->user();
 
-        return Asset::query()
-            ->whereKeyNot($this->record->getKey())
-            ->when($user instanceof User, fn (Builder $query): Builder => $query->accessibleBy($user), fn (Builder $query): Builder => $query->whereRaw('1 = 0'));
+        return AssetResource::scopeToViewer(Asset::query()->whereKeyNot($this->record->getKey()), $user);
     }
 
     protected function performMerge(int $sourceAssetId, array $transferDetailIdsToMove = []): void
@@ -496,7 +541,7 @@ class ViewAsset extends ViewRecord
         $target = $this->record;
 
         $source = $this->mergeableAssets()
-            ->withCount(['attributes', 'assetTransferDetails', 'vehicleChecksheets'])
+            ->withCount(['attributes', 'assetTransferDetails' => fn ($details) => $details->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed()), 'vehicleChecksheets'])
             ->findOrFail($sourceAssetId);
 
         if ($source->id === $target->id) {
@@ -531,20 +576,23 @@ class ViewAsset extends ViewRecord
 
             // 3. Pindahkan asset_transfer_details yang dipilih (non-konflik)
             if (! empty($transferDetailIdsToMove)) {
-                AssetTransferDetail::where('asset_id', $source->id)
+                $this->liveTransferDetails($source->id)
                     ->whereIn('id', $transferDetailIdsToMove)
                     ->update(['asset_id' => $target->id]);
             }
 
             // Hapus transfer details yang konflik (tidak dipilih)
-            AssetTransferDetail::where('asset_id', $source->id)->delete();
+            $this->liveTransferDetails($source->id)->delete();
 
-            // 4. Pindahkan vehicle_checksheets
+            // 4. Pindahkan vehicle_checksheets dan riwayat servis
             VehicleChecksheet::where('asset_id', $source->id)
                 ->update(['asset_id' => $target->id]);
+            AssetService::withTrashed()->where('asset_id', $source->id)
+                ->update(['asset_id' => $target->id]);
 
-            // 5. Hapus aset sumber
-            $source->delete();
+            // 5. Hapus aset sumber permanen (QR-nya ikut lewat cascade): atribut, BA, checksheet,
+            //    dan servis sudah pindah, pemulihan hanya akan membuat aset kosong.
+            $source->forceDelete();
         });
 
         Notification::make()
@@ -654,5 +702,17 @@ class ViewAsset extends ViewRecord
 
         $asset->sale_notes = $data['sale_notes'] ?? null;
         $asset->save();
+    }
+
+    /**
+     * Rincian BA yang masih berlaku: BA di Sampah bukan riwayat aset.
+     *
+     * @return Builder<AssetTransferDetail>
+     */
+    private function liveTransferDetails(int|string|null $assetId): Builder
+    {
+        return AssetTransferDetail::query()
+            ->where('asset_id', $assetId)
+            ->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed());
     }
 }

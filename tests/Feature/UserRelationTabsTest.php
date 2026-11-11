@@ -136,9 +136,12 @@ class UserRelationTabsTest extends TestCase
     {
         $this->actingAs($this->viewer(['view_any_user', 'view_user']));
 
-        foreach ([AssetTransfersRelationManager::class, ItemRequestsRelationManager::class, ItemRequestApprovalsRelationManager::class, ProblemReportsRelationManager::class, HeldAssetsRelationManager::class] as $tab) {
+        foreach ([AssetTransfersRelationManager::class, ItemRequestsRelationManager::class, ItemRequestApprovalsRelationManager::class, HeldAssetsRelationManager::class] as $tab) {
             $this->assertFalse($tab::canViewForRecord($this->owner, EditUser::class), $tab);
         }
+
+        // Lapor Gangguan adalah akses dasar semua karyawan; isinya tetap sebatas yang boleh dilihat.
+        $this->assertTrue(ProblemReportsRelationManager::canViewForRecord($this->owner, EditUser::class));
     }
 
     /**

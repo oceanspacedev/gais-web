@@ -2,6 +2,10 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use App\Enums\AssetCondition;
 use App\Enums\AssetTransferDocumentType;
 use App\Enums\NbhStatus;
@@ -11,6 +15,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * Berita acara transfer aset. Jenis dokumen (document_type) dipilih eksplisit;
@@ -20,7 +25,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  */
 class AssetTransfer extends Model
 {
-    use HasFactory;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'business_entity_id',
@@ -38,7 +43,7 @@ class AssetTransfer extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function details(): HasMany
@@ -85,7 +90,8 @@ class AssetTransfer extends Model
         }
 
         if ($newNumber === null) {
-            $lastTransfer = self::where('business_entity_id', $businessEntity->id)
+            // Termasuk BA terhapus: nomor surat unik dan tidak boleh terpakai ulang.
+            $lastTransfer = self::withTrashed()->where('business_entity_id', $businessEntity->id)
                 ->orderBy('created_at', 'desc')
                 ->first();
 
@@ -98,7 +104,7 @@ class AssetTransfer extends Model
                 $lastNumber++;
                 $newNumberStr = str_pad($lastNumber, 6, '0', STR_PAD_LEFT);
                 $candidate = "{$format}{$newNumberStr}";
-                $exists = self::where('letter_number', $candidate)->exists();
+                $exists = self::withTrashed()->where('letter_number', $candidate)->exists();
             } while ($exists);
 
             return $candidate;
@@ -138,19 +144,6 @@ class AssetTransfer extends Model
         }
 
         return $query->where('document_type', $type->value);
-    }
-
-    /**
-     * BA yang boleh dilihat $user: badan usaha BA termasuk akses user.
-     */
-    public function scopeAccessibleBy(Builder $query, User $user): Builder
-    {
-        return $user->limitToAccessibleBusinessEntities($query, $query->qualifyColumn('business_entity_id'));
-    }
-
-    public function isAccessibleBy(User $user): bool
-    {
-        return $user->canAccessBusinessEntity($this->business_entity_id);
     }
 
     /**
@@ -271,12 +264,12 @@ class AssetTransfer extends Model
             return;
         }
 
-        if (! $this->isAccessibleBy($actor)) {
+        if (! $this->isVisibleTo($actor)) {
             throw new AssetTransferException('Badan usaha BA ini berada di luar akses badan usaha Anda.');
         }
 
         foreach ($this->details as $detail) {
-            if ($detail->asset && ! $detail->asset->isAccessibleBy($actor)) {
+            if ($detail->asset && ! $detail->asset->isVisibleTo($actor)) {
                 throw new AssetTransferException(sprintf(
                     'Aset "%s" berada di luar badan usaha yang bisa Anda akses.',
                     $detail->asset->name,
@@ -372,5 +365,16 @@ class AssetTransfer extends Model
                 $asset->recipient?->name ?? 'pengguna lain',
             ));
         }
+    }
+
+    /**
+     * BA terlihat bila badan usahanya termasuk akses user; BA tanpa badan usaha
+     * hanya untuk user berakses semua badan usaha.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new BusinessEntityRule(allowsNull: false))
+            ->grant(new EveryoneGrant);
     }
 }

@@ -18,7 +18,7 @@ class DivisionApprover extends Model
 
     public function division(): BelongsTo
     {
-        return $this->belongsTo(Division::class);
+        return $this->belongsTo(Division::class)->withTrashed();
     }
 
     public function user(): BelongsTo

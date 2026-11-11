@@ -1,12 +1,13 @@
 # Data legacy sumo-web (Web Gais lama)
 
 Modul Pengajuan Barang, Lapor Gangguan, Asuransi, Perjanjian Sewa, master barang, QR dan
-notifikasi WA berasal dari aplikasi sumo-web. Data lamanya dibaca lewat koneksi database
-`sumo` (lihat `config/database.php`, env `SUMO_DB_*`) oleh perintah:
+notifikasi WA berasal dari aplikasi sumo-web. Dump database lamanya dimuat ke tabel staging
+berawalan `sumo_dump_` di database GAIS (koneksi `sumo` di `config/database.php`, env
+`SUMO_DB_*`), lalu dipetakan ke tabel GAIS oleh perintah:
 
 ```bash
-php artisan sumo:import --dry-run   # laporan jumlah dan pemetaan, tanpa menulis
-php artisan sumo:import             # impor sungguhan, bisa diulang (idempoten)
+php artisan sumo:import --file=sumo.sql.gz --dry-run   # muat dump ke staging, laporan tanpa menulis
+php artisan sumo:import                                # impor sungguhan dari staging, bisa diulang (idempoten)
 ```
 
 ### Lewat panel: Pengaturan > Impor Data Sumo
@@ -15,10 +16,13 @@ Cara yang disarankan, karena setiap langkah tercatat (file, tabel yang dimuat, l
 
 1. **Unggah dump** hasil `mysqldump db_sumo | gzip > sumo.sql.gz` (.sql atau .sql.gz).
    File disimpan privat di disk `SUMO_IMPORT_DISK` (default `FILESYSTEM_DISK`).
-2. Job antrean `long-running` (supervisor Horizon `supervisor-long`) **mengosongkan database
-   staging** (`SUMO_DB_DATABASE`) lalu menjalankan dump ke sana, kemudian **uji coba** otomatis.
-   Loader menolak target yang sama dengan database GAIS, database yang berisi tabel GAIS, dan
-   pernyataan yang menulis ke database lain (`USE`, `db.tabel`, `GRANT`, `DROP DATABASE`, ...).
+2. Job antrean `long-running` (supervisor Horizon `supervisor-long`) **menghapus tabel staging
+   lama** lalu menjalankan dump ke tabel berawalan `sumo_dump_` (`SUMO_DB_PREFIX`) di database
+   GAIS, kemudian **uji coba** otomatis. Setiap nama tabel di dump diberi awalan, jadi
+   `DROP TABLE users` di dump mengenai `sumo_dump_users`, bukan tabel GAIS. Tidak perlu membuat
+   database atau memberi izin MySQL tambahan. Foreign key, view, trigger, dan routine di dump
+   dilewati; pernyataan yang keluar dari tabel staging (`USE`, `db.tabel`, `UPDATE`,
+   `RENAME TABLE`, `INSERT ... SELECT`, `GRANT`, `DROP DATABASE`, ...) ditolak.
 3. Periksa **Hasil uji coba**: jumlah per langkah, pemetaan badan usaha, peringatan penggabungan user.
    Ubah `config/sumo-import.php` bila perlu, lalu **Uji coba ulang**.
 4. **Impor sungguhan** (ketik `IMPOR`) memakai dump yang sama dengan uji coba terakhir, dalam satu
@@ -52,38 +56,40 @@ setiap query beserta binding upsert 500 baris. Akibatnya impor bisa melewati `me
 128M begitu data sumo sekitar 5x ukuran sekarang. Kalau terpaksa menjalankan di lingkungan
 dev, pakai `php -d memory_limit=512M artisan sumo:import`.
 
-## Aturan utama: dump sumo TIDAK BOLEH di-import ke database GAIS
+## Aturan utama: dump sumo TIDAK BOLEH dijalankan langsung ke database GAIS
 
 Dump sumo memakai `DROP TABLE IF EXISTS` dan punya tabel bernama sama dengan GAIS
 (`users`, `roles`, `categories`, `divisions`, `migrations`, `personal_access_tokens`,
-`failed_jobs`, `password_resets`). Di-import ke `db_shelf` berarti tabel GAIS tertimpa,
+`failed_jobs`, `password_resets`). `mysql db_gais < dump-sumo.sql` berarti tabel GAIS tertimpa,
 login dan permission rusak, dan `php artisan migrate` berhenti bekerja.
 
-Cara yang benar di server:
+Muat dump hanya lewat panel atau `php artisan sumo:import --file=...`: loader memberi awalan
+`sumo_dump_` pada setiap tabel, dan menolak berjalan di database GAIS bila `SUMO_DB_PREFIX`
+kosong atau awalannya juga dipakai tabel GAIS (mis. `sumo_` mengenai `sumo_import_runs`).
+
+Mode lama, database staging tersendiri (opsional):
 
 ```bash
-mysql -e "CREATE DATABASE db_sumo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"
-mysql db_sumo < dump-sumo.sql
+mysql -e "CREATE DATABASE db_sumo CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci; GRANT ALL ON db_sumo.* TO '<DB_USERNAME>'@'localhost'"
 ```
 
-lalu di `.env` GAIS:
+lalu di `.env` GAIS (host, port, user, password mengikuti `DB_*` kecuali diisi `SUMO_DB_HOST` dst.):
 
 ```dotenv
 SUMO_DB_DATABASE=db_sumo
+SUMO_DB_PREFIX=
 ```
-
-(host, port, user, password mengikuti `DB_*` kecuali diisi `SUMO_DB_HOST` dst.)
 
 ## Catatan kejadian 12 Okt 2026 (lokal) dan cara memulihkannya
 
-Dump sumo sempat di-import ke `db_shelf`. Pemulihan yang dilakukan, urutannya penting:
+Dump sumo sempat di-import ke `db_gais`. Pemulihan yang dilakukan, urutannya penting:
 
-1. `mysqldump --single-transaction db_shelf > backup-penuh.sql` (simpan di luar repo).
+1. `mysqldump --single-transaction db_gais > backup-penuh.sql` (simpan di luar repo).
 2. Salin 30 tabel sumo ke database baru `db_sumo_latest`
-   (`mysqldump db_shelf <daftar tabel sumo> | mysql db_sumo_latest`).
-3. Muat backup GAIS terakhir ke database sementara `db_shelf_bak`, lalu
-   `mysqldump db_shelf_bak users roles categories divisions migrations personal_access_tokens failed_jobs > restore7.sql`
-   dan `mysql db_shelf < restore7.sql`. mysqldump sudah mematikan `FOREIGN_KEY_CHECKS`,
+   (`mysqldump db_gais <daftar tabel sumo> | mysql db_sumo_latest`).
+3. Muat backup GAIS terakhir ke database sementara `db_gais_bak`, lalu
+   `mysqldump db_gais_bak users roles categories divisions migrations personal_access_tokens failed_jobs > restore7.sql`
+   dan `mysql db_gais < restore7.sql`. mysqldump sudah mematikan `FOREIGN_KEY_CHECKS`,
    dan karena nama tabel sama, FK dari tabel GAIS lain (asset_transfers, model_has_roles, dst)
    otomatis tersambung lagi. **Jangan** memakai `RENAME TABLE` pada tabel yang bentrok nama,
    karena FK tabel lain ikut pindah ke nama baru.
@@ -113,7 +119,11 @@ Yang hilang karena restore: perubahan pada 7 tabel itu antara tanggal backup dan
 4. **Akun sumo.** 87 akun aktif dibuat sebagai user GAIS dengan password lamanya. Role: ADMIN ->
    `pengajuan_admin`, ACCOUNTING -> `accounting`, EXECUTOR -> `executor`, USER -> `requester`.
    Izin tambahan per divisi (HCM, AUDIT, MIS-IT) dan cakupan pengajuan per divisi ada di
-   `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu.
+   `config/sumo-import.php`; ubah lewat menu Users / Divisi bila perlu. Cakupan WHM (ATK area
+   TOP dan MKLI-DEPO), MKLI-HO (ATK area MKLI-4S dan MKLI-HO), dan AUDIT (NOTA) ditandai
+   "menyetujui jumlah": executor menunggu persetujuan divisi itu, seperti tombol Check di sumo.
+   Cakupan hanya diisi pada impor pertama; bila impor pertama sudah terjadi sebelum tanda ini
+   ada, centang "Menyetujui jumlah" pada cakupan tersebut lewat menu Divisi.
 5. **Pemetaan badan usaha.** Periksa `config/sumo-import.php` bagian `business_entities`
    (mis. CV.CS dan PT. RISM punya kandidat lebih dari satu) sebelum impor di server; jalankan
    `php artisan sumo:import --dry-run` dulu dan baca peringatannya.

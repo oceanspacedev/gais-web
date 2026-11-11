@@ -3,35 +3,32 @@
 namespace App\Filament\Widgets;
 
 use App\Filament\Resources\ProblemReportResource;
+use App\Filament\Widgets\Concerns\GuardsWidgetWithPermission;
 use App\Models\ProblemReportCategory;
-use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
-use Filament\Facades\Filament;
+use App\Support\Dashboard\ChartOptions;
+use App\Support\Dashboard\ChartPalette;
+use Filament\Support\RawJs;
 use Filament\Widgets\ChartWidget;
 
 /**
- * Beranda sumo: "Jumlah Laporan Gangguan" per pelapor (10 terbanyak), bisa
- * disaring per jenis gangguan, setahun terakhir.
+ * Dasbor > Lapor Gangguan (sumo: "Jumlah Laporan Gangguan"): laporan per pelapor
+ * (10 terbanyak), bisa disaring per jenis gangguan, setahun terakhir.
  */
 class ProblemReportCountChart extends ChartWidget
 {
-    use HasWidgetShield;
-
-    protected static ?int $sort = 13;
+    use GuardsWidgetWithPermission;
 
     protected ?string $heading = 'Laporan Gangguan per Pelapor';
 
-    // Tanpa polling 5 detik bawaan Filament: angkanya tidak perlu real-time dan querynya berat.
+    protected ?string $description = '10 pelapor dengan laporan terbanyak, 12 bulan terakhir.';
+
     protected ?string $pollingInterval = null;
 
-    protected ?string $maxHeight = '320px';
+    protected ?string $maxHeight = '300px';
 
-    public static function canView(): bool
-    {
-        $permission = static::getWidgetPermission();
-        $user = Filament::auth()?->user();
+    protected int|string|array $columnSpan = 6;
 
-        return $permission && $user ? $user->can($permission) : parent::canView();
-    }
+    public ?string $filter = 'all';
 
     protected function getType(): string
     {
@@ -64,9 +61,15 @@ class ProblemReportCountChart extends ChartWidget
             'datasets' => [[
                 'label' => 'Jumlah laporan',
                 'data' => $rows->pluck('total')->map(fn ($value): int => (int) $value)->all(),
-                'backgroundColor' => '#ef4444',
+                'backgroundColor' => ChartPalette::DANGER,
+                'borderRadius' => 4,
             ]],
             'labels' => $rows->pluck('reporter')->all(),
         ];
+    }
+
+    protected function getOptions(): array|RawJs|null
+    {
+        return ChartOptions::value('int', horizontal: true);
     }
 }

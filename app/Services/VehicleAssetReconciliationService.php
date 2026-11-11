@@ -1045,10 +1045,15 @@ class VehicleAssetReconciliationService
         );
 
         if ($location === null && $batch->auto_create_locations) {
-            $location = AssetLocation::create([
-                'name' => $targetName,
-                'external_code' => Normalizer::key($presence),
-            ]);
+            // Kode gudang unik di database termasuk baris di Sampah: gudang terhapus dipulihkan, bukan digandakan.
+            $location = AssetLocation::withTrashed()->firstOrCreate(
+                ['external_code' => Normalizer::key($presence)],
+                ['name' => $targetName],
+            );
+
+            if ($location->trashed()) {
+                $location->restore();
+            }
         }
 
         if ($location !== null && (int) $asset->asset_location_id !== (int) $location->id) {

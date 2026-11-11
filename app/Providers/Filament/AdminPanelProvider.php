@@ -3,29 +3,27 @@
 namespace App\Providers\Filament;
 
 use App\Filament\Pages\Auth\Login;
+use App\Filament\Pages\Dashboard;
 use App\Filament\Plugins\FilamentExceptionsPlugin;
 use App\Filament\Resources\AssetLocationResource;
 use App\Filament\Resources\AssetResource\Widgets\CustomAssetWidget;
 use App\Filament\Resources\ObChecksheetResource\Pages\ListObChecksheets;
 use App\Filament\Resources\ObChecksheetResource\Pages\ViewObChecksheet;
+use App\Filament\Resources\SecurityChecksheetResource\Pages\ViewSecurityChecksheet;
 use Apriansyahrs\MekayaTheme\Livewire\MekayaSidebar;
 use Apriansyahrs\MekayaTheme\MekayaPlugin;
 use Asmit\ResizedColumn\ResizedColumnPlugin;
-use Awcodes\Overlook\OverlookPlugin;
-use Awcodes\Overlook\Widgets\OverlookWidget;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
 use Filament\Navigation\NavigationGroup;
 use Filament\Navigation\NavigationItem;
-use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
-use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
@@ -54,17 +52,18 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn () => view('auth.login-extra'),
             )
-            // Foto OB Checksheet bisa diklik untuk diperbesar.
+            // Foto OB Checksheet dan lampiran Security Checksheet bisa diklik untuk diperbesar.
             ->renderHook(
                 PanelsRenderHook::BODY_END,
                 fn () => view('filament.ob-checksheet.image-lightbox'),
-                scopes: [ListObChecksheets::class, ViewObChecksheet::class],
+                scopes: [ListObChecksheets::class, ViewObChecksheet::class, ViewSecurityChecksheet::class],
             )
             // Menu dikelompokkan per modul; urutan grup mengikuti daftar ini.
             ->navigationGroups([
                 NavigationGroup::make('Aset'),
                 NavigationGroup::make('Master Aset'),
                 NavigationGroup::make('OB / Kebersihan'),
+                NavigationGroup::make('Security'),
                 NavigationGroup::make('Kendaraan'),
                 NavigationGroup::make('Pekerjaan Vendor'),
                 NavigationGroup::make('Pengajuan Barang'),
@@ -82,13 +81,12 @@ class AdminPanelProvider extends PanelProvider
             ->profile(null)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
+            // Dasbor manajemen: seksi per modul, widget dijaga izin widget_* (lihat App\Filament\Pages\Dashboard).
             ->pages([
-                Pages\Dashboard::class,
+                Dashboard::class,
             ])
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\\Filament\\Widgets')
             ->widgets([
-                Widgets\AccountWidget::class,
-                OverlookWidget::class,
                 CustomAssetWidget::class,
             ])
             ->middleware([
@@ -132,16 +130,6 @@ class AdminPanelProvider extends PanelProvider
                     ->resourceCheckboxListColumns([
                         'default' => 1,
                         'sm' => 2,
-                    ]),
-                OverlookPlugin::make()
-                    ->sort(2)
-                    ->columns([
-                        'default' => 1,
-                        'sm' => 2,
-                        'md' => 3,
-                        'lg' => 4,
-                        'xl' => 4,
-                        '2xl' => null,
                     ]),
             ])
             ->maxContentWidth(Width::Full);

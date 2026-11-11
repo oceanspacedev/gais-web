@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Bus;
 use Throwable;
 
 /**
- * Memuat file dump sebuah run ke database staging sumo. Dijalankan berantai
+ * Memuat file dump sebuah run ke staging sumo. Dijalankan berantai
  * dengan uji coba supaya laporan langsung tersedia setelah unggah.
  */
 class LoadSumoDump implements ShouldQueue
@@ -54,7 +54,7 @@ class LoadSumoDump implements ShouldQueue
         // Staging akan dikosongkan: tidak ada run lain yang datanya masih di sana.
         SumoImportRun::query()->where('staged', true)->update(['staged' => false]);
         $run->forceFill(['status' => SumoImportRun::STATUS_LOADING, 'staged' => false, 'source_tables' => null, 'dry_run_report' => null])->save();
-        $run->appendLog("Memuat {$run->original_name} ke database staging.");
+        $run->appendLog("Memuat {$run->original_name} ke staging.");
 
         try {
             $tables = StoredFile::withLocalPath($run->file_disk, $run->file_path, fn (string $path): array => (new SumoDumpLoader((string) config('sumo-import.connection', 'sumo')))

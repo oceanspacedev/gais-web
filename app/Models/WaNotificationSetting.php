@@ -6,7 +6,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 /**
- * Pengaturan tunggal pengingat WhatsApp (satu baris, id 1).
+ * Pengaturan tunggal pengingat WhatsApp: satu baris, yang pertama ada (impor sumo
+ * menulisnya dengan id 1, tetapi id-nya tidak diandalkan).
  */
 class WaNotificationSetting extends Model
 {
@@ -26,7 +27,7 @@ class WaNotificationSetting extends Model
 
     public static function current(): self
     {
-        return static::query()->firstOrCreate(['id' => 1], [
+        return static::query()->orderBy('id')->first() ?? static::query()->create([
             'is_enabled' => true,
             'target_phones' => '',
             'send_time' => '08:00',

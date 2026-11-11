@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetCondition;
 use App\Enums\AssetServiceStatus;
 use App\Enums\NbhStatus;
@@ -21,7 +22,6 @@ use App\Services\AssetQrLabelHistoryService;
 use App\Services\AssetQrService;
 use App\Support\RelationSearch;
 use App\Support\StoredFile;
-use Carbon\Carbon;
 use Filament\Actions\Action;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkAction;
@@ -29,6 +29,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\Component;
 use Filament\Forms\Components\DatePicker;
@@ -40,18 +43,22 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\ImageEntry;
 use Filament\Infolists\Components\RepeatableEntry;
+use Filament\Infolists\Components\RepeatableEntry\TableColumn;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Grid as ComponentsGrid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\Section as ComponentsSection;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\Alignment;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Enums\FiltersLayout;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -59,6 +66,8 @@ use Illuminate\Support\Facades\Cache;
 
 class AssetResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = Asset::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-archive-box';
@@ -159,7 +168,9 @@ class AssetResource extends Resource
             return null;
         }
 
-        return self::customAttributeDefinitions()->get((int) $customAttributeId);
+        // Definisi di Sampah tetap dikenali untuk nilai yang sudah tersimpan, supaya tidak tertimpa saat aset disimpan.
+        return self::customAttributeDefinitions()->get((int) $customAttributeId)
+            ?? CustomAssetAttribute::withTrashed()->find((int) $customAttributeId);
     }
 
     /**
@@ -379,7 +390,7 @@ class AssetResource extends Resource
 
         // 1. Atribut dokumen yang sudah ada pada aset ini (hanya document_expiry)
         $existing = $record->attributes()
-            ->whereHas('customAttribute', fn ($q) => $q->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)->where('is_active', true))
+            ->whereHas('customAttribute', fn ($q) => $q->withoutTrashed()->where('type', CustomAssetAttribute::TYPE_DOCUMENT_EXPIRY)->where('is_active', true))
             ->with('customAttribute')
             ->get();
 
@@ -729,22 +740,17 @@ class AssetResource extends Resource
                                 }
                             }),
 
+                        // Penjelasan per isian ada di ikon (i) supaya baris tidak memanjang.
                         Section::make('Kondisi & NBH')
+                            ->description('Kelola kondisi fisik aset, dokumen NBH saat insiden, dan audit penjualan saat aset dijual.')
                             ->schema([
-                                Placeholder::make('lifecycle_hint')
-                                    ->label('Panduan')
-                                    ->content('Kelola kondisi fisik aset, dokumen NBH saat insiden, dan audit penjualan saat aset dijual.')
-                                    ->columnSpanFull()
-                                    ->extraAttributes([
-                                        'class' => 'text-sm text-gray-500',
-                                    ]),
                                 Select::make('condition_status')
                                     ->label('Status Kondisi')
                                     ->options(AssetCondition::options())
                                     ->default(AssetCondition::Available->value)
                                     ->required()
                                     ->live()
-                                    ->helperText('Pilih “Dijual” untuk aset yang sudah keluar inventaris, lalu lengkapi audit penjualannya.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pilih “Dijual” untuk aset yang sudah keluar inventaris, lalu lengkapi audit penjualannya.')
                                     ->columnSpan(1)
                                     ->afterStateUpdated(function ($state, callable $set, callable $get) {
                                         if (in_array($state, AssetCondition::incidentValues(), true)) {
@@ -788,19 +794,19 @@ class AssetResource extends Resource
                                         return NbhStatus::options();
                                     })
                                     ->live()
-                                    ->helperText('Perbarui saat proses penggantian selesai.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Perbarui saat proses penggantian selesai.')
                                     ->columnSpan(1)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') !== NbhStatus::None->value),
                                 DatePicker::make('nbh_reported_at')
                                     ->label('Tanggal Insiden')
-                                    ->helperText('Tanggal ditemukannya aset hilang atau rusak.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Tanggal ditemukannya aset hilang atau rusak.')
                                     ->columnSpan(1)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') !== NbhStatus::None->value),
                                 Select::make('nbh_responsible_user_id')
                                     ->label('Penanggung Jawab')
                                     ->options(fn () => Cache::remember('user_options', 300, fn () => User::orderBy('name')->pluck('name', 'id')))
                                     ->searchable()
-                                    ->helperText('Pihak yang bertanggung jawab atas NBH.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pihak yang bertanggung jawab atas NBH.')
                                     ->columnSpan(1)
                                     ->required(fn (callable $get) => $get('nbh_status') === NbhStatus::Resolved->value)
                                     ->visible(fn (callable $get) => in_array($get('condition_status'), AssetCondition::incidentValues(), true) || $get('nbh_status') === NbhStatus::Resolved->value),
@@ -833,21 +839,21 @@ class AssetResource extends Resource
                                 DatePicker::make('sold_at')
                                     ->label('Tanggal Jual')
                                     ->native(false)
-                                    ->helperText('Tanggal efektif aset dijual.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Tanggal efektif aset dijual.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 TextInput::make('sold_to')
                                     ->label('Dijual Ke')
                                     ->maxLength(255)
                                     ->placeholder('Nama pembeli, vendor, atau tujuan penjualan')
-                                    ->helperText('Isi pihak tujuan penjualan untuk kebutuhan audit.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Isi pihak tujuan penjualan untuk kebutuhan audit.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 TextInput::make('sold_price')
                                     ->label('Harga Jual')
                                     ->numeric()
                                     ->prefix('Rp')
-                                    ->helperText('Nilai transaksi penjualan aset.')
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Nilai transaksi penjualan aset.')
                                     ->required(fn (callable $get) => $get('condition_status') === AssetCondition::Sold->value)
                                     ->visible(fn (callable $get): bool => self::shouldShowSaleAuditFields($get)),
                                 FileUpload::make('sale_document_path')
@@ -871,87 +877,86 @@ class AssetResource extends Resource
                             ->visible(fn (): bool => auth()->user()?->can('manageCondition', Asset::class) ?? false),
 
                         Section::make('Penerima Aset')
+                            ->description('Opsional: sesuaikan penerima aset secara manual untuk kasus khusus.')
                             ->schema([
-                                Placeholder::make('recipient_hint')
-                                    ->label('Pengaturan Penerima')
-                                    ->content('Opsional: sesuaikan penerima aset secara manual untuk kasus khusus.')
-                                    ->columnSpanFull()
-                                    ->extraAttributes([
-                                        'class' => 'text-sm text-gray-500',
-                                    ]),
                                 Select::make('recipient_business_entity_id')
-                                    ->translateLabel()
+                                    ->label('Badan Usaha Penerima')
                                     ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->recipient_business_entity_id))
                                     ->searchable()
-                                    ->helperText('Kosongkan jika tetap mengikuti data transfer terakhir.'),
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Kosongkan jika tetap mengikuti data transfer terakhir.'),
                                 Select::make('recipient_id')
-                                    ->translateLabel()
+                                    ->label('Pemegang Aset')
                                     ->options(fn (?Asset $record): array => self::recipientOptions($record))
                                     ->searchable()
                                     ->disabled(fn (callable $get): bool => $get('condition_status') === AssetCondition::Available->value)
-                                    ->helperText('Pilih pemegang aset saat ini. Aset Tersedia berada di stok dan tidak punya pemegang.'),
+                                    ->hintIcon('heroicon-o-information-circle', tooltip: 'Pilih pemegang aset saat ini. Aset Tersedia berada di stok dan tidak punya pemegang.'),
                             ])
-                            ->columns(2)
                             ->visible(fn (): bool => auth()->user()?->can('updateRecipient', Asset::class) ?? false),
                     ])
                     ->columnSpan(2),
 
                 // Kolom kanan
-                Section::make('Detail Pembelian')
-                    ->schema([
-                        DatePicker::make('purchase_date')
-                            ->translateLabel()
-                            ->required(),
-                        Select::make('business_entity_id')
-                            ->translateLabel()
-                            // Aset baru harus masuk badan usaha yang bisa diakses, kalau tidak
-                            // aset itu langsung hilang dari daftar pembuatnya sendiri.
-                            ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
-                            ->in(fn (?Asset $record): array => array_keys(BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id)))
-                            ->searchable()
-                            ->required(),
-                        TextInput::make('item_price')
-                            ->translateLabel()
-                            ->numeric(),
-                        TextInput::make('qty')
-                            ->translateLabel()
-                            ->default(1)
-                            ->required()
-                            ->numeric(),
-                        Select::make('asset_location_id')
-                            ->translateLabel()
-                            ->options(fn () => Cache::remember('asset_location_options', 300, fn () => AssetLocation::orderBy('name')->pluck('name', 'id')))
-                            ->searchable()
-                            ->createOptionForm([
-                                TextInput::make('name')
-                                    ->translateLabel()
-                                    ->required()
-                                    ->maxLength(255),
-                                TextInput::make('address')
-                                    ->translateLabel()
-                                    ->maxLength(255),
-                                TextInput::make('description')
-                                    ->translateLabel()
-                                    ->maxLength(255),
-                            ])
-                            ->createOptionUsing(function ($data) {
-                                $assetLocation = AssetLocation::create([
-                                    'name' => $data['name'],
-                                    'address' => $data['address'],
-                                    'description' => $data['description'],
-                                ]);
-                                Cache::forget('asset_location_options');
+                Group::make([
+                    Section::make('Detail Pembelian')
+                        ->schema([
+                            DatePicker::make('purchase_date')
+                                ->translateLabel()
+                                ->required(),
+                            TextInput::make('qty')
+                                ->translateLabel()
+                                ->default(1)
+                                ->required()
+                                ->numeric(),
+                            TextInput::make('item_price')
+                                ->translateLabel()
+                                ->numeric()
+                                ->columnSpanFull(),
+                            // Selebar baris: tombol + membuat pilihan terlalu sempit kalau dibagi dua.
+                            Select::make('asset_location_id')
+                                ->translateLabel()
+                                ->options(fn () => Cache::remember('asset_location_options', 300, fn () => AssetLocation::orderBy('name')->pluck('name', 'id')))
+                                ->searchable()
+                                ->columnSpanFull()
+                                ->createOptionForm([
+                                    TextInput::make('name')
+                                        ->translateLabel()
+                                        ->required()
+                                        ->maxLength(255),
+                                    TextInput::make('address')
+                                        ->translateLabel()
+                                        ->maxLength(255),
+                                    TextInput::make('description')
+                                        ->translateLabel()
+                                        ->maxLength(255),
+                                ])
+                                ->createOptionUsing(function ($data) {
+                                    $assetLocation = AssetLocation::create([
+                                        'name' => $data['name'],
+                                        'address' => $data['address'],
+                                        'description' => $data['description'],
+                                    ]);
+                                    Cache::forget('asset_location_options');
 
-                                return $assetLocation->id;
-                            }),
-                        FileUpload::make('image')
-                            ->label('Foto Aset')
-                            ->directory('assets') // Define the directory to store images
-                            ->image() // Only allow image uploads
-                            ->maxSize(2048),
-                    ])
-                    ->columns(1)
-                    ->columnSpan(1),
+                                    return $assetLocation->id;
+                                }),
+                            Select::make('business_entity_id')
+                                ->translateLabel()
+                                // Aset baru harus masuk badan usaha yang bisa diakses, kalau tidak
+                                // aset itu langsung hilang dari daftar pembuatnya sendiri.
+                                ->options(fn (?Asset $record): array => BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id))
+                                ->in(fn (?Asset $record): array => array_keys(BusinessEntity::optionsFor(auth()->user(), $record?->business_entity_id)))
+                                ->searchable()
+                                ->required()
+                                ->columnSpanFull(),
+                            FileUpload::make('image')
+                                ->label('Foto Aset')
+                                ->directory('assets') // Define the directory to store images
+                                ->image() // Only allow image uploads
+                                ->maxSize(2048)
+                                ->columnSpanFull(),
+                        ])
+                        ->columns(2),
+                ])->columnSpan(1),
             ])->columns(3);
     }
 
@@ -1035,14 +1040,15 @@ class AssetResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('businessEntity')
-                    ->relationship('businessEntity', 'name')
+                    ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
                     ->preload(),
                 SelectFilter::make('category')
-                    ->relationship('category', 'name')
+                    ->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->label('Kategori')
                     ->multiple()
                     ->searchable()
@@ -1056,7 +1062,7 @@ class AssetResource extends Resource
                     ->options(NbhStatus::options())
                     ->multiple(),
                 SelectFilter::make('assetLocation')
-                    ->relationship('assetLocation', 'name')
+                    ->relationship('assetLocation', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->translateLabel()
                     ->multiple()
                     ->searchable()
@@ -1104,6 +1110,7 @@ class AssetResource extends Resource
                 ->label('Filter Audit')
                 ->slideOver())
             ->actions([
+                RestoreAction::make(),
                 Action::make('completeRepair')
                     ->label('Selesaikan Perbaikan')
                     ->icon('heroicon-o-check-circle')
@@ -1144,6 +1151,8 @@ class AssetResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     BulkAction::make('printQrLabels')
                         ->label('Print Label QR')
                         ->icon('heroicon-o-printer')
@@ -1169,18 +1178,6 @@ class AssetResource extends Resource
                     DeleteBulkAction::make(),
                 ]),
             ]);
-    }
-
-    /**
-     * Pengguna dengan akses badan usaha terbatas hanya melihat aset yang
-     * pemilik atau pemegangnya ada di badan usaha yang bisa diaksesnya.
-     */
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-        $viewer = auth()->user();
-
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query;
     }
 
     public static function getRelations(): array
@@ -1213,236 +1210,283 @@ class AssetResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        $hasNbh = fn (?Asset $record): bool => $record?->nbh_status instanceof NbhStatus && $record->nbh_status !== NbhStatus::None;
+        $qrUrl = fn (Asset $record): ?string => $record->qr ? app(AssetQrService::class)->publicUrl($record->qr) : null;
+
+        // Kiri: data aset dan riwayatnya. Kanan: status, penempatan, QR.
         return $infolist
+            ->columns(['default' => 1, 'lg' => 3])
             ->schema([
-                ComponentsGrid::make(1)
-                    ->schema([
-                        ComponentsSection::make('Informasi Aset')
-                            ->schema([
-                                ComponentsGrid::make(2)
-                                    ->schema([
-                                        TextEntry::make('name')
-                                            ->label(__('Nama Aset'))
-                                            ->columnSpan(2),
-                                        TextEntry::make('category.name')
-                                            ->label(__('Kategori')),
-                                        TextEntry::make('brand.name')
-                                            ->label(__('Merek')),
-                                        TextEntry::make('type')
-                                            ->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_TYPE))
-                                            ->placeholder('-'),
-                                        ImageEntry::make('image')
-                                            ->label('Foto Aset')
-                                            ->width('100px')
-                                            ->height('100px'),
-                                    ]),
-                            ])
-                            ->grow(true),
-
-                        ComponentsSection::make('Atribut Khusus')
-                            ->schema([
-                                ComponentsGrid::make(2)
-                                    ->schema(function ($record) {
-                                        $record->load('attributes.customAttribute');
-
-                                        return $record->attributes->map(function ($attribute) {
-                                            $entry = TextEntry::make("custom_attribute_{$attribute->custom_attribute_id}")
-                                                ->label($attribute->customAttribute?->name ?? 'Unknown Attribute')
-                                                ->state($attribute->displayValue());
-
-                                            if ($attribute->isDocumentExpiryAttribute()) {
-                                                $entry
-                                                    ->badge()
-                                                    ->color(fn () => $attribute->expiryReminderStatusColorOn());
-
-                                                if ($attribute->documentUrl()) {
-                                                    $entry
-                                                        ->url($attribute->documentUrl(), true)
-                                                        ->openUrlInNewTab();
-                                                }
-                                            }
-
-                                            return $entry;
-                                        })->toArray();
-                                    }),
-                            ]),
-
-                        ComponentsSection::make('Detail Pembelian')
-                            ->schema([
-                                ComponentsGrid::make(4)
-                                    ->schema([
-                                        TextEntry::make('purchase_date')
-                                            ->label(__('Tanggal Pembelian'))
-                                            ->formatStateUsing(fn ($state) => Carbon::parse($state)->format('d/m/Y'))
-                                            ->extraAttributes(['style' => 'color:#007BFF;']),
-                                        TextEntry::make('item_price')
-                                            ->label(__('Harga'))
-                                            ->formatStateUsing(fn ($state) => 'Rp '.number_format($state, 0, ',', '.'))
-                                            ->extraAttributes([
-                                                'style' => 'color:#28a745; font-weight:bold;',
-                                            ]),
-                                        TextEntry::make('qty')
-                                            ->label(__('Kuantitas')),
-                                        TextEntry::make('businessEntity.name')
-                                            ->label(__('Entitas Bisnis')),
-                                    ]),
-                            ]),
-                    ])
-                    ->columnSpan([
-                        'default' => 'full',
-                        'lg' => 2,
-                    ]),
-
-                ComponentsGrid::make(1)
-                    ->schema([
-                        ComponentsSection::make('Status & NBH')
-                            ->schema([
-                                ComponentsGrid::make(1)
-                                    ->schema([
-                                        TextEntry::make('condition_status_label')
-                                            ->label(__('Status Aset'))
-                                            ->badge()
-                                            ->color(fn ($state, Asset $record): string => $record->condition_status_color ?? 'secondary')
-                                            ->extraAttributes(['style' => 'font-weight:bold;']),
-                                        TextEntry::make('nbh_status_label')
-                                            ->label(__('Status NBH'))
-                                            ->badge()
-                                            ->color(fn ($state, Asset $record): string => $record->nbh_status_color ?? 'gray'),
-                                        TextEntry::make('validasi_status')
-                                            ->label(__('Status Validasi'))
-                                            ->badge()
-                                            ->color(fn ($state): string => $state === 'Valid' ? 'success' : 'danger')
-                                            ->state(fn (Asset $record): string => $record->checkValidRecipient() ? 'Valid' : 'Tidak Valid'),
-                                    ]),
-                                ComponentsGrid::make(1)
-                                    ->schema([
-                                        TextEntry::make('asset_location_display')
-                                            ->label(__('Lokasi Aset'))
-                                            ->state(fn (Asset $record): string => $record->assetLocation?->name ?? '-'),
-                                        TextEntry::make('recipient_display')
-                                            ->label(__('Pemegang Aset'))
-                                            // Stok tidak punya pemegang; tampilkan badan usaha stoknya, bukan "-".
-                                            ->state(fn (Asset $record): string => $record->recipient?->name
-                                                ?? ($record->condition_status === AssetCondition::Available
-                                                    ? collect(['Stok', $record->recipientBusinessEntity?->name])->filter()->implode(' · ')
-                                                    : '-')),
-                                    ]),
-
-                                ComponentsSection::make('QR Code')
-                                    ->schema([
-                                        TextEntry::make('qr.id')
-                                            ->label('ID QR')
-                                            ->copyable()
-                                            ->placeholder('Belum ada QR'),
-                                        TextEntry::make('qr_public_url')
-                                            ->label('URL Scan')
-                                            ->state(fn (Asset $record): string => $record->qr
-                                                ? app(AssetQrService::class)->publicUrl($record->qr)
-                                                : '-')
-                                            ->url(fn (Asset $record): ?string => $record->qr
-                                                ? app(AssetQrService::class)->publicUrl($record->qr)
-                                                : null, true)
-                                            ->placeholder('-'),
-                                        ImageEntry::make('qr_preview')
-                                            ->label('Preview')
-                                            ->state(function (Asset $record): ?string {
-                                                if (! $record->qr) {
-                                                    return null;
-                                                }
-
-                                                $png = app(AssetQrService::class)->png($record->qr, 200);
-
-                                                return 'data:image/png;base64,'.base64_encode($png);
-                                            })
-                                            ->visible(fn (Asset $record): bool => (bool) $record->qr),
-                                    ]),
-                                ComponentsGrid::make(1)
-                                    ->schema([
-                                        TextEntry::make('nbh_reported_at_display')
-                                            ->label(__('Tanggal Insiden'))
-                                            ->state(fn (?Asset $record): string => $record?->nbh_status instanceof NbhStatus && $record->nbh_status !== NbhStatus::None
-                                                ? optional($record->nbh_reported_at)?->format('d M Y') ?? '-'
-                                                : '-'),
-                                        TextEntry::make('nbh_responsible_display')
-                                            ->label(__('Penanggung Jawab'))
-                                            ->state(fn (?Asset $record): string => $record?->nbh_status instanceof NbhStatus && $record->nbh_status !== NbhStatus::None
-                                                ? $record->nbhResponsible?->name ?? '-'
-                                                : '-'),
-                                    ])
-                                    ->visible(fn (?Asset $record): bool => $record?->nbh_status instanceof NbhStatus && $record->nbh_status !== NbhStatus::None),
-                                TextEntry::make('nbh_notes')
-                                    ->label(__('Catatan NBH'))
+                Group::make([
+                    Section::make('Informasi Aset')
+                        ->icon('heroicon-o-cube')
+                        ->schema([
+                            // Nama aset sudah jadi judul halaman.
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('category.name')
+                                    ->label(__('Kategori'))
+                                    ->placeholder('-'),
+                                TextEntry::make('brand.name')
+                                    ->label(__('Merek'))
+                                    ->placeholder('-'),
+                                TextEntry::make('type')
+                                    ->label(fn (): string => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_TYPE))
+                                    ->placeholder('-'),
+                                ImageEntry::make('image')
+                                    ->label('Foto Aset')
+                                    ->height(160)
                                     ->columnSpanFull()
-                                    ->visible(fn (?Asset $record): bool => filled($record?->nbh_notes)),
+                                    ->visible(fn (?Asset $record): bool => filled($record?->image)),
                             ]),
+                        ]),
 
-                        ComponentsSection::make('Audit Penjualan')
-                            ->schema([
-                                ComponentsGrid::make(3)
-                                    ->schema([
-                                        TextEntry::make('sold_at')
-                                            ->label(__('Tanggal Jual'))
-                                            ->state(fn (Asset $record): string => optional($record->sold_at)?->format('d M Y') ?? '-'),
-                                        TextEntry::make('sold_to')
-                                            ->label(__('Dijual Ke'))
-                                            ->state(fn (Asset $record): string => $record->sold_to ?? '-'),
-                                        TextEntry::make('sold_price')
-                                            ->label(__('Harga Jual'))
-                                            ->state(fn (?Asset $record): string => $record?->sold_price !== null ? 'Rp '.number_format($record->sold_price, 0, ',', '.') : '-'),
-                                    ]),
-                                TextEntry::make('sale_notes')
-                                    ->label(__('Catatan Penjualan'))
-                                    ->columnSpanFull()
-                                    ->visible(fn (?Asset $record): bool => filled($record?->sale_notes)),
-                            ])
-                            ->visible(fn (?Asset $record): bool => $record !== null && self::hasSaleAuditRecord($record)),
+                    // Atribut identitas Type sudah tampil di Informasi Aset.
+                    Section::make('Atribut Khusus')
+                        ->icon('heroicon-o-tag')
+                        ->visible(fn (Asset $record): bool => static::detailAttributes($record)->isNotEmpty())
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])
+                                ->schema(fn (Asset $record): array => static::detailAttributes($record)->map(function (AssetAttribute $attribute) {
+                                    $entry = TextEntry::make("custom_attribute_{$attribute->custom_attribute_id}")
+                                        ->label($attribute->customAttribute?->name ?? 'Unknown Attribute')
+                                        ->state($attribute->displayValue())
+                                        ->placeholder('-');
 
-                        ComponentsSection::make('Dokumen Pendukung')
-                            ->schema([
-                                ComponentsGrid::make(2)
-                                    ->schema([
-                                        TextEntry::make('audit_document_path')
-                                            ->label(__('Dokumen Audit'))
-                                            ->url(fn (?Asset $record) => $record?->audit_document_path ? StoredFile::url($record->audit_document_path) : null, true)
-                                            ->openUrlInNewTab()
-                                            ->visible(fn (?Asset $record): bool => filled($record?->audit_document_path)),
-                                        TextEntry::make('nbh_document_path')
-                                            ->label(__('Nota Barang Hilang'))
-                                            ->url(fn (?Asset $record) => $record?->nbh_document_path ? StoredFile::url($record->nbh_document_path) : null, true)
-                                            ->openUrlInNewTab()
-                                            ->visible(fn (?Asset $record): bool => filled($record?->nbh_document_path)),
-                                        TextEntry::make('sale_document_path')
-                                            ->label(__('Dokumen Penjualan'))
-                                            ->url(fn (?Asset $record) => self::resolveDocumentUrl($record?->sale_document_path), true)
-                                            ->openUrlInNewTab()
-                                            ->visible(fn (?Asset $record): bool => filled($record?->sale_document_path)),
-                                    ]),
-                            ])
-                            ->visible(fn (?Asset $record): bool => filled($record?->audit_document_path) || filled($record?->nbh_document_path) || filled($record?->sale_document_path)),
+                                    if ($attribute->isDocumentExpiryAttribute()) {
+                                        $entry
+                                            ->badge()
+                                            ->color(fn () => $attribute->expiryReminderStatusColorOn());
 
-                        ComponentsSection::make('Riwayat Servis Aset')
-                            ->schema([
-                                RepeatableEntry::make('services')
-                                    ->label('')
-                                    ->schema([
-                                        TextEntry::make('service_number')->label(__('No. Servis'))->weight('bold'),
-                                        TextEntry::make('service_date')->label(__('Tgl Servis'))->state(fn ($record) => $record->service_date?->format('d M Y')),
-                                        TextEntry::make('provider_label')->label(__('Pelaksana')),
-                                        TextEntry::make('total_cost')->label(__('Biaya'))->state(fn ($record) => 'Rp '.number_format($record->total_cost ?: 0, 0, ',', '.')),
-                                        TextEntry::make('status')->label(__('Status'))->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
-                                    ])
-                                    ->columns(5),
-                            ])
-                            ->visible(fn (?Asset $record): bool => (bool) $record?->services()->exists()),
-                    ])
-                    ->columnSpan([
-                        'default' => 'full',
-                        'lg' => 1,
-                    ]),
-            ])
-            ->columns([
-                'default' => 1,
-                'lg' => 3,
+                                        if ($attribute->documentUrl()) {
+                                            $entry->url($attribute->documentUrl(), true);
+                                        }
+                                    }
+
+                                    return $entry;
+                                })->all()),
+                        ]),
+
+                    Section::make('Detail Pembelian')
+                        ->icon('heroicon-o-shopping-bag')
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 4])->schema([
+                                TextEntry::make('purchase_date')
+                                    ->label(__('Tanggal Pembelian'))
+                                    ->date('d M Y')
+                                    ->placeholder('-'),
+                                TextEntry::make('item_price')
+                                    ->label(__('Harga'))
+                                    ->state(fn (Asset $record): ?string => $record->item_price !== null ? 'Rp '.number_format($record->item_price, 0, ',', '.') : null)
+                                    ->weight(FontWeight::Bold)
+                                    ->color('success')
+                                    ->placeholder('-'),
+                                TextEntry::make('qty')
+                                    ->label(__('Kuantitas'))
+                                    ->placeholder('-'),
+                                TextEntry::make('businessEntity.name')
+                                    ->label(__('Entitas Bisnis'))
+                                    ->placeholder('-'),
+                            ]),
+                        ]),
+
+                    Section::make('Audit Penjualan')
+                        ->icon('heroicon-o-banknotes')
+                        ->visible(fn (?Asset $record): bool => $record !== null && self::hasSaleAuditRecord($record))
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('sold_at')
+                                    ->label(__('Tanggal Jual'))
+                                    ->date('d M Y')
+                                    ->placeholder('-'),
+                                TextEntry::make('sold_to')
+                                    ->label(__('Dijual Ke'))
+                                    ->placeholder('-'),
+                                TextEntry::make('sold_price')
+                                    ->label(__('Harga Jual'))
+                                    ->state(fn (?Asset $record): ?string => $record?->sold_price !== null ? 'Rp '.number_format($record->sold_price, 0, ',', '.') : null)
+                                    ->weight(FontWeight::Bold)
+                                    ->placeholder('-'),
+                            ]),
+                            TextEntry::make('sale_notes')
+                                ->label(__('Catatan Penjualan'))
+                                ->visible(fn (?Asset $record): bool => filled($record?->sale_notes)),
+                        ]),
+
+                    // Penjualan antar badan usaha (AssetSale), urut kronologis;
+                    // pemilik saat ini (Detail Pembelian) adalah pembeli terakhir.
+                    Section::make('Riwayat Kepemilikan')
+                        ->icon('heroicon-o-building-office-2')
+                        ->description('Penjualan antar badan usaha di dalam grup; pemilik saat ini adalah pembeli terakhir.')
+                        ->visible(fn (?Asset $record): bool => (bool) $record?->sales()->exists())
+                        ->schema([
+                            RepeatableEntry::make('sales')
+                                ->hiddenLabel()
+                                ->table([
+                                    TableColumn::make(__('Tanggal')),
+                                    TableColumn::make(__('Dari')),
+                                    TableColumn::make(__('Kepada')),
+                                    TableColumn::make(__('Harga'))->alignment(Alignment::End),
+                                    TableColumn::make(__('Dokumen')),
+                                    TableColumn::make(__('Dicatat oleh')),
+                                ])
+                                ->schema([
+                                    TextEntry::make('sold_at')->label(__('Tanggal'))->date('d M Y')->placeholder('-'),
+                                    TextEntry::make('fromBusinessEntity.name')->label(__('Dari'))->badge()->color('danger')->placeholder('-'),
+                                    TextEntry::make('toBusinessEntity.name')->label(__('Kepada'))->badge()->color('success')->placeholder('-'),
+                                    TextEntry::make('sold_price')->label(__('Harga'))->state(fn ($record) => 'Rp '.number_format($record->sold_price ?: 0, 0, ',', '.'))->alignEnd(),
+                                    TextEntry::make('document_path')
+                                        ->label(__('Dokumen'))
+                                        ->state(fn ($record): string => $record->document_path ? 'Lihat' : '-')
+                                        ->color(fn ($record): string => $record->document_path ? 'primary' : 'gray')
+                                        ->url(fn ($record): ?string => $record->document_path ? StoredFile::url($record->document_path) : null, true),
+                                    TextEntry::make('createdBy.name')->label(__('Dicatat oleh'))->placeholder('-'),
+                                ]),
+                        ]),
+
+                    Section::make('Dokumen Pendukung')
+                        ->icon('heroicon-o-paper-clip')
+                        ->visible(fn (?Asset $record): bool => filled($record?->audit_document_path) || filled($record?->nbh_document_path) || filled($record?->sale_document_path))
+                        ->schema([
+                            Grid::make(['default' => 1, 'sm' => 3])->schema([
+                                TextEntry::make('audit_document_path')
+                                    ->label(__('Dokumen Audit'))
+                                    ->state('Lihat Dokumen')
+                                    ->icon('heroicon-o-paper-clip')
+                                    ->color('primary')
+                                    ->url(fn (?Asset $record) => $record?->audit_document_path ? StoredFile::url($record->audit_document_path) : null, true)
+                                    ->visible(fn (?Asset $record): bool => filled($record?->audit_document_path)),
+                                TextEntry::make('nbh_document_path')
+                                    ->label(__('Nota Barang Hilang'))
+                                    ->state('Lihat Dokumen')
+                                    ->icon('heroicon-o-paper-clip')
+                                    ->color('primary')
+                                    ->url(fn (?Asset $record) => $record?->nbh_document_path ? StoredFile::url($record->nbh_document_path) : null, true)
+                                    ->visible(fn (?Asset $record): bool => filled($record?->nbh_document_path)),
+                                TextEntry::make('sale_document_path')
+                                    ->label(__('Dokumen Penjualan'))
+                                    ->state('Lihat Dokumen')
+                                    ->icon('heroicon-o-paper-clip')
+                                    ->color('primary')
+                                    ->url(fn (?Asset $record) => self::resolveDocumentUrl($record?->sale_document_path), true)
+                                    ->visible(fn (?Asset $record): bool => filled($record?->sale_document_path)),
+                            ]),
+                        ]),
+
+                    Section::make('Riwayat Servis Aset')
+                        ->icon('heroicon-o-wrench-screwdriver')
+                        ->visible(fn (?Asset $record): bool => (bool) $record?->services()->exists())
+                        ->schema([
+                            RepeatableEntry::make('services')
+                                ->hiddenLabel()
+                                ->table([
+                                    TableColumn::make(__('No. Servis')),
+                                    TableColumn::make(__('Tgl Servis')),
+                                    TableColumn::make(__('Pelaksana')),
+                                    TableColumn::make(__('Biaya'))->alignment(Alignment::End),
+                                    TableColumn::make(__('Status')),
+                                ])
+                                ->schema([
+                                    TextEntry::make('service_number')->label(__('No. Servis'))->weight('bold'),
+                                    TextEntry::make('service_date')->label(__('Tgl Servis'))->date('d M Y')->placeholder('-'),
+                                    TextEntry::make('provider_label')->label(__('Pelaksana'))->placeholder('-'),
+                                    TextEntry::make('total_cost')->label(__('Biaya'))->state(fn ($record) => 'Rp '.number_format($record->total_cost ?: 0, 0, ',', '.'))->alignEnd(),
+                                    TextEntry::make('status')->label(__('Status'))->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
+                                ]),
+                        ]),
+                ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
+
+                Group::make([
+                    Section::make('Status')
+                        ->icon('heroicon-o-shield-check')
+                        ->schema([
+                            Grid::make(['default' => 2, 'lg' => 1])->schema([
+                                TextEntry::make('condition_status_label')
+                                    ->label(__('Status Aset'))
+                                    ->badge()
+                                    ->color(fn ($state, Asset $record): string => $record->condition_status_color ?? 'gray'),
+                                TextEntry::make('nbh_status_label')
+                                    ->label(__('Status NBH'))
+                                    ->badge()
+                                    ->color(fn ($state, Asset $record): string => $record->nbh_status_color ?? 'gray'),
+                                TextEntry::make('validasi_status')
+                                    ->label(__('Status Validasi'))
+                                    ->badge()
+                                    ->color(fn ($state): string => $state === 'Valid' ? 'success' : 'danger')
+                                    ->state(fn (Asset $record): string => $record->checkValidRecipient() ? 'Valid' : 'Tidak Valid'),
+                            ]),
+                            Grid::make(['default' => 2, 'lg' => 1])
+                                ->visible($hasNbh)
+                                ->schema([
+                                    TextEntry::make('nbh_reported_at')
+                                        ->label(__('Tanggal Insiden'))
+                                        ->date('d M Y')
+                                        ->placeholder('-'),
+                                    TextEntry::make('nbhResponsible.name')
+                                        ->label(__('Penanggung Jawab'))
+                                        ->placeholder('-'),
+                                ]),
+                            TextEntry::make('nbh_notes')
+                                ->label(__('Catatan NBH'))
+                                ->visible(fn (?Asset $record): bool => filled($record?->nbh_notes)),
+                        ]),
+
+                    Section::make('Penempatan')
+                        ->icon('heroicon-o-map-pin')
+                        ->schema([
+                            Grid::make(['default' => 2, 'lg' => 1])->schema([
+                                TextEntry::make('assetLocation.name')
+                                    ->label(__('Lokasi Aset'))
+                                    ->placeholder('-'),
+                                TextEntry::make('recipient_display')
+                                    ->label(__('Pemegang Aset'))
+                                    ->weight(FontWeight::SemiBold)
+                                    // Stok tidak punya pemegang; tampilkan badan usaha stoknya, bukan "-".
+                                    ->state(fn (Asset $record): string => $record->recipient?->name
+                                        ?? ($record->condition_status === AssetCondition::Available
+                                            ? collect(['Stok', $record->recipientBusinessEntity?->name])->filter()->implode(' · ')
+                                            : '-')),
+                            ]),
+                        ]),
+
+                    Section::make('QR Code')
+                        ->icon('heroicon-o-qr-code')
+                        ->schema([
+                            ImageEntry::make('qr_preview')
+                                ->hiddenLabel()
+                                ->state(fn (Asset $record): ?string => $record->qr
+                                    ? 'data:image/png;base64,'.base64_encode(app(AssetQrService::class)->png($record->qr, 200))
+                                    : null)
+                                ->height(140)
+                                ->alignCenter()
+                                ->visible(fn (Asset $record): bool => (bool) $record->qr),
+                            TextEntry::make('qr.id')
+                                ->label('ID QR')
+                                ->copyable()
+                                ->placeholder('Belum ada QR'),
+                            TextEntry::make('qr_public_url')
+                                ->label('URL Scan')
+                                ->state($qrUrl)
+                                ->url($qrUrl, true)
+                                ->color('primary')
+                                ->size(TextSize::Small)
+                                ->visible(fn (Asset $record): bool => (bool) $record->qr),
+                        ]),
+                ])->columnSpan(1)->extraAttributes(['class' => 'gais-fill-column']),
             ]);
+    }
+
+    /**
+     * Atribut khusus untuk bagian "Atribut Khusus", tanpa Type yang sudah
+     * tampil di Informasi Aset.
+     *
+     * @return \Illuminate\Support\Collection<int, AssetAttribute>
+     */
+    private static function detailAttributes(Asset $record): \Illuminate\Support\Collection
+    {
+        $record->loadMissing('attributes.customAttribute');
+
+        return $record->attributes
+            ->reject(fn (AssetAttribute $attribute): bool => $attribute->custom_attribute_id === CustomAssetAttribute::idForKey(CustomAssetAttribute::KEY_TYPE))
+            ->values();
     }
 }

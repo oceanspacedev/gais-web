@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\UnitType;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class UnitTypePolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     public function viewAny(User $user): bool
     {
@@ -17,7 +18,7 @@ class UnitTypePolicy
 
     public function view(User $user, UnitType $unitType): bool
     {
-        return $user->can('view_unit::type');
+        return $user->can('view_unit::type') && $this->visible($user, $unitType);
     }
 
     public function create(User $user): bool
@@ -27,12 +28,12 @@ class UnitTypePolicy
 
     public function update(User $user, UnitType $unitType): bool
     {
-        return $user->can('update_unit::type');
+        return $user->can('update_unit::type') && $this->editable($user, $unitType);
     }
 
     public function delete(User $user, UnitType $unitType): bool
     {
-        return $user->can('delete_unit::type');
+        return $user->can('delete_unit::type') && $this->editable($user, $unitType);
     }
 
     public function deleteAny(User $user): bool
@@ -42,7 +43,7 @@ class UnitTypePolicy
 
     public function forceDelete(User $user, UnitType $unitType): bool
     {
-        return $user->can('force_delete_unit::type');
+        return $user->can('force_delete_unit::type') && $this->visible($user, $unitType);
     }
 
     public function forceDeleteAny(User $user): bool
@@ -52,7 +53,7 @@ class UnitTypePolicy
 
     public function restore(User $user, UnitType $unitType): bool
     {
-        return $user->can('restore_unit::type');
+        return $user->can('restore_unit::type') && $this->visible($user, $unitType);
     }
 
     public function restoreAny(User $user): bool
@@ -62,7 +63,7 @@ class UnitTypePolicy
 
     public function replicate(User $user, UnitType $unitType): bool
     {
-        return $user->can('replicate_unit::type');
+        return $user->can('replicate_unit::type') && $this->editable($user, $unitType);
     }
 
     public function reorder(User $user): bool

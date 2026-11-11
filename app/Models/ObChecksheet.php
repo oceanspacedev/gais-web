@@ -2,16 +2,21 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\ObChecksheets\UnclaimedPoolGrant;
+use App\Access\Rules\OwnerGrant;
+use App\Access\Rules\PermissionGrant;
+use App\Access\Visibility;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ObChecksheet extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     public const STATUS_PENDING = 'pending';
 
@@ -69,20 +74,6 @@ class ObChecksheet extends Model
     public function obShift(): BelongsTo
     {
         return $this->belongsTo(ObShift::class)->withTrashed();
-    }
-
-    /**
-     * Tugas milik user, ditambah tugas kolam bersama yang belum diambil siapa pun.
-     *
-     * @param  Builder<ObChecksheet>  $query
-     * @return Builder<ObChecksheet>
-     */
-    public function scopeVisibleTo(Builder $query, User $user): Builder
-    {
-        return $query->where(function (Builder $query) use ($user): void {
-            $query->where('user_id', $user->id)
-                ->orWhere(fn (Builder $query) => $query->unclaimed());
-        });
     }
 
     /**
@@ -331,6 +322,19 @@ class ObChecksheet extends Model
             $sequence = ((int) $matches[1]) + 1;
         }
 
-        return $prefix . str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+        return $prefix.str_pad((string) $sequence, 4, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * Petugas melihat tugasnya sendiri dan tugas kolam bersama yang belum
+     * diambil; pemegang "Lihat Data Semua User" melihat semua checksheet.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(
+            new PermissionGrant('view_all_ob::checksheet'),
+            new OwnerGrant,
+            new UnclaimedPoolGrant,
+        );
     }
 }

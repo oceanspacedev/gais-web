@@ -40,7 +40,7 @@ class HeldAssetsRelationManager extends RelationManager
         $viewer = auth()->user();
         $query = $owner->heldAssets()->getQuery();
 
-        return $viewer instanceof User ? $query->accessibleBy($viewer) : $query->whereRaw('1 = 0');
+        return AssetResource::scopeToViewer($query, $viewer);
     }
 
     public function isReadOnly(): bool

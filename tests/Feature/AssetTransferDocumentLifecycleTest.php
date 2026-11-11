@@ -493,6 +493,7 @@ class AssetTransferDocumentLifecycleTest extends TestCase
         });
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('format')->nullable();
@@ -500,6 +501,7 @@ class AssetTransferDocumentLifecycleTest extends TestCase
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('condition_status')->default(AssetCondition::Available->value);
@@ -523,6 +525,7 @@ class AssetTransferDocumentLifecycleTest extends TestCase
         AssetIdentitySchema::ensure();
 
         Schema::create('asset_transfers', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->unsignedBigInteger('business_entity_id')->nullable();
             $table->string('document_type', 32)->nullable();

@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\VehicleChecksheetResource\Pages;
 use App\Models\AssetAttribute;
 use App\Models\VehicleChecksheet;
@@ -9,6 +10,9 @@ use App\Support\StoredFile;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
 use Filament\Resources\Pages\CreateRecord;
 use Filament\Resources\Resource;
@@ -27,6 +31,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class VehicleChecksheetResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = VehicleChecksheet::class;
 
     public static function getModelLabel(): string
@@ -51,6 +57,7 @@ class VehicleChecksheetResource extends Resource
             ->schema([
                 // Informasi Kendaraan
                 Section::make('Informasi Kendaraan')
+                    ->columns(['default' => 1, 'md' => 2, 'lg' => 3])
                     ->schema([
                         // Forms\Components\Select::make('asset_id')
                         //     ->relationship('asset', 'name')
@@ -68,8 +75,10 @@ class VehicleChecksheetResource extends Resource
                             ->options(function () {
                                 // Ambil data dari AssetAttribute yang terkait dengan CustomAssetAttribute "Plat Nomor"
                                 return AssetAttribute::whereHas('customAttribute', function ($query) {
-                                    $query->where('name', 'Plat Nomor');
-                                })->pluck('attribute_value', 'attribute_value'); // Menggunakan attribute_value sebagai key dan value
+                                    $query->withoutTrashed()->where('name', 'Plat Nomor')->where('is_active', true);
+                                })
+                                    ->whereHas('asset', fn ($asset) => $asset->withoutTrashed())
+                                    ->pluck('attribute_value', 'attribute_value'); // Menggunakan attribute_value sebagai key dan value
                             })
                             ->searchable()
                             ->required()
@@ -99,7 +108,9 @@ class VehicleChecksheetResource extends Resource
                     ]),
 
                 // Informasi Keberangkatan
+                // KM dan waktu sebaris, dua foto berdampingan.
                 Section::make('Informasi Keberangkatan')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('start_km')
                             ->required()
@@ -154,6 +165,7 @@ class VehicleChecksheetResource extends Resource
 
                 // Informasi Pengembalian
                 Section::make('Informasi Pengembalian')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('end_km')
                             ->required()
@@ -197,6 +209,7 @@ class VehicleChecksheetResource extends Resource
                     ->hidden(fn ($livewire) => $livewire instanceof CreateRecord),
                 // Informasi Tambahan
                 Section::make('Informasi Tambahan')
+                    ->columns(['default' => 1, 'md' => 2])
                     ->schema([
                         Forms\Components\TextInput::make('rental_duration')
                             ->numeric()
@@ -291,6 +304,7 @@ class VehicleChecksheetResource extends Resource
                     ->label('Tanggal Diperbarui'),
             ])
             ->filters([
+                Tables\Filters\TrashedFilter::make(),
                 SelectFilter::make('license_plate')
                     ->label('Plat Nomor')
                     ->options(fn () => VehicleChecksheet::query()
@@ -319,10 +333,13 @@ class VehicleChecksheetResource extends Resource
             ->persistSortInSession()
             ->columnToggleFormColumns(2)
             ->actions([
+                RestoreAction::make(),
                 EditAction::make(),
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->visible(fn () => auth()->user()->can('export', static::getModel()))
@@ -376,7 +393,8 @@ class VehicleChecksheetResource extends Resource
         $year = date('Y');
 
         // Cari record dengan nomor terbesar untuk tahun ini
-        $latestRecord = VehicleChecksheet::whereYear('created_at', $year)
+        // Termasuk checksheet di Sampah supaya nomor referensi tidak terpakai ulang.
+        $latestRecord = VehicleChecksheet::withTrashed()->whereYear('created_at', $year)
             ->orderByRaw('CAST(SUBSTRING_INDEX(reference_number, "-", -1) AS UNSIGNED) DESC')
             ->first();
 

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\AssetServiceResource\Pages;
 
 use App\Filament\Resources\AssetServiceResource;
+use App\Models\AssetService;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\EditRecord;
@@ -17,6 +18,11 @@ class EditAssetService extends EditRecord
             ViewAction::make(),
             DeleteAction::make(),
         ];
+    }
+
+    protected function mutateFormDataBeforeSave(array $data): array
+    {
+        return AssetService::normalizeAssetSource($data);
     }
 
     protected function getRedirectUrl(): string

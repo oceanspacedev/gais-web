@@ -540,10 +540,17 @@ class TalentaUserImportService
             return (int) $id;
         }
 
-        return BusinessEntity::firstOrCreate(
+        // Nama badan usaha unik di database termasuk baris di Sampah: yang terhapus dipulihkan, bukan digandakan.
+        $entity = BusinessEntity::withTrashed()->firstOrCreate(
             ['name' => $name],
             ['created_at' => now(), 'updated_at' => now()],
-        )->id;
+        );
+
+        if ($entity->trashed()) {
+            $entity->restore();
+        }
+
+        return $entity->id;
     }
 
     private function findOrCreateJobTitle(string $title): int

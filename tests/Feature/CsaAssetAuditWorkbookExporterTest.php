@@ -45,6 +45,7 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
         });
 
         Schema::create('business_entities', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name')->unique();
             $table->string('format')->nullable();
@@ -61,6 +62,7 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
         ])->id;
 
         Schema::create('asset_locations', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->string('name');
             $table->string('address')->nullable();
@@ -69,6 +71,7 @@ class CsaAssetAuditWorkbookExporterTest extends TestCase
         });
 
         Schema::create('assets', function (Blueprint $table): void {
+            $table->softDeletes();
             $table->id();
             $table->date('purchase_date')->nullable();
             $table->unsignedBigInteger('business_entity_id')->nullable();

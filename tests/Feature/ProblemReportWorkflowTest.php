@@ -9,6 +9,7 @@ use App\Filament\Resources\ProblemReportResource\Pages\ViewProblemReport;
 use App\Models\Division;
 use App\Models\ProblemReport;
 use App\Models\ProblemReportCategory;
+use App\Models\ProblemReportScope;
 use App\Models\User;
 use App\Services\ProblemReportWorkflow;
 use Filament\Facades\Filament;
@@ -96,6 +97,8 @@ class ProblemReportWorkflowTest extends TestCase
     public function test_hcm_executor_only_sees_general_reports_and_reporter_sees_own(): void
     {
         $hcm = Division::firstOrCreate(['name' => 'HCM']);
+        // Sumo: executor HCM hanya menangani gangguan UMUM (cakupan di menu Divisi).
+        ProblemReportScope::firstOrCreate(['division_id' => $hcm->id, 'problem_report_category_id' => $this->umum->id]);
         $executor = User::factory()->create(['division_id' => $hcm->id]);
         $executor->assignRole(Role::findByName('executor', 'web'));
         $reporter = User::factory()->create();

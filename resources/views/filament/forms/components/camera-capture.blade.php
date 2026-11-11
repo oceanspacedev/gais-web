@@ -206,6 +206,10 @@
                         body: bodyData
                     });
 
+                    if (response.status === 419 || response.status === 401) {
+                        throw new Error('Sesi habis. Muat ulang halaman ini lalu ambil fotonya lagi; foto lain yang sudah diambil tetap ada.');
+                    }
+
                     if (!response.ok) {
                         const errData = await response.json().catch(() => null);
                         throw new Error(errData?.message || 'Server error ' + response.status);
@@ -413,7 +417,7 @@
             </div>
 
             <p class="text-xs text-gray-500 dark:text-gray-400 max-w-sm mt-1">
-                Buka kamera langsung untuk bukti ruangan, atau pilih foto dari perangkat (Maks. 10MB)
+                Buka kamera langsung untuk bukti pekerjaan, atau pilih foto dari perangkat (Maks. 10MB)
             </p>
         </div>
 

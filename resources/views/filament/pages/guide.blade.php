@@ -153,7 +153,8 @@
                         @foreach ([
                             ['Aset', 'Data aset, BA transfer (serah terima, pengalihan, pengembalian), servis, rekonsiliasi audit, riwayat label QR.'],
                             ['Master Aset', 'Merek, kategori, atribut kustom (STNK, KIR, dan sejenisnya), vendor.'],
-                            ['OB / Kebersihan', 'Checksheet kebersihan, ruangan, shift.'],
+                            ['OB / Kebersihan', 'Checksheet kebersihan, pekerjaan, shift.'],
+                            ['Security', 'Laporan jaga security: checklist keamanan, kelistrikan, aset, kebersihan, temuan, foto/video.'],
                             ['Kendaraan', 'Catatan penggunaan kendaraan: KM, tujuan, kerusakan.'],
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
@@ -172,10 +173,11 @@
                 </div>
 
                 <div class="pg-block">
-                    <h3>Tiga hal yang perlu dipahami dulu</h3>
+                    <h3>Empat hal yang perlu dipahami dulu</h3>
                     <ul class="pg-list">
-                        <li><strong>Semua dibatasi per badan usaha.</strong> Kecuali super admin dan user dengan flag "Akses semua badan usaha", Anda hanya melihat data badan usaha Anda sendiri.</li>
+                        <li><strong>Semua dibatasi per badan usaha.</strong> Kecuali user dengan flag "Akses semua badan usaha", Anda hanya melihat data badan usaha Anda sendiri.</li>
                         <li><strong>Akses ditentukan permission, bukan nama role.</strong> Role hanyalah kumpulan permission yang diatur lewat Shield.</li>
+                        <li><strong>Hapus berarti masuk Sampah.</strong> Data yang dihapus tidak hilang: buka filter <strong>Sampah</strong> di setiap daftar untuk melihatnya lagi, lalu <strong>Pulihkan</strong> atau <strong>Hapus permanen</strong> sesuai izin Anda. Pengecualian: akun pengguna dihapus permanen.</li>
                         <li><strong>Pekerjaan lama tidak hilang.</strong> Data dari sumo-web diimpor lewat menu <strong>Pengaturan, Impor Data Sumo</strong> (atau <code>sumo:import</code>), dan kode lama seperti <code>REQ123</code> tetap dipakai.</li>
                     </ul>
                 </div>
@@ -202,6 +204,7 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-13').scrollIntoView({ behavior: 'smooth' })">13. Asuransi, Sewa, dan pengingat WhatsApp</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-14').scrollIntoView({ behavior: 'smooth' })">14. Pekerjaan Vendor</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-15').scrollIntoView({ behavior: 'smooth' })">15. Import &amp; Laporan Audit stok (CSA)</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-16').scrollIntoView({ behavior: 'smooth' })">16. Penjualan aset antar badan usaha</a></li>
                     </ol>
                 </div>
 
@@ -438,13 +441,13 @@
                 <div class="pg-block" id="bab-9">
                     <h2>9. OB: menugaskan dan mengerjakan</h2>
                     <h3>9.1 Atasan menugaskan per shift</h3>
-                    <x-guide.demo name="ob-tugaskan" caption="Animasi: memilih Shift Pagi, ruangannya tercentang otomatis, lalu menugaskan ke satu OB." :shots="[
+                    <x-guide.demo name="ob-tugaskan" caption="Animasi: memilih Shift Pagi, pekerjaannya tercentang otomatis, lalu menugaskan ke satu OB." :shots="[
                         'ob-tugaskan-01-daftar-tugas.png' => 'Daftar tugas',
                         'ob-tugaskan-02-form-tugaskan.png' => 'Form tugaskan',
                         'ob-tugaskan-03-tugas-dibuat.png' => 'Tugas dibuat',
                     ]" />
                     <ul class="pg-list">
-                        <li>Menu <strong>OB Checksheets</strong>, tombol <strong>Tugaskan per Shift</strong>. Ruangan dan shift diatur di menu <strong>Ruangan OB</strong> dan <strong>Shift OB</strong>.</li>
+                        <li>Menu <strong>OB Checksheets</strong>, tombol <strong>Tugaskan per Shift</strong>. Pekerjaan dan shift diatur di menu <strong>Pekerjaan OB</strong> dan <strong>Shift OB</strong>.</li>
                         <li>Kosongkan <strong>Petugas OB</strong> agar tugas masuk kolam bersama dan bisa diambil OB mana pun.</li>
                     </ul>
 
@@ -457,7 +460,7 @@
                         'ob-kerja-05-selesai.png' => 'Selesai',
                     ]" />
                     <ul class="pg-list">
-                        <li><strong>Mulai Semua &amp; Foto Sebelum</strong>: foto tiap ruangan yang mulai dikerjakan. Ruangan tanpa foto tetap <em>Belum Dikerjakan</em>.</li>
+                        <li><strong>Mulai Semua &amp; Foto Sebelum</strong>: foto tiap pekerjaan yang mulai dikerjakan. Pekerjaan tanpa foto tetap <em>Belum Dikerjakan</em>.</li>
                         <li><strong>Selesaikan Semua &amp; Foto Sesudah</strong>: foto hasil, status menjadi <em>Selesai</em> dan durasi tercatat.</li>
                         <li>Di HP, tombol <strong>Buka Kamera</strong> memotret langsung. <strong>Pilih dari Galeri</strong> memakai foto yang sudah ada. Tekan <strong>Gunakan Foto Ini</strong> sampai muncul tanda <em>Tersimpan</em>.</li>
                     </ul>
@@ -491,7 +494,7 @@
                         <li>Menu <strong>Organisasi</strong>, <strong>Pengguna</strong>, tombol <strong>Buat Pengguna</strong>.</li>
                         <li>Tanpa role, pengguna tidak bisa masuk. Role menentukan menu yang tampil (lihat tab <strong>Role dan akses</strong>).</li>
                         <li>Untuk pengajuan barang, isi juga <strong>Divisi</strong> dan <strong>Atasan (approver pengajuan barang)</strong>. Untuk login WhatsApp, isi <strong>Nomor WhatsApp</strong>.</li>
-                        <li>Data karyawan sebaiknya masuk lewat tombol <strong>Import JSON (Talenta)</strong>, satu-satunya import pengguna. Baris dicocokkan lewat Employee ID, lalu nama; bila ada beberapa pengguna bernama sama, dipersempit dengan nomor HP, email, badan usaha, dan jabatan.</li>
+                        <li>Data karyawan sebaiknya masuk lewat <strong>Ekspor / Impor → Impor JSON (Talenta)</strong>, satu-satunya import pengguna. Baris dicocokkan lewat Employee ID, lalu nama; bila ada beberapa pengguna bernama sama, dipersempit dengan nomor HP, email, badan usaha, dan jabatan.</li>
                         <li>Pengguna yang punya <strong>Employee ID</strong> mengikuti Talenta: Nama, Employee ID, Nomor WhatsApp, Email, Badan Usaha, dan Jabatan terkunci di form. Ubah di Talenta lalu import ulang JSON-nya. Divisi, atasan, username, kata sandi, dan role tetap diatur di GAIS.</li>
                         <li>Halaman pengguna punya tab <strong>Aset Dipegang</strong>, <strong>Berita Acara (BA)</strong>, <strong>Pengajuan Barang</strong>, <strong>Approval Pengajuan</strong>, dan <strong>Laporan Gangguan</strong> untuk melihat riwayatnya.</li>
                     </ul>
@@ -602,6 +605,24 @@
                         <li><strong>3. Terapkan Koreksi</strong>: qty aset disesuaikan, barang baru dibuat sebagai aset di gudangnya. Barang dengan fisik 0 dinonaktifkan dari inventori (tidak dihapus). Jalankan <strong>Compare Ulang</strong> untuk memastikan semua sudah Inline.</li>
                     </ul>
                 </div>
+
+                <div class="pg-block" id="bab-16">
+                    <h2>16. Penjualan aset antar badan usaha</h2>
+                    <p>Aset yang dijual dari satu badan usaha ke badan usaha lain di dalam grup tidak keluar dari GAIS: kepemilikannya pindah ke pembeli dan setiap perpindahan tercatat sebagai riwayat. Contoh di bawah menjual satu printer dari CV BERSAMA CS ke CV COMPLETE SELULAR.</p>
+                    <x-guide.demo name="jual-badan-usaha" caption="Animasi: membuka detail printer, memilih Jual ke Badan Usaha Lain, mengisi pembeli dan harga, lalu riwayat kepemilikan dan daftar penjualan terisi." :shots="[
+                        'jual-badan-usaha-01-form-jual.png' => 'Form jual',
+                        'jual-badan-usaha-02-riwayat-kepemilikan.png' => 'Riwayat kepemilikan',
+                        'jual-badan-usaha-03-daftar-penjualan.png' => 'Daftar penjualan',
+                        'jual-badan-usaha-04-impor-excel.png' => 'Impor Excel',
+                    ]" />
+                    <ul class="pg-list">
+                        <li><strong>Syarat</strong>: aset harus di stok (<em>Tersedia</em>, tanpa pemegang); aset yang masih dipegang dikembalikan dulu lewat BA Pengembalian. Pembeli harus badan usaha lain, dan pencatat harus punya akses ke badan usaha penjual maupun pembeli.</li>
+                        <li><strong>Tiga cara mencatat</strong>: <em>Pilihan → Jual ke Badan Usaha Lain</em> di detail aset; <em>Catat Penjualan</em> di menu Aset → Penjualan Aset; atau <em>Ekspor / Impor → Impor Excel</em> untuk banyak aset sekaligus (unduh template dari modalnya, satu baris per aset, aset dikenali dari <code>id_aset</code> atau <code>serial_number</code>, badan usaha ditulis sesuai nama di master, satu baris salah membatalkan seluruh file).</li>
+                        <li><strong>Setelah disimpan</strong>: aset menjadi milik pembeli dan masuk stoknya sebagai <em>Tersedia</em> tanpa pemegang; badan usaha lama tidak lagi melihatnya di daftar aset. Riwayatnya tampil di seksi <em>Riwayat Kepemilikan</em> pada detail aset dan di menu Penjualan Aset, terlihat oleh penjual maupun pembeli.</li>
+                        <li><strong>Beda dengan Tandai Dijual</strong>: Tandai Dijual untuk aset yang keluar dari grup (status <em>Dijual</em>, aset berhenti aktif). Penjualan antar badan usaha menjaga aset tetap aktif di pemilik barunya.</li>
+                        <li>Baris penjualan bisa diperbaiki (tanggal, harga, dokumen BAST/invoice, catatan) dan dihapus ke Sampah; menghapus tidak membalik kepemilikan. Riwayatnya bisa diekspor ke Excel lewat <em>Ekspor Semua Penjualan</em>.</li>
+                    </ul>
+                </div>
             </section>
 
             {{-- ============ LOGIN ============ --}}
@@ -663,6 +684,7 @@
                         <li>Atasan (kolom "approver" di user) melihat pengajuan bawahannya.</li>
                         <li>Accounting melihat semua pengajuan dari tipe yang butuh Accounting.</li>
                         <li>Executor, manager, dan auditor melihat sesuai cakupan divisi, tipe, dan area (tabel <code>item_request_scopes</code>). Cakupan kosong berarti semua.</li>
+                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT.</li>
                         <li>Izin <code>view_all</code> melihat semuanya.</li>
                     </ul>
                 </div>
@@ -691,7 +713,7 @@
                     <h3>Aturan penting</h3>
                     <ul class="pg-list">
                         <li>Pelapor melihat laporannya sendiri. Izin <code>view_all</code> melihat semua.</li>
-                        <li>Divisi HCM hanya melihat kategori UMUM (diatur di <code>config/problem-report.php</code>).</li>
+                        <li>Divisi bisa dibatasi ke jenis gangguan tertentu lewat menu Divisi, bagian Cakupan Laporan Gangguan (dari sumo: HCM hanya UMUM, MIS-IT selain UMUM).</li>
                         <li>Kategori dikelola di menu Lapor Gangguan, Kategori.</li>
                     </ul>
                 </div>
@@ -722,6 +744,11 @@
                     </ul>
                 </div>
                 <div class="pg-block">
+                    <h3>Penjualan antar badan usaha</h3>
+                    <p>BA memindahkan aset antar orang di satu badan usaha. Penjualan antar badan usaha memindahkan kepemilikan aset ke badan usaha lain di dalam grup; aset tetap aktif, hanya pemiliknya berganti, dan riwayatnya tersimpan per perpindahan (bab 16).</p>
+                    <x-guide.flow :steps="$flows['sale']" />
+                </div>
+                <div class="pg-block">
                     <h3>Lainnya di grup Aset</h3>
                     <ul class="pg-list">
                         <li><strong>Rekonsiliasi:</strong> unggah workbook CSA atau audit kendaraan untuk dibandingkan dengan data GAIS. Data baru berubah hanya setelah menekan Terapkan Koreksi.</li>
@@ -738,9 +765,14 @@
                 </div>
                 <div class="pg-block">
                     <h3>OB / Kebersihan</h3>
-                    <p class="pg-lead">Office boy mencatat pekerjaan bersih-bersih per ruangan dan shift, dengan foto sebelum dan sesudah.</p>
+                    <p class="pg-lead">Office boy mencatat tiap pekerjaan (ruangan yang dibersihkan atau tugas lain) per shift, dengan foto sebelum dan sesudah.</p>
                     <x-guide.flow :steps="$flows['ob']" />
-                    <p>Ruangan dan shift adalah master per lokasi. Satu shift bisa mencakup beberapa ruangan. Data bisa diexport.</p>
+                    <p>Pekerjaan dan shift adalah master per lokasi. Satu shift bisa mencakup beberapa pekerjaan. Data bisa diexport.</p>
+                </div>
+                <div class="pg-block">
+                    <h3>Security</h3>
+                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist keamanan, kelistrikan, kondisi aset, dan kebersihan, lalu temuan kejadian bila ada.</p>
+                    <p>Lampiran bisa foto atau video (maksimal 10 file, 50 MB per file). Petugas hanya melihat laporannya sendiri; atasan dengan izin Lihat Data Semua User melihat semuanya. Data bisa diexport.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Kendaraan</h3>
@@ -798,6 +830,7 @@
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>
                             <tr><td><code>office_boy</code></td><td>OB</td><td>Melihat dan membuat OB checksheet.</td></tr>
+                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya.</td></tr>
                             <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
                         </tbody>
                     </table>
@@ -846,7 +879,7 @@
                                 <tr><td><code>app/Models</code>, <code>app/Policies</code></td><td>Data dan otorisasi</td></tr>
                                 <tr><td><code>app/Console/Commands</code></td><td><code>sumo:import</code>, <code>reminder:whatsapp</code>, <code>problem-reports:auto-confirm</code></td></tr>
                                 <tr><td><code>routes/web.php</code>, <code>routes/console.php</code></td><td>Route PDF dan QR, jadwal scheduler</td></tr>
-                                <tr><td><code>config/item-request.php</code>, <code>problem-report.php</code>, <code>sumo-import.php</code></td><td>Aturan modul sumo</td></tr>
+                                <tr><td><code>config/item-request.php</code>, <code>sumo-import.php</code></td><td>Aturan modul sumo</td></tr>
                                 <tr><td><code>database/migrations</code></td><td>Skema, permission, dan role (role sumo dibuat lewat migration, bukan seeder)</td></tr>
                                 <tr><td><code>docs/</code></td><td>Catatan teknis tambahan</td></tr>
                             </tbody>
@@ -886,8 +919,8 @@ php artisan schedule:work   # bila menguji pengingat</pre>
                     <h3>Mengimpor data dari sumo-web</h3>
                     <x-guide.flow :steps="$flows['import']" />
 <p>Cara yang disarankan: menu <strong>Pengaturan, Impor Data Sumo</strong> (izin <code>Manage:SumoImport</code>, awalnya hanya super admin). Unggah dump <code>.sql</code> atau <code>.gz</code> (batas default 12 MB), tunggu uji coba otomatis selesai, periksa laporannya, lalu tekan Impor sungguhan dan ketik <code>IMPOR</code>. Setiap run menyimpan file, tabel yang dimuat, laporan, dan log. Butuh Horizon dengan supervisor antrean <code>long-running</code>.</p>
-                    <p>Dump yang lebih besar dimuat manual ke database staging, lalu lewat CLI:</p>
-<pre>php artisan sumo:import --dry-run
+                    <p>Dump yang lebih besar lewat CLI di server:</p>
+<pre>php artisan sumo:import --file=sumo.sql.gz --dry-run
 php artisan sumo:import
 php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                     <p>Langkah yang tersedia: <code>areas, divisions, masters, users, requests, problems, insurances, rents, wa, scopes, access</code>. Baris yang tidak bisa dipetakan dilewati dengan peringatan, bukan menggagalkan semuanya.</p>
@@ -899,8 +932,8 @@ php artisan sumo:import --only=requests,problems   # sebagian langkah</pre>
                         <table class="pg-table">
                             <thead><tr><th>Variabel</th><th>Fungsi</th></tr></thead>
                             <tbody>
-                                <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_shelf)</td></tr>
-                                <tr><td><code>SUMO_DB_DATABASE</code></td><td>Database staging sumo lama. Impor lewat panel mengosongkannya lalu memuat dump. Jangan isi dengan database GAIS.</td></tr>
+                                <tr><td><code>DB_*</code></td><td>Koneksi database utama (db_gais)</td></tr>
+                                <tr><td><code>SUMO_DB_PREFIX</code></td><td>Awalan tabel staging dump sumo di database GAIS (default <code>sumo_dump_</code>). Impor menghapus tabel berawalan ini lalu memuat dump.</td></tr>
                                 <tr><td><code>SUMO_IMPORT_MAX_UPLOAD_KB</code></td><td>Batas unggah dump di menu Impor Data Sumo (default 12288)</td></tr>
                                 <tr><td><code>QUEUE_CONNECTION</code>, <code>REDIS_*</code></td><td>Antrean (default redis, butuh Horizon)</td></tr>
                                 <tr><td><code>WAG_URL</code>, <code>WAG_TOKEN</code></td><td>Gateway WhatsApp untuk OTP dan pengingat</td></tr>

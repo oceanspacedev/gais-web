@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\Division;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class DivisionPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class DivisionPolicy
      */
     public function view(User $user, Division $division): bool
     {
-        return $user->can('view_division');
+        return $user->can('view_division') && $this->visible($user, $division);
     }
 
     /**
@@ -39,7 +40,7 @@ class DivisionPolicy
      */
     public function update(User $user, Division $division): bool
     {
-        return $user->can('update_division');
+        return $user->can('update_division') && $this->editable($user, $division);
     }
 
     /**
@@ -47,7 +48,7 @@ class DivisionPolicy
      */
     public function delete(User $user, Division $division): bool
     {
-        return $user->can('delete_division');
+        return $user->can('delete_division') && $this->editable($user, $division);
     }
 
     /**
@@ -63,7 +64,7 @@ class DivisionPolicy
      */
     public function forceDelete(User $user, Division $division): bool
     {
-        return $user->can('force_delete_division');
+        return $user->can('force_delete_division') && $this->visible($user, $division);
     }
 
     /**
@@ -79,7 +80,7 @@ class DivisionPolicy
      */
     public function restore(User $user, Division $division): bool
     {
-        return $user->can('restore_division');
+        return $user->can('restore_division') && $this->visible($user, $division);
     }
 
     /**
@@ -95,7 +96,7 @@ class DivisionPolicy
      */
     public function replicate(User $user, Division $division): bool
     {
-        return $user->can('create_division');
+        return $user->can('create_division') && $this->editable($user, $division);
     }
 
     /**

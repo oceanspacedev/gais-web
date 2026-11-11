@@ -75,16 +75,23 @@ class SumoImportRunResource extends Resource
         return false;
     }
 
-    public static function stagingDatabase(): string
+    /**
+     * Tempat dump dimuat: tabel berawalan di database GAIS, atau database staging tersendiri.
+     */
+    public static function stagingTarget(): string
     {
-        return (string) config('database.connections.'.config('sumo-import.connection', 'sumo').'.database');
+        $connection = (array) config('database.connections.'.config('sumo-import.connection', 'sumo'));
+        $database = (string) ($connection['database'] ?? '');
+        $prefix = (string) ($connection['prefix'] ?? '');
+
+        return $prefix === '' ? "database `{$database}`" : "tabel `{$prefix}*` di database `{$database}`";
     }
 
     public static function form(Schema $schema): Schema
     {
         return $schema->schema([
             Section::make('Unggah dump sumo')
-                ->description(fn (): string => 'Dump dimuat ke database staging `'.self::stagingDatabase().'` (SUMO_DB_DATABASE), bukan ke database GAIS. '
+                ->description(fn (): string => 'Isi dump dimuat ke '.self::stagingTarget().', terpisah dari tabel GAIS. '
                     .'Setelah dimuat, uji coba berjalan otomatis; data GAIS baru berubah setelah tombol Impor Sungguhan dikonfirmasi.')
                 ->schema([
                     FileUpload::make('file_path')
@@ -149,7 +156,7 @@ class SumoImportRunResource extends Resource
                         TextEntry::make('file_size')->label('Ukuran')->formatStateUsing(fn (int $state): string => Number::fileSize($state, 1)),
                         TextEntry::make('staged')
                             ->label('Di staging')
-                            ->formatStateUsing(fn (bool $state): string => $state ? 'Ya, `'.self::stagingDatabase().'`' : 'Tidak')
+                            ->formatStateUsing(fn (bool $state): string => $state ? 'Ya, '.self::stagingTarget() : 'Tidak')
                             ->color(fn (bool $state): string => $state ? 'success' : 'gray'),
                         TextEntry::make('user.name')->label('Diunggah oleh')->placeholder('-'),
                         TextEntry::make('created_at')->label('Diunggah')->dateTime('d M Y H:i'),

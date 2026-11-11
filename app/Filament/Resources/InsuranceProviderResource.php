@@ -2,21 +2,28 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\InsuranceProviderResource\Pages;
 use App\Models\InsuranceProvider;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Validation\Rules\Unique;
 
 class InsuranceProviderResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = InsuranceProvider::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
@@ -70,7 +77,11 @@ class InsuranceProviderResource extends Resource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->defaultSort('name')
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
@@ -78,6 +89,8 @@ class InsuranceProviderResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     DeleteBulkAction::make(),
                 ]),
             ]);

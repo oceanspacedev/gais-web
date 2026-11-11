@@ -6,14 +6,18 @@ use App\Enums\ItemRequestClientStatus;
 use App\Models\ItemRequest;
 use App\Models\ItemRequestDetail;
 use App\Models\Product;
+use App\Services\ItemRequestWorkflow;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -70,13 +74,18 @@ class DetailsRelationManager extends RelationManager
         return $table
             ->modifyQueryUsing(fn (Builder $query): Builder => $query->with('product.unitType'))
             ->columns([
-                TextColumn::make('product.name')->label('Barang')->weight('bold')->placeholder('(barang dihapus)'),
-                TextColumn::make('product.unitType.name')->label('Satuan')->placeholder('-'),
-                TextColumn::make('qty_request')->label('Diminta')->numeric(decimalPlaces: 0),
-                TextColumn::make('qty_approved')->label('Disetujui')->numeric(decimalPlaces: 0)->placeholder('Belum'),
-                TextColumn::make('product.price')->label('Harga')->money('IDR', decimalPlaces: 0)->placeholder('-'),
-                TextColumn::make('line_total')->label('Subtotal')->state(fn (ItemRequestDetail $record): string => 'Rp '.number_format($record->lineTotal(), 0, ',', '.')),
-                TextColumn::make('description')->label('Keterangan')->wrap()->placeholder('-'),
+                TextColumn::make('product.name')->label('Barang')->weight('bold')->wrap()->placeholder('(barang dihapus)')
+                    ->description(fn (ItemRequestDetail $record): ?string => $record->description),
+                TextColumn::make('qty_request')->label('Diminta')->numeric(decimalPlaces: 0)->alignEnd()
+                    ->suffix(fn (ItemRequestDetail $record): string => $record->product?->unitType ? ' '.$record->product->unitType->name : ''),
+                TextColumn::make('qty_approved')->label('Disetujui')->numeric(decimalPlaces: 0)->alignEnd()->placeholder('Belum')
+                    ->suffix(fn (ItemRequestDetail $record): string => $record->product?->unitType ? ' '.$record->product->unitType->name : ''),
+                TextColumn::make('product.price')->label('Harga')->money('IDR', decimalPlaces: 0)->alignEnd()->placeholder('-'),
+                TextColumn::make('line_total')->label('Subtotal')->weight('semibold')->alignEnd()
+                    ->state(fn (ItemRequestDetail $record): string => 'Rp '.number_format($record->lineTotal(), 0, ',', '.')),
+            ])
+            ->filters([
+                TrashedFilter::make(),
             ])
             ->headerActions([
                 CreateAction::make()
@@ -88,6 +97,10 @@ class DetailsRelationManager extends RelationManager
                     ->visible(fn (): bool => $this->canEditItems() || $this->canApproveQty()),
                 DeleteAction::make()
                     ->visible(fn (): bool => $this->canEditItems()),
+                RestoreAction::make()
+                    ->hidden(fn (): bool => ! $this->canEditItems()),
+                ForceDeleteAction::make()
+                    ->hidden(fn (): bool => ! $this->canEditItems()),
             ]);
     }
 
@@ -115,12 +128,18 @@ class DetailsRelationManager extends RelationManager
         $user = auth()->user();
 
         return $user !== null
+            && ! $this->request()->trashed()
             && $this->request()->client_status === ItemRequestClientStatus::Waiting
             && ($this->request()->isOwnedBy($user) || $user->can('update', $this->request()));
     }
 
     private function canApproveQty(): bool
     {
-        return ! $this->isFinal() && (auth()->user()?->can('approveManager', ItemRequest::class) ?? false);
+        $user = auth()->user();
+
+        return ! $this->isFinal()
+            && ! $this->request()->trashed()
+            && ($user?->can('approveManager', ItemRequest::class) ?? false)
+            && app(ItemRequestWorkflow::class)->canApproveQuantity($user, $this->request());
     }
 }

@@ -6,10 +6,12 @@ use App\Enums\AssetTransferDocumentType;
 use App\Models\AssetTransfer;
 use App\Support\StoredFile;
 use Asmit\ResizedColumn\HasResizableColumn;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 
@@ -33,6 +35,7 @@ class AssetTransfersRelationManager extends RelationManager
     {
         return $table
             ->recordTitleAttribute('letter_number')
+            ->modifyQueryUsing(fn ($query) => $query->whereHas('assetTransfer', fn ($transfer) => $transfer->withoutTrashed()))
             ->columns([
                 TextColumn::make('assetTransfer.letter_number')
                     ->translateLabel()
@@ -66,14 +69,14 @@ class AssetTransfersRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                \Filament\Actions\Action::make('createAssetTransfer')
+                Action::make('createAssetTransfer')
                     ->label('Transfer Asset') // Label tombol yang akan tampil di header
                     ->url(route('filament.admin.resources.asset-transfers.create')) // URL ke halaman create
                     ->icon('heroicon-o-plus') // Ikon untuk tombol
                     ->color('success'),
             ])
             ->actions([
-                \Filament\Actions\Action::make('removeTransferDetail')
+                Action::make('removeTransferDetail')
                     ->label('Hapus')
                     ->icon('heroicon-o-trash')
                     ->color('danger')
@@ -85,8 +88,8 @@ class AssetTransfersRelationManager extends RelationManager
                     ->action(fn ($record) => $record->delete()),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

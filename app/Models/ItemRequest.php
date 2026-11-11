@@ -2,9 +2,16 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\ItemRequests\AccountingTypeGrant;
+use App\Access\ItemRequests\DivisionScopeGrant;
+use App\Access\Rules\ApproverOfOwnerGrant;
+use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\OwnerGrant;
+use App\Access\Rules\PermissionGrant;
+use App\Access\Visibility;
 use App\Enums\ItemRequestApprovalType;
 use App\Enums\ItemRequestClientStatus;
-use App\Support\ItemRequestVisibility;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,7 +26,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ItemRequest extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'request_code',
@@ -66,6 +73,27 @@ class ItemRequest extends Model
         });
     }
 
+    /**
+     * Siapa melihat pengajuan apa, pengganti aturan role/divisi hard-coded di sumo:
+     *  - "Lihat Data Semua User" melihat semuanya;
+     *  - pemohon melihat miliknya, atasan melihat milik bawahannya (users.approver_user_id);
+     *  - pemegang izin Accounting melihat tipe yang lewat tahap Accounting;
+     *  - executor/manager/audit melihat cakupan divisinya (item_request_scopes).
+     * Semuanya dibatasi badan usaha pengajuan (kosong = semua).
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()
+            ->require(new BusinessEntityRule)
+            ->grant(
+                new PermissionGrant('view_all_item::request'),
+                new OwnerGrant,
+                new ApproverOfOwnerGrant,
+                new AccountingTypeGrant,
+                new DivisionScopeGrant,
+            );
+    }
+
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
@@ -78,7 +106,7 @@ class ItemRequest extends Model
 
     public function businessEntity(): BelongsTo
     {
-        return $this->belongsTo(BusinessEntity::class);
+        return $this->belongsTo(BusinessEntity::class)->withTrashed();
     }
 
     public function closedBy(): BelongsTo
@@ -104,14 +132,6 @@ class ItemRequest extends Model
     public function logs(): HasMany
     {
         return $this->hasMany(ItemRequestLog::class)->latest();
-    }
-
-    /**
-     * Pengajuan yang boleh dilihat user (lihat ItemRequestVisibility).
-     */
-    public function scopeVisibleTo(Builder $query, User $user): Builder
-    {
-        return ItemRequestVisibility::apply($query, $user);
     }
 
     /**
@@ -155,10 +175,5 @@ class ItemRequest extends Model
         $this->loadMissing('details.product');
 
         return (float) $this->details->sum(fn (ItemRequestDetail $detail): float => $detail->lineTotal());
-    }
-
-    public function isAccessibleBy(User $user): bool
-    {
-        return $this->business_entity_id === null || $user->canAccessBusinessEntity($this->business_entity_id);
     }
 }

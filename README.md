@@ -17,7 +17,7 @@ GAIS menggabungkan dua aplikasi internal yang dulu berjalan terpisah:
 | **Shelf** (kode asli repo ini) | Inventaris aset, transfer dan berita acara, rekonsiliasi audit, checksheet kendaraan dan OB, pekerjaan vendor, pengingat dokumen, QR aset | Aset, Master Aset, OB / Kebersihan, Kendaraan, Pekerjaan Vendor, Organisasi |
 | **sumo-web** ("Web Gais lama") | Pengajuan barang, lapor gangguan, asuransi dan perjanjian sewa, master barang, QR pengajuan/barang, notifikasi WhatsApp | Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, serta Pengaturan > Notifikasi WA dan Impor Data Sumo |
 
-Modul sumo-web dibangun ulang sebagai resource Filament di repo ini, bukan ditempel sebagai aplikasi lain. Data lamanya dipindahkan sekali lewat **Pengaturan > Impor Data Sumo** (atau `php artisan sumo:import`); setelah itu sumo-web tidak perlu dijalankan lagi. Repo GitHub sudah di-rename menjadi `oceanspacedev/gais-web`; database production (`db_shelf`), bucket S3, folder server, dan domain tidak ikut diganti.
+Modul sumo-web dibangun ulang sebagai resource Filament di repo ini, bukan ditempel sebagai aplikasi lain. Data lamanya dipindahkan sekali lewat **Pengaturan > Impor Data Sumo** (atau `php artisan sumo:import`); setelah itu sumo-web tidak perlu dijalankan lagi. Repo GitHub sudah di-rename menjadi `oceanspacedev/gais-web`, dan production memakai nama GAIS: domain `gais.oceanspace.co.id`, database `db_gais`, bucket S3 `gais`, folder server `/var/www/gais-web`.
 
 Semua dipakai lewat satu jalur: **panel staf Filament di `/admin`**. Di luar panel hanya ada halaman QR aset publik, unduhan PDF/label untuk user terautentikasi, dan endpoint integrasi WhatsApp.
 
@@ -49,7 +49,7 @@ GAIS adalah sumber data tunggal tim General Affair: siapa memegang aset apa, dok
 ### Termasuk dalam scope
 
 - `GET /` mengarah ke panel `/admin`.
-- Panel Filament dengan sepuluh grup menu (lihat [Fitur utama](#fitur-utama)), dashboard dengan widget statistik aset dan ringkasan modul sumo, halaman **Panduan** untuk semua user, dan halaman **Dokumentasi Teknis** (dirender dari [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md)) untuk developer.
+- Panel Filament dengan sepuluh grup menu (lihat [Fitur utama](#fitur-utama)), dasbor manajemen per modul (antrean lintas modul, aset, pengajuan, gangguan, asuransi & sewa, operasional, data master), halaman **Panduan** untuk semua user, dan halaman **Dokumentasi Teknis** (dirender dari [`docs/dokumentasi-teknis.md`](docs/dokumentasi-teknis.md)) untuk developer.
 - Login panel dengan username atau email, OTP WhatsApp, atau kode/magic link email. Registrasi mandiri, reset password, dan profil default Filament dimatikan.
 - Unduhan PDF berita acara dan penyelesaian tugas, cetak label QR aset, QR pengajuan, dan QR barang (semua butuh login).
 - Halaman QR aset publik `GET /qr/{qr}` yang menampilkan aset dan mencatat pemindaian beserta lokasi.
@@ -57,7 +57,7 @@ GAIS adalah sumber data tunggal tim General Affair: siapa memegang aset apa, dok
 - Gateway WhatsApp WagHub (`WAG_URL` + `WAG_TOKEN`) untuk notifikasi, pengingat, dan OTP login.
 - Query aset dari bot WhatsApp: `gais.search_asset`, `gais.asset_history`, `gais.expiring_documents`.
 - Impor data legacy sumo-web dari panel atau CLI, idempoten.
-- Import user hanya dari JSON Talenta; import Excel untuk aset, produk, asuransi, sewa, dan checksheet kendaraan.
+- Import user hanya dari JSON Talenta; import Excel untuk aset, produk, asuransi, sewa, checksheet kendaraan, dan penjualan aset antar badan usaha (massal).
 - Health check Laravel di `/up`; Horizon, Pulse, dan Log Viewer untuk pemegang permission observability.
 
 ### Di luar scope implementasi saat ini
@@ -74,18 +74,35 @@ Menu panel dikelompokkan per modul; urutan grup diatur di `AdminPanelProvider::n
 
 | Grup menu | Menu | Asal | Keterangan |
 |---|---|---|---|
-| Aset | Aset, BA (asset transfers), servis aset, Import & Laporan Audit Aset, History Label QR | Shelf | Kondisi aset: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai. Pencarian daftar aset ikut mencocokkan atribut kustom (plat, serial number, IMEI) |
+| Aset | Aset, BA (asset transfers), Penjualan Aset (antar badan usaha), servis aset, Import & Laporan Audit Aset, History Label QR | Shelf | Kondisi aset: Tersedia, Digunakan, Dijual, Hilang, Rusak; NBH pending/selesai. Pencarian daftar aset ikut mencocokkan atribut kustom (plat, serial number, IMEI). Penjualan antar badan usaha (aksi "Jual ke Badan Usaha Lain" di detail aset) memindahkan kepemilikan ke pembeli, memasukkan aset ke stok pembeli, dan menyimpan riwayatnya per perpindahan; penjualan massal lewat Impor Excel bertemplate (`id_aset` atau `serial_number`, nama badan usaha) dan riwayatnya bisa diekspor; "Tandai Dijual" tetap untuk aset yang keluar dari grup |
 | Master Aset | Kategori, merek, vendor, atribut kustom, pintasan Lokasi | Shelf | Atribut kustom bertipe dokumen jadi sumber pengingat masa berlaku |
 | OB / Kebersihan | OB Checksheets, Ruangan OB, Shift OB, pintasan Lokasi | Shelf | Checklist kebersihan per shift dan ruangan, foto bisa diperbesar, export Excel |
+| Security | Security Checksheets | GAIS | Laporan jaga petugas security: lokasi kerja, checklist keamanan/kelistrikan/kondisi aset/kebersihan (butirnya di `SecurityChecksheet::CHECKLIST`), temuan kejadian, lampiran foto atau video (maks. 10 file, 50 MB per file), export Excel. Role `security` setara `office_boy` |
 | Kendaraan | Checksheet kendaraan | Shelf | Import/export checksheet kendaraan per plat |
 | Pekerjaan Vendor | Tugas vendor | Shelf | PDF penyelesaian tugas vendor |
-| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log |
-| Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup |
-| Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp |
-| Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta |
+| Pengajuan Barang | Pengajuan, Scan QR Pengajuan, barang (produk), kategori barang, satuan, tipe pengajuan, pengaturan periode pengajuan, log pengajuan, Scan QR Barang | sumo-web | Alur Accounting → Manager → Executor → konfirmasi pemohon; setiap perubahan status tercatat di log; ekspor Excel Rekap per Divisi dan Master QR; impor barang dari template dan ekspor semua barang dengan kolom yang sama |
+| Lapor Gangguan | Laporan gangguan, jenis gangguan | sumo-web | Satu laporan terbuka per pelapor; konfirmasi otomatis 24 jam setelah ditutup; ekspor laporan per rentang tanggal dengan kolom sumo |
+| Asuransi & Sewa | Asuransi, sewa, penyedia asuransi, kategori asuransi, cakupan asuransi | sumo-web | Riwayat perubahan kontrak di tab Updates; pengingat jatuh tempo via WhatsApp; impor dari template dan ekspor semua kontrak dengan kolom yang sama, plus impor/ekspor baris pembaharuan per kontrak |
+| Organisasi | Users, badan usaha, divisi, area, jabatan, lokasi | Shelf | Halaman user punya tab Aset Dipegang, BA, Pengajuan Barang, Approval Pengajuan, Laporan Gangguan. Import user hanya dari JSON Talenta; ekspor Excel user (kolom sumo) untuk pemegang `export_user` |
 | Pengaturan (collapsed) | Roles (Shield), site/PWA settings, Notifikasi WA, Impor Data Sumo, Exceptions, tautan Horizon dan Log Viewer | campuran | Tiap item dijaga permission masing-masing |
 
-Di luar grup: **Dashboard** (widget statistik aset, Overlook, dan sepuluh widget modul sumo), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
+Di luar grup: **Dasbor** (`App\Filament\Pages\Dashboard`: kartu **Perlu Tindakan** lintas modul, lalu satu seksi lipat per modul berisi 33 widget statistik/grafik/tabel; tiap widget dijaga izin `widget_*` dan seksi tanpa widget yang boleh dilihat tidak dirender, lihat [Dasbor manajemen](#dasbor-manajemen)), **Panduan** (`/admin/panduan`, semua user yang login), dan **Dokumentasi Teknis** (`/admin/dokumentasi-teknis`, permission `View:TechnicalDocs`).
+
+### Dasbor manajemen
+
+`App\Filament\Pages\Dashboard` menimpa dasbor Filament: `content()` menyusun seksi (`Section` yang bisa dilipat, pilihannya diingat per browser) dan memasukkan widget lewat `getWidgetsSchemaComponents()`, jadi penyaringan izin Shield tetap berlaku. Semua widget memakai `Resource::getEloquentQuery()` sehingga angkanya mengikuti hak lihat pembaca (pemohon hanya melihat pengajuannya sendiri). Helper di `app/Support/Dashboard` (`Rupiah`, `MonthSeries`, `ChartPalette`, `ChartOptions`) menyatukan format angka, deret bulan, warna, dan opsi Chart.js (sumbu rupiah ringkas, tooltip nilai penuh).
+
+| Seksi | Widget | Isi |
+|---|---|---|
+| Perlu Tindakan | `AttentionStats` | Antrean lintas modul: pengajuan menunggu executor/konfirmasi, gangguan terbuka, aset menunggu NBH, servis dan pekerjaan vendor berjalan, OB belum selesai hari ini, kendaraan belum kembali, polis/sewa jatuh tempo ≤ 30 hari. Kartu hanya tampil bila menunya boleh dibuka, dan menautkan ke daftar yang sudah difilter |
+| Aset | `CustomAssetWidget`, `AssetConditionChart`, `AssetValueByCategoryChart`, `AssetPurchaseTrendChart`, `AssetTransferTrendChart`, `AssetsByBusinessEntityChart`, `AssetIncidentsTable`, `ActiveAssetServicesTable` | Jumlah/nilai/kondisi/NBH/pembelian 12 bulan/audit terakhir; komposisi kondisi; nilai per kategori dan badan usaha; tren pembelian dan BA per jenis; aset insiden dan servis berjalan |
+| Pengajuan Barang | `SumoOverviewStats`, `ItemRequestTrendChart`, `ItemRequestStageChart`, `ItemRequestItemsChart`, `ItemRequestCostChart`, `ItemRequestCostByDivisionChart`, `PendingItemRequestsTable` | Antrean per tahap (Accounting, Manager, Executor, diproses, konfirmasi pemohon), hasil dan biaya tahun berjalan, periode cutoff, tren 12 bulan per hasil, biaya per pemohon dan divisi, pengajuan menunggu executor beserta tahap dan nilainya |
+| Lapor Gangguan | `ProblemReportOverviewStats`, `ProblemReportTrendChart`, `ProblemReportCategoryChart`, `ProblemReportCountChart`, `OpenProblemReportsTable` | Terbuka/terjadwal, menunggu konfirmasi pelapor, selesai bulan ini, rata-rata penyelesaian 90 hari; masuk vs ditutup per bulan; jenis dan pelapor terbanyak; laporan belum ditutup |
+| Asuransi & Sewa | `ContractOverviewStats`, `InsuranceCostChart`, `RentExpiryChart`, `ExpiringInsurancesTable`, `ExpiringRentsTable` | Polis aktif, nilai pertanggungan, premi 12 bulan ke depan, jatuh tempo ≤ 30 hari; sewa aktif, nilai sewa per tahun, tagihan belum lunas, masa pengingat; premi per bulan; sewa berakhir 12 bulan ke depan; kontrak terdekat jatuh tempo |
+| Operasional | `OperationsOverviewStats`, `ObChecksheetTrendChart`, `VehicleUsageChart`, `VendorTaskCostChart`, `OpenVendorTasksTable`, `VehiclesOutTable` | OB hari ini, tugas belum diambil, penyelesaian 30 hari; kendaraan belum kembali, perjalanan dan km bulan ini; pekerjaan dan biaya vendor; grafik 14 hari OB, pemakaian kendaraan, dan biaya vendor 12 bulan; tabel pekerjaan terbuka dan kendaraan di luar |
+| Organisasi & Data Master | `MasterDataOverview` | Jumlah record master per menu dalam satu kartu ringkas (pengganti Overlook), dilipat secara bawaan |
+
+Izin widget dibuat migrasi `2026_10_13_000007` (widget sumo) dan `2026_10_31_000004` (widget manajemen): super_admin dan pengajuan_admin memegang semuanya; role yang memegang `widget_CustomAssetWidget` (general_affair, admin) mendapat widget aset, operasional, antrean, dan data master; accounting/executor mendapat widget pengajuan (executor juga gangguan); requester mendapat antrean dan ringkasan gangguan miliknya; executor divisi HCM mendapat widget kontrak lewat `config/sumo-import.php`. Widget baru selalu memakai trait `GuardsWidgetWithPermission` dan didaftarkan di `App\Filament\Pages\Dashboard`; izinnya dibuat lewat migrasi lalu `php artisan permission:cache-reset`.
 
 Surface di luar panel:
 
@@ -111,13 +128,22 @@ Hak akses ditentukan **permission Filament Shield** pada role, lalu dipersempit 
 
 ### Batas badan usaha
 
-`super_admin` melihat semua; user dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah yang dicentang di form user (`business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin.
+User dengan flag **Akses semua badan usaha** (`users.access_all_business_entities`) menjangkau semua badan usaha, termasuk yang dibuat nanti; user lain melihat badan usaha asalnya (`users.business_entity_id`) ditambah yang dicentang di form user (`business_entity_user`). Role tidak membawa akses badan usaha, dan hanya super admin yang bisa mengubah flag maupun centangan itu. Non-super-admin tidak pernah melihat akun super admin.
 
-Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`Asset::scopeAccessibleBy`: badan usaha pemilik, penerima BA terakhir, atau pemegang), BA termasuk unduhan PDF (`AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya), serta modul sumo lewat trait `HasBusinessEntityAccess`. Impor sumo memetakan badan usaha lama ke badan usaha GAIS dan tidak pernah membuat yang baru.
+Pembatasan berlaku pada Users (termasuk impersonasi dan import), Aset (`AssetBusinessEntityRule`: badan usaha pemilik, penerima BA terakhir, atau pemegang), BA termasuk unduhan PDF (`AssetTransfer::applyLifecycleToAssets` menolak aktor yang memindahkan aset di luar aksesnya), pekerjaan vendor, serta modul sumo, semuanya lewat `BusinessEntityRule` di `visibility()` model (lihat [Lapisan visibilitas](#lapisan-visibilitas)). Impor sumo memetakan badan usaha lama ke badan usaha GAIS dan tidak pernah membuat yang baru.
 
 ### Visibilitas Pengajuan Barang dan Lapor Gangguan
 
-Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibility.php` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). `ProblemReportVisibility` serupa, dengan batas jenis gangguan per divisi di `config/problem-report.php`.
+Tidak ada role hard-coded seperti di sumo-web. Aturan siapa melihat apa dirangkai per model di `app/Access` (lihat [Lapisan visibilitas](#lapisan-visibilitas)); `ItemRequest::visibility()` menentukan siapa melihat pengajuan apa: pemegang `view_all_item::request` melihat semua; pemohon melihat miliknya; atasan (`users.approver_user_id`) melihat milik bawahannya; pemegang izin Accounting melihat tipe yang lewat tahap Accounting; executor/manager/audit melihat cakupan divisinya di `item_request_scopes` (per tipe dan/atau area). Cakupan yang ditandai **menyetujui jumlah** (`approves_quantity`) menjadikan tahap Manager wajib untuk pengajuan di dalamnya: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya (sumo: ATK dari area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT). `ProblemReport::visibility()` serupa, dengan cakupan jenis gangguan per divisi di `problem_report_scopes` (menu Divisi, bagian Cakupan Laporan Gangguan): jenis yang disebut, atau dengan centang **Kecualikan** semua jenis kecuali yang disebut (sumo: HCM hanya UMUM, MIS-IT selain UMUM).
+
+### Lapisan visibilitas
+
+Aturan "siapa melihat apa" per model dirangkai di `app/Access`, bukan ditulis ulang di tiap resource. `Visibility::make()->require(...)->grant(...)` menggabungkan pembatas (AND, mis. `BusinessEntityRule`) dan pemberi akses (OR, mis. `OwnerGrant`, `ApproverOfOwnerGrant`, `PermissionGrant`, serta rule modul di `app/Access/ItemRequests` dan `app/Access/ProblemReports`). Setiap rule punya dua wajah yang harus sepakat: `apply()` membatasi query daftar dan `allows()` memutuskan satu record dari relasi yang sudah dimuat (null = jatuh ke query). Model memakai trait `HasVisibility` (`visibleTo()`, `isVisibleTo()`), resource memakai `ScopesVisibleRecords` (mengisi `getEloquentQuery()`; ganti `baseVisibleQuery()` bila perlu), policy memakai `AuthorizesVisibleRecords` (`visible()`). `VisibilityArchitectureTest` memastikan ketiganya terpasang untuk setiap model ber-`HasVisibility`, dan `tests/Support/AssertsVisibilityContract.php` membandingkan query dengan keputusan per record. Semua model fitur memakainya (`VisibilityArchitectureTest` menolak resource baru yang tidak), dengan rule khusus untuk aset (`AssetBusinessEntityRule`: badan usaha pemilik, penerima, atau pemegang), user (`HidesSuperAdminsRule`, `BusinessEntityMemberGrant`, `SelfGrant`), checksheet OB (`UnclaimedPoolGrant`), dan servis aset (pembuat atau teknisi); master data memakai `EveryoneGrant`. Pengecualian yang disengaja: Roles dan Exceptions (model vendor), Impor Data Sumo dan Rekonsiliasi Aset (alat impor dengan izin sendiri).
+
+### Soft delete
+
+Semua model fitur memakai `SoftDeletes` (migrasi `2026_10_31_000002` melengkapi aset, BA, servis aset, master aset, badan usaha, jabatan, vendor, dan cutoff pengajuan). Hapus dari panel hanya mengisi `deleted_at`; setiap daftar punya filter **Sampah** (`TrashedFilter`), aksi **Pulihkan** per baris dan massal, serta **Hapus permanen** massal, dan halaman view bisa membuka record terhapus (`ScopesVisibleRecords::getRecordRouteBindingEloquentQuery`). Record di Sampah hanya-baca: ubah, hapus, replikasi, dan semua aksi kustom ditolak (policy `editable()`, `ScopesVisibleRecords::canEdit()`, dan aturan global `Action::configureUsing` di `AppServiceProvider`) sampai dipulihkan. `getEloquentQuery()` tetap menyembunyikan record terhapus, jadi badge navigasi, widget, dan ekspor tidak menghitungnya. Aturan lihat tidak membedakan status terhapus: siapa yang boleh melihat record, boleh melihatnya di Sampah dan memulihkannya. Izin `restore_*`, `restore_any_*`, `force_delete_*`, `force_delete_any_*` dibuat migrasi `2026_10_31_000003`; role dan user yang boleh menghapus otomatis boleh memulihkan, hapus permanen hanya role super admin kecuali diberikan lewat Pengaturan > Roles (form Role menampilkan izin ini karena `restore`/`forceDelete` ada di `policies.methods` Shield). Hapus permanen record anak (pembaharuan kontrak, barang pengajuan) memakai izin hapus permanen induknya. Relasi `belongsTo` ke model yang soft delete memakai `withTrashed()` supaya riwayat (BA, servis, atribut aset) tetap utuh, sedangkan select dan filter relasi memakai `withoutTrashed()` supaya record terhapus tidak bisa dipilih lagi. Nomor unik (nomor BA, nomor servis, kode sewa, nomor checksheet kendaraan) dihitung termasuk record terhapus dan tidak dipakai ulang; nilai unik yang dipakai impor (nama badan usaha, kode gudang) memulihkan baris di Sampah alih-alih menggandakannya. Kode tanpa user (QR publik, pengingat, WhatsApp) mengabaikan record di Sampah, dan penggabungan aset menghapus permanen aset sumbernya. Tanpa soft delete: `users` (identitas login dan sinkron Talenta/sumo memakai kolom unik; butuh desain pulihkan/gabung) dan History Label QR (log hanya-baca).
+
 
 ### Role
 
@@ -126,14 +152,14 @@ Tidak ada role hard-coded seperti di sumo-web. `app/Support/ItemRequestVisibilit
 | `super_admin` | Seeder (`shield:super-admin`) | Akses penuh; satu-satunya yang boleh mengubah akses badan usaha user |
 | `general_affair` | Manual | Pihak GA pada BA/BAPEB, penentu jenis dokumen BA, aksi perbaikan aset |
 | `admin` | Manual | Target permission `export_asset` (bersama `general_affair`) dan `manage_stock_asset::transfer`; migrasi hanya memberi permission bila role sudah ada |
-| `pengajuan_admin` | Migrasi `2026_10_13_000007` | Semua permission modul sumo (dulu ADMIN) |
+| `pengajuan_admin` | Migrasi `2026_10_13_000007` | Semua permission modul sumo (dulu ADMIN), plus lihat/buat/ubah user dan divisi serta lihat badan usaha (migrasi `2026_10_30_000002`); penugasan role tetap butuh `manage_access_user` |
 | `accounting` | Migrasi `2026_10_13_000007` | Lihat dan setujui tahap Accounting pengajuan, export, widget biaya |
-| `executor` | Migrasi `2026_10_13_000007` | Proses pengajuan dan laporan gangguan, setujui sebagai manager, scan QR, semua widget |
+| `executor` | Migrasi `2026_10_13_000007` | Proses pengajuan dan laporan gangguan, setujui sebagai manager (bila divisinya menyetujui jumlah), scan QR, widget pengajuan dan gangguan; widget asuransi/sewa hanya lewat izin divisi HCM (`config/sumo-import.php`) |
 | `requester` | Migrasi `2026_10_13_000007` | Buat dan lihat pengajuan dan laporan sendiri (dulu USER) |
 
 Impor sumo memetakan role lama ke empat role terakhir dan menambahkan permission per divisi (HCM mengelola asuransi/sewa/master, AUDIT mengisi catatan audit, MIS-IT melihat semua pengajuan) sesuai `config/sumo-import.php`.
 
-Permission custom yang perlu diketahui: `manage_stock_asset::transfer`, `export_asset`, `import_asset`, `view_all_item::request`, `approve_accounting_item::request`, `approve_manager_item::request`, `process_item::request`, `audit_item::request`, `change_applicant_item::request`, `view_all_problem::report`, `process_problem::report`, `View:WaNotificationSettings`, `View:ScanItemRequestQr`, `View:ScanProductQr`, `View:TechnicalDocs`, `Manage:SumoImport`, `View:Horizon`, `View:LogViewer`, `Download:LogViewer`, `Delete:LogViewer`, `View:Pulse`, `impersonate_user`, dan `widget_*` untuk tiap widget dashboard. Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
+Permission custom yang perlu diketahui: `manage_stock_asset::transfer`, `export_asset`, `import_asset`, `export_asset::sale`, `import_asset::sale`, `view_all_item::request`, `approve_accounting_item::request`, `approve_manager_item::request`, `process_item::request`, `audit_item::request`, `change_applicant_item::request`, `view_all_problem::report`, `process_problem::report`, `View:WaNotificationSettings`, `View:ScanItemRequestQr`, `View:ScanProductQr`, `View:TechnicalDocs`, `Manage:SumoImport`, `View:Horizon`, `View:LogViewer`, `Download:LogViewer`, `Delete:LogViewer`, `View:Pulse`, `impersonate_user`, dan `widget_*` untuk tiap widget dashboard. Setelah mengubah permission lewat kode, jalankan `php artisan permission:cache-reset`.
 
 ### Akun uji development
 
@@ -189,11 +215,18 @@ Logikanya ada di `app/Services/ItemRequestWorkflow.php`:
 1. Pemohon memilih tipe pengajuan, mengisi barang dan jumlah, dan mengunggah lampiran bila tipenya mewajibkan. Kode otomatis `REQ{id}`. Maksimal dua pengajuan terbuka per tipe per pemohon (`ITEM_REQUEST_MAX_OPEN_PER_TYPE`).
 2. Empat baris approval dibuat otomatis: Accounting, Manager, Executor, Pemohon. Status awal **Menunggu**.
 3. **Accounting** (bila tipe mensyaratkannya) mengisi status dan nomor PO lalu menyetujui.
-4. **Manager** (atasan di `users.approver_user_id`) menyetujui; jumlah disetujui bisa diubah per barang.
-5. **Executor** memutuskan: Diproses, Selesai, Dibatalkan, atau kembali ke antrean.
+4. **Manager** (pemegang izin Setujui Jumlah) menyetujui; jumlah disetujui bisa diubah per barang. Bila pengajuan masuk cakupan divisi yang **menyetujui jumlah** (menu Divisi), hanya divisi itu yang boleh, dan tahap ini wajib.
+5. **Executor** memproses setelah tahap Accounting dan Manager yang wajib lewat (tombol Proses dan filter "Belum diproses executor" mengikuti ini): Diproses, Selesai, Dibatalkan, atau kembali ke antrean.
 6. **Pemohon** mengonfirmasi penerimaan; status menjadi Diterima dan pengajuan tertutup.
 
 Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan mengatur tanggal buka/tutup per bulan; cutoff-nya ikut diingatkan lewat WhatsApp. QR pengajuan dan QR barang dicetak dari resource dan dipindai lewat halaman **Scan QR Pengajuan** / **Scan QR Barang**.
+
+Pemegang izin `export_item::request` punya dua unduhan Excel di header daftar pengajuan, pengganti `RequestExport` dan `RequestMasterQRExport` sumo (`app/Services/ItemRequestRecapExport.php`, `app/Services/ItemRequestMasterQrExport.php`):
+
+- **Rekap per Divisi**: pivot barang x divisi untuk satu area, satu tipe pengajuan, rentang tanggal pengajuan (default bulan berjalan), dan filter status (belum/sudah diproses executor, semua kecuali dibatalkan, dibatalkan, selesai). Kolom: Barang, Tipe Unit, Harga, satu kolom per divisi aktif di area itu, Total Item, Total Biaya, ditutup baris "Total Item per Divisi" dan "Total Biaya per Divisi". Jumlah memakai jumlah disetujui bila sudah diisi, kalau belum jumlah diminta; divisi diambil dari divisi pemohon saat ini; barisnya adalah barang yang muncul pada pengajuan yang cocok (sumo memakai kategori barang yang id-nya sama dengan id tipe).
+- **Ekspor Master QR**: satu baris per detail pengajuan dengan kolom `id` (isi QR, sama dengan Cetak QR per pengajuan), `nama_barang`, `pemohon`, untuk satu tipe dan rentang tanggal; dipakai mencetak label QR massal.
+
+Keduanya hanya menghitung pengajuan yang boleh dilihat user yang mengunduh, sama dengan daftar.
 
 ### 5. Lapor Gangguan (sumo-web)
 
@@ -201,7 +234,7 @@ Setiap perubahan tercatat di `item_request_logs`. Pengaturan periode pengajuan m
 
 ### 6. Asuransi, sewa, dan pengingat WhatsApp (sumo-web)
 
-Asuransi dan sewa menyimpan kontrak per badan usaha beserta riwayat perubahannya (tab Updates). Menu **Pengaturan > Notifikasi WA** mengatur nomor tujuan global, jam kirim, hari-hari pengingat sebelum jatuh tempo, saklar per jenis (sewa, asuransi, cutoff pengajuan), uji kirim, dan ganti nomor massal. `reminder:whatsapp` dijadwalkan tiap jam tetapi mengirim sekali sehari setelah jam kirim terlewati; `wa_notification_logs` mencegah satu nomor menerima pengingat ganda untuk referensi yang sama di hari yang sama. Opsi `--dry-run` menampilkan tanpa mengirim, `--force` mengabaikan jam kirim.
+Asuransi dan sewa menyimpan kontrak per badan usaha beserta riwayat perubahannya (tab Updates). Seperti di sumo, daftar menampilkan nilai pembaharuan/perpanjangan terakhir (nomor, provider, nilai, status, catatan), mengurutkan berdasarkan jatuh tempo efektif, menyembunyikan kontrak TUTUP/REFUND kecuali filter "Masih berjalan" dimatikan, dan mewarnai jatuh tempo (asuransi: kuning 15-30 hari, merah 14 hari atau kurang; sewa: dari tanggal reminder = berakhir dikurangi "bulan sebelum"). Daftar asuransi punya kolom Selisih dan Status Stok (Overlimit/Underlimit/OK, ambang 30%); daftar sewa punya Total, Sisa, dan Status Tagihan (LUNAS/LEBIH/BELUM LUNAS, tahun = hari/366 dibulatkan ke atas). Kode sewa `RENT####` dan perpanjangan `RENTUP####` dibuat otomatis bila dikosongkan. Baris pembaharuan baru berstatus BERJALAN; status PEMBAHARUAN menandai baris yang sudah digantikan dan tidak ikut dihitung di chart biaya premi (per bulan jatuh tempo). Tab Riwayat juga punya tombol **Impor Pembaharuan/Perpanjangan** dan **Ekspor Pembaharuan/Perpanjangan** seperti `importUpdate`/`exportUpdate` sumo: templatenya memakai kolom sumo (`no_polis_induk` / `kode_sewa_induk` harus sama dengan kontrak yang sedang dibuka), baris dengan `no_polis` / `kode` yang sudah ada diperbarui dan sel kosong dibiarkan, baris baru wajib bertanggal dan berstatus BERJALAN bila kosong, kode perpanjangan kosong dibuat otomatis, dan satu baris salah membatalkan seluruh file. Ekspor memakai kolom yang sama (asuransi ditambah `status`) sehingga hasilnya bisa diimpor kembali; tombolnya mengikuti izin `import_*` dan `export_*` kontrak. Menu **Pengaturan > Notifikasi WA** mengatur nomor tujuan global, jam kirim, hari-hari pengingat sebelum jatuh tempo, saklar per jenis (sewa, asuransi, cutoff pengajuan), uji kirim, dan ganti nomor massal. `reminder:whatsapp` dijadwalkan tiap jam tetapi mengirim sekali sehari setelah jam kirim terlewati; `wa_notification_logs` mencegah satu nomor menerima pengingat ganda untuk referensi yang sama di hari yang sama. Opsi `--dry-run` menampilkan tanpa mengirim, `--force` mengabaikan jam kirim.
 
 ### 7. QR aset (Shelf)
 
@@ -229,7 +262,7 @@ flowchart TB
     Queue --> Horizon[php artisan horizon]
     Horizon --> WA[WhatsAppGateway WagHub]
     Horizon --> Mail[SMTP]
-    Horizon --> Sumo[(MySQL db_sumo staging)]
+    Horizon --> Sumo[(Tabel staging sumo_dump_*)]
     Sumo -. sumo:import .-> DB
     Bot[Bot WhatsApp] --> Query["POST /api/integrations/whatsapp/assets/query"]
     Publik[Pemindai QR] --> QR["GET /qr/{qr}"]
@@ -248,14 +281,15 @@ flowchart TB
 | `app/Filament/Actions`, `Exports` | Export format audit CSA/kendaraan; exporter aset, BA, servis, checksheet OB |
 | `app/Http/Controllers` | PDF, label QR aset dan sumo, QR publik, upload kamera, unduhan bertanda tangan, `Integrations/WhatsappAssetQueryController`, `GET /api/user` |
 | `app/Models` | Model Eloquent; `Concerns/HasBusinessEntityAccess` untuk scope badan usaha |
+| `app/Access` | Aturan lihat per model: `Visibility`, rule generik (`Rules/`) dan per modul (`ItemRequests/`, `ProblemReports/`), trait `HasVisibility`, `ScopesVisibleRecords`, `AuthorizesVisibleRecords` |
 | `app/Enums` | Status aset, BA, servis, kontrak, pengajuan, laporan gangguan, notifikasi WA |
 | `app/Policies` | Authorization panel dan unduhan PDF (hasil `shield:generate`) |
 | `app/Services` | Workflow pengajuan/gangguan, rekonsiliasi CSA/kendaraan, QR, notifikasi, pengingat kontrak, gateway WhatsApp, `TalentaUserImportService`, `Sumo/` (importer dan loader dump) |
-| `app/Support` | Normalizer, aturan visibilitas, `StoredFile`, `LegacyUpload`, `ObservabilityAccess`, `EnsureAssetExportPermissions` |
+| `app/Support` | Normalizer, `StoredFile`, `LegacyUpload`, `ObservabilityAccess`, `EnsureAssetExportPermissions` |
 | `app/Imports` | Import Excel aset, produk, asuransi, sewa, checksheet kendaraan |
 | `app/Jobs`, `app/Mail` | Job notifikasi aset, `Jobs/Sumo` (`LoadSumoDump`, `RunSumoImport`), job export Filament yang ditimpa |
 | `app/Console/Commands` | `notifications:send-scheduled`, `reminder:whatsapp`, `problem-reports:auto-confirm`, `sumo:import`, `assets:generate-missing-qrs`, `storage:migrate-to-s3`, `storage:check-s3`, `vehicle-audit:validate-masters` |
-| `config/` | Konfigurasi domain: `asset-transfer.php`, `asset-reconciliation.php`, `vehicle-asset-reconciliation.php`, `item-request.php`, `problem-report.php`, `sumo-import.php` |
+| `config/` | Konfigurasi domain: `asset-transfer.php`, `asset-reconciliation.php`, `vehicle-asset-reconciliation.php`, `item-request.php`, `sumo-import.php` |
 | `database/migrations` | Evolusi schema, termasuk permission dan role custom |
 | `database/seeders` | Super Admin Shield plus master kategori/badan usaha/jabatan/merek; `GuideCaptureSeeder` untuk screenshot panduan |
 | `database/sumo` | Aturan impor dan pemulihan data legacy sumo-web |
@@ -332,7 +366,7 @@ APP_LOCALE=id
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=db_shelf
+DB_DATABASE=db_gais
 DB_USERNAME=root
 DB_PASSWORD=
 ```
@@ -355,16 +389,16 @@ php artisan storage:link
 ```
 
 > [!WARNING]
-> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data; feature test juga berjalan di database `.env`. Jangan menjalankan seeder development di production. Dan jangan pernah memuat dump sumo-web ke database GAIS: delapan tabel bernama sama (`users`, `roles`, `categories`, `divisions`, `migrations`, dan lainnya) akan tertimpa. Dump sumo hanya boleh masuk ke database terpisah (`SUMO_DB_DATABASE`).
+> Jangan menjalankan `php artisan migrate:fresh`, `migrate:refresh`, atau `db:wipe` pada database yang berisi data; feature test juga berjalan di database `.env`. Jangan menjalankan seeder development di production. Dan jangan pernah memuat dump sumo-web ke database GAIS: delapan tabel bernama sama (`users`, `roles`, `categories`, `divisions`, `migrations`, dan lainnya) akan tertimpa. Muat dump sumo hanya lewat menu Impor Data Sumo atau `php artisan sumo:import --file=...`, yang memberi awalan `sumo_dump_` pada setiap tabelnya.
 
 Seeder membuat Super Admin lokal (tabel di atas) plus master kategori, badan usaha, jabatan, dan merek. Migrasi membuat empat role modul sumo. Seeder tidak membuat role `general_affair`/`admin`, divisi, atau aset contoh.
 
 ### Data legacy sumo (opsional)
 
-Hanya dibutuhkan untuk memindahkan data dari sumo-web. Buat database kosong `db_sumo`, isi `SUMO_DB_DATABASE`, lalu pakai menu **Pengaturan > Impor Data Sumo** (unggah dump `.sql`/`.sql.gz`, uji coba, impor) atau CLI:
+Hanya dibutuhkan untuk memindahkan data dari sumo-web. Tidak perlu database lain: dump dimuat ke tabel berawalan `sumo_dump_` di database GAIS, lalu dipetakan ke tabel GAIS. Pakai menu **Pengaturan > Impor Data Sumo** (unggah dump `.sql`/`.sql.gz`, uji coba, impor) atau CLI:
 
 ```bash
-php artisan sumo:import --dry-run
+php artisan sumo:import --file=sumo.sql.gz --dry-run
 php artisan sumo:import
 ```
 
@@ -384,7 +418,7 @@ Blok inti mengikuti skeleton Laravel 12 (`CACHE_STORE`, `MAIL_SCHEME`, `BROADCAS
 | `APP_ENV` / `APP_DEBUG` | Ya | Environment dan debug |
 | `APP_LOCALE` / `APP_FALLBACK_LOCALE` | Ya | Default `id` |
 | `DB_CONNECTION` / `DB_*` | Ya | Driver dan koneksi; default proyek `mysql` |
-| `SUMO_DB_DATABASE` | Untuk impor sumo | Database staging dump sumo; default `db_sumo`. `SUMO_DB_HOST/PORT/USERNAME/PASSWORD/PREFIX` mengikuti `DB_*` bila kosong |
+| `SUMO_DB_PREFIX` / `SUMO_DB_DATABASE` | Tidak | Staging dump sumo: tabel berawalan `SUMO_DB_PREFIX` (default `sumo_dump_`) di database `DB_DATABASE`. Untuk database staging tersendiri isi `SUMO_DB_DATABASE` dan kosongkan `SUMO_DB_PREFIX`; `SUMO_DB_HOST/PORT/USERNAME/PASSWORD` mengikuti `DB_*` bila kosong |
 | `SUMO_IMPORT_DISK` / `SUMO_IMPORT_MAX_UPLOAD_KB` | Tidak | Disk privat penyimpanan dump unggahan (default `FILESYSTEM_DISK`) dan batas unggah (default 12288 KB); tidak tercantum di `.env.example` |
 | `CACHE_STORE` / `CACHE_PREFIX` | Ya / Tidak | Cache default `file`; isi prefix khusus bila beberapa aplikasi berbagi Redis |
 | `FILESYSTEM_DISK` | Ya | Disk default; `local`, `public`, atau `s3` |
@@ -507,11 +541,11 @@ Gunakan scope kecil dan satu tujuan per branch.
 | Kebutuhan | Lokasi umum |
 |---|---|
 | Tambah/ubah tabel | `database/migrations` dan `app/Models` |
-| Hak akses panel | `app/Policies`, permission Shield lewat migrasi, `app/Support/*Visibility.php` |
+| Hak akses panel | `app/Policies`, permission Shield lewat migrasi, aturan lihat di `app/Access` |
 | Fitur panel web | `app/Filament/Resources`, `Pages`, atau `Widgets`; grup baru didaftarkan di `AdminPanelProvider` dan `NavigationGroupsTest` |
 | Aset, BA, stok | `app/Models/Asset.php`, `AssetTransfer.php`, `config/asset-transfer.php` |
 | Rekonsiliasi | `app/Services/*Reconciliation*`, `app/Services/*AuditWorkbook*`, `config/*-reconciliation.php` |
-| Pengajuan Barang / Lapor Gangguan | `app/Services/ItemRequestWorkflow.php`, `ProblemReportWorkflow.php`, `app/Support/*Visibility.php`, `config/item-request.php`, `config/problem-report.php` |
+| Pengajuan Barang / Lapor Gangguan | `app/Services/ItemRequestWorkflow.php`, `ProblemReportWorkflow.php`, `app/Access/ItemRequests`, `app/Access/ProblemReports`, `config/item-request.php` |
 | Asuransi, sewa, pengingat WA | `app/Services/ContractReminderService.php`, `app/Filament/Pages/WaNotificationSettings.php` |
 | Impor sumo | `app/Services/Sumo`, `app/Jobs/Sumo`, `config/sumo-import.php`, `tests/Support/SumoLegacyFixture.php` |
 | WhatsApp | `app/Services/WhatsAppGateway.php`, `WhatsappService.php`, `Integrations/WhatsappAssetQueryController` |
@@ -524,7 +558,11 @@ Gunakan scope kecil dan satu tujuan per branch.
 
 - Jangan mengubah schema melalui migration yang sudah pernah berjalan di shared environment; tambahkan migration baru.
 - Akses baru selalu lewat permission Shield (dibuat di migrasi dan diberikan ke role yang memakainya), bukan pengecekan nama role.
-- Query data per badan usaha wajib memakai `accessibleBy`, dan policy wajib menolak record di luar akses.
+- Data per badan usaha dibatasi lewat `BusinessEntityRule` (atau `AssetBusinessEntityRule`) di `visibility()` model, bukan query manual di resource.
+- Setiap model fitur memakai `HasVisibility` dan `SoftDeletes`; resource-nya `ScopesVisibleRecords` plus filter Sampah dan aksi Pulihkan, policy-nya `AuthorizesVisibleRecords` dengan dua belas metode standar Shield yang semua aksi per record-nya memanggil `visible()` (`VisibilityArchitectureTest` memeriksa semuanya), dan aturan lihat diuji dengan `Tests\Support\AssertsVisibilityContract`.
+- Daftar untuk viewer selalu lewat `Resource::getEloquentQuery()` (badge, widget, ekspor) atau `Resource::scopeToViewer()` (relation manager, halaman, service); `visibleTo()` tidak dipanggil langsung di luar `app/Access` dan `app/Models`. Satu record diperiksa lewat policy (`authorize('view', ...)`). Pengecualian yang disengaja: QR publik, integrasi WhatsApp, pengingat, dan importer yang berjalan tanpa user.
+- Record anak (detail pengajuan, pembaharuan kontrak) mengikuti induknya: policy memakai `visibleParent()` atau mendelegasikan ke policy induk, dan relation manager yang bisa mengubahnya punya filter Sampah dan aksi Pulihkan.
+- Relasi `belongsTo` ke model soft delete selalu `withTrashed()` (riwayat utuh), subquery scope yang lewat tabel itu juga `withTrashed()` (query dan policy sepakat), sedangkan select dan filter relasi memakai `withoutTrashed()`.
 - Pindah pemegang aset hanya lewat `AssetTransfer::applyLifecycleToAssets`.
 - Field user yang disinkronkan dari Talenta (`employee_id` terisi) hanya berubah lewat import ulang JSON Talenta.
 - Perubahan konfigurasi wajib diikuti update `.env.example` dan README tanpa memasukkan secret.
@@ -574,10 +612,11 @@ Daftar ini adalah batas perilaku aktual, bukan fitur yang dijanjikan:
 6. **Queue default `redis` + Horizon.** Notifikasi aset mengantri di `notifications`, export Filament di `exports`, Impor Data Sumo di `long-running`. Tanpa Redis dan `php artisan horizon`, job menumpuk diam-diam. Tes memakai `QUEUE_CONNECTION=sync`.
 7. **`phpunit.xml` tidak memaksa SQLite memory.** Full suite menyentuh database development.
 8. **File unggahan sumo lama tidak ikut diimpor.** Folder `Request_File`, `Problem_Report_File`, `Rent_File`, dan `product` harus disalin manual ke disk `public`; nama file di database hanya nama filenya (`App\Support\LegacyUpload`).
-9. **Nama infrastruktur masih Shelf.** Database `db_shelf`, bucket S3 `shelf`, folder server `/var/www/web-shelf`, dan domain tidak ikut rebranding. Ikon PWA di `public/images/icons/` dan `public/favicon.ico` masih logo lama.
+9. **Ikon PWA masih logo lama.** Ikon di `public/images/icons/` dan `public/favicon.ico` belum diganti ke logo GAIS.
 10. **Command `app:test-whats-app` dan `app:clear-log` kosong.** Jangan diandalkan.
 11. **`model:prune` dijadwalkan** meskipun model aplikasi saat ini tidak memakai trait `Prunable`.
 12. **Versi PHP.** `composer.json` menulis `^8.2`, tetapi `composer.lock` saat ini membutuhkan 8.4.
+13. **Foto profil user dan impor user dari Excel sumo tidak dibawa.** Folder `profile` tidak dipakai dan user masuk hanya lewat JSON Talenta; ekspor Excel user (kolom sumo) tetap ada untuk pemegang `export_user`.
 
 ## Troubleshooting
 
@@ -646,7 +685,7 @@ Kuota pengajuan terbuka per tipe (default dua) sudah habis, atau tipe pengajuan 
 
 ### Pengajuan tidak terlihat oleh executor atau manager
 
-Periksa `users.approver_user_id` pemohon (untuk manager) dan cakupan divisi executor di tabel `item_request_scopes` (diisi dari `config/sumo-import.php` saat impor; ubah lewat menu Divisi). Pengajuan juga dibatasi badan usaha.
+Periksa `users.approver_user_id` pemohon (untuk atasan) dan cakupan divisi executor di tabel `item_request_scopes` (diisi dari `config/sumo-import.php` saat impor; ubah lewat menu Divisi). Tombol Proses executor baru muncul setelah tahap Accounting (tipe yang mensyaratkannya) dan tahap Manager (bila ada cakupan "menyetujui jumlah" yang mengenai pengajuan itu) lewat; kolom Tahap menandai tahap yang ditunggu dengan ⏳. Pengajuan juga dibatasi badan usaha.
 
 ### Pengingat sewa, asuransi, atau cutoff tidak terkirim
 
@@ -658,8 +697,8 @@ Periksa `users.approver_user_id` pemohon (untuk manager) dan cakupan divisi exec
 ### Impor Data Sumo tidak berjalan atau menggantung
 
 1. Butuh Redis dan Horizon dengan supervisor `supervisor-long`; setelah deploy jalankan `php artisan horizon:terminate`.
-2. `SUMO_DB_DATABASE` harus database terpisah dan kosong; loader menolak target yang sama dengan database GAIS atau yang berisi tabel GAIS.
-3. Batas unggah 12 MB (`SUMO_IMPORT_MAX_UPLOAD_KB`, plus `upload_max_filesize` PHP dan `client_max_body_size` nginx); pakai `.sql.gz` atau CLI `php artisan sumo:import`.
+2. Error `Access denied ... to database 'db_sumo'` berarti `.env` masih berisi `SUMO_DB_DATABASE=db_sumo` dari versi lama. Hapus baris itu supaya dump dimuat ke tabel `sumo_dump_*` di database GAIS, lalu `php artisan optimize` dan `php artisan horizon:terminate`.
+3. Batas unggah 12 MB (`SUMO_IMPORT_MAX_UPLOAD_KB`, plus `upload_max_filesize` PHP dan `client_max_body_size` nginx); pakai `.sql.gz` atau CLI `php artisan sumo:import --file=...`.
 4. Baca peringatan di hasil uji coba (pemetaan badan usaha, user bernama sama) sebelum **Impor sungguhan**, dan backup database GAIS dulu.
 
 ### WhatsApp atau pengingat dokumen aset tidak terkirim

@@ -21,7 +21,7 @@ class ItemRequestApproval extends Model
 
     public function request(): BelongsTo
     {
-        return $this->belongsTo(ItemRequest::class, 'item_request_id');
+        return $this->belongsTo(ItemRequest::class, 'item_request_id')->withTrashed();
     }
 
     public function approver(): BelongsTo

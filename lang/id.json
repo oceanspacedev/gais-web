@@ -105,6 +105,8 @@
     "Custom Asset Attributes": "Custom Aset Attribute",
     "Task": "Task",
     "Tasks": "Task",
+    "Security Checksheet": "Security Checksheet",
+    "Security Checksheets": "Security Checksheet",
     "Vehicle Checksheet": "Vehicle Checksheet",
     "Vehicle Checksheets": "Vehicle Checksheet",
     "Vendor": "Vendor",
@@ -112,5 +114,7 @@
     "Asset Request": "Pengajuan Aset",
     "Asset Requests": "Pengajuan Aset",
     "Division": "Divisi",
-    "Divisions": "Divisi"
+    "Divisions": "Divisi",
+
+    "All rights reserved.": "Hak cipta dilindungi."
 }

@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\JobTitle;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class JobTitlePolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class JobTitlePolicy
      */
     public function view(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('view_job::title');
+        return $user->can('view_job::title') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -39,7 +40,7 @@ class JobTitlePolicy
      */
     public function update(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('update_job::title');
+        return $user->can('update_job::title') && $this->editable($user, $jobTitle);
     }
 
     /**
@@ -47,7 +48,7 @@ class JobTitlePolicy
      */
     public function delete(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('delete_job::title');
+        return $user->can('delete_job::title') && $this->editable($user, $jobTitle);
     }
 
     /**
@@ -63,7 +64,7 @@ class JobTitlePolicy
      */
     public function forceDelete(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('force_delete_job::title');
+        return $user->can('force_delete_job::title') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -79,7 +80,7 @@ class JobTitlePolicy
      */
     public function restore(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('restore_job::title');
+        return $user->can('restore_job::title') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -95,7 +96,7 @@ class JobTitlePolicy
      */
     public function replicate(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('replicate_job::title');
+        return $user->can('replicate_job::title') && $this->editable($user, $jobTitle);
     }
 
     /**

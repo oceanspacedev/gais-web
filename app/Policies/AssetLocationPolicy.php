@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\AssetLocation;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AssetLocationPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class AssetLocationPolicy
      */
     public function view(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('view_asset::location');
+        return $user->can('view_asset::location') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -39,7 +40,7 @@ class AssetLocationPolicy
      */
     public function update(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('update_asset::location');
+        return $user->can('update_asset::location') && $this->editable($user, $assetLocation);
     }
 
     /**
@@ -47,7 +48,7 @@ class AssetLocationPolicy
      */
     public function delete(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('delete_asset::location');
+        return $user->can('delete_asset::location') && $this->editable($user, $assetLocation);
     }
 
     /**
@@ -63,7 +64,7 @@ class AssetLocationPolicy
      */
     public function forceDelete(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('force_delete_asset::location');
+        return $user->can('force_delete_asset::location') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -79,7 +80,7 @@ class AssetLocationPolicy
      */
     public function restore(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('restore_asset::location');
+        return $user->can('restore_asset::location') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -95,7 +96,7 @@ class AssetLocationPolicy
      */
     public function replicate(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('replicate_asset::location');
+        return $user->can('replicate_asset::location') && $this->editable($user, $assetLocation);
     }
 
     /**

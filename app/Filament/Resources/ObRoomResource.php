@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ObRoomResource\Pages;
 use App\Models\ObRoom;
 use App\Support\RelationSearch;
@@ -10,6 +11,9 @@ use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
@@ -21,15 +25,19 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Filters\TernaryFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Validation\Rules\Unique;
 
 class ObRoomResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ObRoom::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-home-modern';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-list-bullet';
 
     protected static string|\UnitEnum|null $navigationGroup = 'OB / Kebersihan';
 
@@ -37,12 +45,12 @@ class ObRoomResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Ruangan OB');
+        return __('Pekerjaan OB');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Ruangan OB');
+        return __('Pekerjaan OB');
     }
 
     public static function form(Schema $form): Schema
@@ -61,8 +69,8 @@ class ObRoomResource extends Resource
     {
         return [
             TextInput::make('name')
-                ->label('Nama Ruangan')
-                ->placeholder('Contoh: Toilet Lt. 1, Mushola, Ruang Meeting Finance')
+                ->label('Nama Pekerjaan')
+                ->placeholder('Contoh: Toilet Lt. 1, Mushola, Buang sampah toko')
                 ->required()
                 ->maxLength(255)
                 ->dehydrateStateUsing(fn (?string $state): string => ObRoom::normalizeName($state))
@@ -78,16 +86,16 @@ class ObRoomResource extends Resource
 
             Select::make('asset_location_id')
                 ->label('Lokasi')
-                ->relationship('location', 'name')
+                ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                 ->placeholder('Semua lokasi')
-                ->helperText('Kosongkan bila ruangan ini tidak terikat lokasi tertentu.')
+                ->helperText('Kosongkan bila pekerjaan ini tidak terikat lokasi tertentu.')
                 ->searchable()
                 ->preload()
                 ->live(),
 
             Toggle::make('is_active')
                 ->label('Aktif')
-                ->helperText('Ruangan nonaktif tidak muncul saat menugaskan OB.')
+                ->helperText('Pekerjaan nonaktif tidak muncul saat menugaskan OB.')
                 ->default(true),
         ];
     }
@@ -97,7 +105,7 @@ class ObRoomResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
-                    ->label('Ruangan')
+                    ->label('Pekerjaan')
                     ->searchable()
                     ->sortable()
                     ->weight('bold'),
@@ -127,15 +135,17 @@ class ObRoomResource extends Resource
             ])
             ->defaultSort('name')
             ->filters([
+                TrashedFilter::make(),
                 SelectFilter::make('asset_location_id')
                     ->label('Lokasi')
-                    ->relationship('location', 'name')
+                    ->relationship('location', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                     ->searchable()
                     ->preload(),
                 TernaryFilter::make('is_active')
                     ->label('Aktif'),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 EditAction::make()
                     ->slideOver()
                     ->modalWidth('md'),
@@ -143,6 +153,8 @@ class ObRoomResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     self::mergeBulkAction(),
                     DeleteBulkAction::make(),
                 ]),
@@ -168,8 +180,8 @@ class ObRoomResource extends Resource
             ->color('warning')
             ->visible(fn (): bool => (auth()->user()?->can('update', new ObRoom) ?? false)
                 && (auth()->user()?->can('deleteAny', ObRoom::class) ?? false))
-            ->modalHeading('Gabungkan Ruangan')
-            ->modalDescription('Riwayat checksheet dan daftar shift dari ruangan yang dipilih dipindahkan ke ruangan tujuan, lalu ruangan lainnya dihapus. Nama ruangan di riwayat checksheet ikut dibetulkan.')
+            ->modalHeading('Gabungkan Pekerjaan')
+            ->modalDescription('Riwayat checksheet dan daftar shift dari pekerjaan yang dipilih dipindahkan ke pekerjaan tujuan, lalu pekerjaan lainnya dihapus. Nama pekerjaan di riwayat checksheet ikut dibetulkan.')
             ->modalSubmitActionLabel('Gabungkan')
             ->form(fn (Collection $records): array => [
                 Select::make('target_id')
@@ -191,7 +203,7 @@ class ObRoomResource extends Resource
                 $merged = ObRoom::mergeInto($target, $records);
 
                 Notification::make()
-                    ->title("{$merged} ruangan digabungkan ke {$target->name}")
+                    ->title("{$merged} pekerjaan digabungkan ke {$target->name}")
                     ->success()
                     ->send();
             });

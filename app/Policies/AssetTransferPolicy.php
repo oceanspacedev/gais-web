@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\AssetTransfer;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class AssetTransferPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,7 +24,7 @@ class AssetTransferPolicy
      */
     public function view(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('view_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('view_asset::transfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -39,7 +40,7 @@ class AssetTransferPolicy
      */
     public function update(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('update_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('update_asset::transfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -47,7 +48,7 @@ class AssetTransferPolicy
      */
     public function delete(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('delete_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('delete_asset::transfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -63,7 +64,7 @@ class AssetTransferPolicy
      */
     public function forceDelete(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('force_delete_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('force_delete_asset::transfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -79,7 +80,7 @@ class AssetTransferPolicy
      */
     public function restore(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('restore_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('restore_asset::transfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -95,7 +96,7 @@ class AssetTransferPolicy
      */
     public function replicate(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('replicate_asset::transfer') && $this->withinBusinessEntityScope($user, $assetTransfer);
+        return $user->can('replicate_asset::transfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -137,15 +138,5 @@ class AssetTransferPolicy
     public function deleteDetail(User $user): bool
     {
         return $user->can('delete_detail_asset::transfer');
-    }
-
-    /**
-     * Record di luar badan usaha yang bisa diakses user ditolak (lihat
-     * AssetTransfer::isAccessibleBy). Model yang belum tersimpan, yaitu cek
-     * izin saja, tidak dibatasi.
-     */
-    private function withinBusinessEntityScope(User $user, AssetTransfer $assetTransfer): bool
-    {
-        return ! $assetTransfer->exists || $assetTransfer->isAccessibleBy($user);
     }
 }

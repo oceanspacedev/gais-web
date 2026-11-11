@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Enums\ProblemReportStatus;
 use App\Exceptions\ItemRequestException;
 use App\Filament\Resources\ProblemReportResource\Pages;
@@ -16,6 +17,9 @@ use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\FileUpload;
@@ -28,11 +32,14 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
@@ -44,6 +51,8 @@ use pxlrbt\FilamentExcel\Exports\ExcelExport;
  */
 class ProblemReportResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ProblemReport::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-chat-bubble-left-ellipsis';
@@ -71,33 +80,6 @@ class ProblemReportResource extends Resource
         return $count > 0 ? (string) $count : null;
     }
 
-    public static function getEloquentQuery(): Builder
-    {
-        $query = parent::getEloquentQuery();
-
-        return static::scopeToViewer($query, auth()->user());
-    }
-
-    /**
-     * Aturan lihat yang sama dengan menu ini, juga dipakai tab di halaman user.
-     */
-    public static function scopeToViewer(Builder $query, mixed $viewer): Builder
-    {
-        if (! $viewer instanceof User) {
-            return $query->whereRaw('1 = 0');
-        }
-
-        $query->visibleTo($viewer);
-
-        if (! $viewer->hasUnrestrictedBusinessEntityAccess()) {
-            $query->where(fn (Builder $scoped) => $scoped
-                ->whereNull('problem_reports.business_entity_id')
-                ->orWhereIn('problem_reports.business_entity_id', $viewer->accessibleBusinessEntityIds()));
-        }
-
-        return $query;
-    }
-
     public static function form(Schema $form): Schema
     {
         $viewer = auth()->user();
@@ -118,7 +100,7 @@ class ProblemReportResource extends Resource
                             ->visible($onBehalf),
                         Select::make('problem_report_category_id')
                             ->label('Jenis Gangguan')
-                            ->relationship('category', 'name')
+                            ->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->preload()
                             ->required(),
                         TextInput::make('title')
@@ -141,40 +123,66 @@ class ProblemReportResource extends Resource
 
     public static function infolist(Schema $infolist): Schema
     {
+        // Kiri: data laporan, keterangan, hasil. Kanan: foto sebelum/sesudah.
         return $infolist
-            ->columns(1)
+            ->columns(['default' => 1, 'lg' => 3])
             ->schema([
-                Section::make('Ringkasan')->schema([
-                    Grid::make(3)->schema([
-                        TextEntry::make('code')->label('Kode')->badge()->color('primary'),
-                        TextEntry::make('status')->label('Status')->badge(),
-                        TextEntry::make('client_status')->label('Konfirmasi Pelapor')
-                            ->state(fn (ProblemReport $record): string => $record->isConfirmed() ? 'Selesai' : 'Menunggu')
-                            ->badge()
-                            ->color(fn (ProblemReport $record): string => $record->isConfirmed() ? 'success' : 'warning'),
-                        TextEntry::make('user.name')->label('Pelapor'),
-                        TextEntry::make('user.division.name')->label('Divisi')->placeholder('-'),
-                        TextEntry::make('category.name')->label('Jenis')->placeholder('-'),
-                        TextEntry::make('reported_at')->label('Dilaporkan')->dateTime('d/m/Y H:i'),
-                        TextEntry::make('scheduled_at')->label('Jadwal Pengerjaan')->date('d/m/Y')->placeholder('-'),
-                        TextEntry::make('closedBy.name')->label('Ditutup Oleh')->placeholder('-'),
-                    ]),
-                    TextEntry::make('title')->label('Judul')->placeholder('-'),
-                    TextEntry::make('description')->label('Keterangan')->placeholder('-'),
-                    TextEntry::make('result_desc')->label('Hasil Pengerjaan')->placeholder('-'),
-                    TextEntry::make('review_user')->label('Ulasan Pelapor')->placeholder('-'),
-                ]),
-                Section::make('Foto')->schema([
-                    Grid::make(2)->schema([
-                        ImageEntry::make('photo_before')->label('Sebelum')->disk('public')
-                            ->state(fn (ProblemReport $record): ?string => LegacyUpload::path(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_before))
-                            ->height(260),
-                        ImageEntry::make('photo_after')->label('Sesudah')->disk('public')
-                            ->state(fn (ProblemReport $record): ?string => LegacyUpload::path(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_after))
-                            ->height(260)
-                            ->placeholder('Belum ada'),
-                    ]),
-                ]),
+                Group::make([
+                    Section::make('Informasi Laporan')
+                        ->icon('heroicon-o-document-text')
+                        ->schema([
+                            Grid::make(['default' => 2, 'xl' => 3])->schema([
+                                TextEntry::make('user.name')->label('Pelapor')->weight(FontWeight::SemiBold)
+                                    ->helperText(fn (ProblemReport $record): ?string => $record->user?->division?->name),
+                                TextEntry::make('category.name')->label('Jenis Gangguan')->placeholder('-'),
+                                TextEntry::make('reported_at')->label('Dilaporkan')->dateTime('d M Y, H:i'),
+                                TextEntry::make('status')->label('Status')->badge(),
+                                TextEntry::make('client_status')->label('Konfirmasi Pelapor')
+                                    ->state(fn (ProblemReport $record): string => $record->isConfirmed() ? 'Selesai' : 'Menunggu')
+                                    ->badge()
+                                    ->color(fn (ProblemReport $record): string => $record->isConfirmed() ? 'success' : 'warning'),
+                                TextEntry::make('scheduled_at')->label('Jadwal Pengerjaan')->date('d M Y')->placeholder('-'),
+                            ]),
+                        ]),
+
+                    Section::make('Keterangan Gangguan')
+                        ->icon('heroicon-o-exclamation-triangle')
+                        ->schema([
+                            TextEntry::make('title')->label('Judul')->weight(FontWeight::SemiBold)
+                                ->visible(fn (ProblemReport $record): bool => filled($record->title)),
+                            TextEntry::make('description')->label('Keterangan')->placeholder('-'),
+                        ]),
+
+                    // Baru tampil setelah ada yang mengerjakan; isian kosong disembunyikan.
+                    Section::make('Hasil Pengerjaan')
+                        ->icon('heroicon-o-wrench-screwdriver')
+                        ->visible(fn (ProblemReport $record): bool => filled($record->result_desc) || filled($record->review_user) || filled($record->closed_by_user_id))
+                        ->schema([
+                            TextEntry::make('closedBy.name')->label('Ditutup Oleh')
+                                ->visible(fn (ProblemReport $record): bool => filled($record->closed_by_user_id)),
+                            TextEntry::make('result_desc')->label('Hasil Pengerjaan')
+                                ->visible(fn (ProblemReport $record): bool => filled($record->result_desc)),
+                            TextEntry::make('review_user')->label('Ulasan Pelapor')
+                                ->visible(fn (ProblemReport $record): bool => filled($record->review_user)),
+                        ]),
+                ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
+
+                Group::make([
+                    Section::make('Foto')
+                        ->icon('heroicon-o-photo')
+                        ->schema([
+                            ImageEntry::make('photo_before')->label('Sebelum')->disk('public')
+                                ->state(fn (ProblemReport $record): ?string => LegacyUpload::path(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_before))
+                                ->url(fn (ProblemReport $record): ?string => LegacyUpload::url(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_before), true)
+                                ->height(220)
+                                ->placeholder('Tidak ada foto'),
+                            ImageEntry::make('photo_after')->label('Sesudah')->disk('public')
+                                ->state(fn (ProblemReport $record): ?string => LegacyUpload::path(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_after))
+                                ->url(fn (ProblemReport $record): ?string => LegacyUpload::url(LegacyUpload::PROBLEM_REPORT_DIR, $record->photo_after), true)
+                                ->height(220)
+                                ->placeholder('Belum ada'),
+                        ]),
+                ])->columnSpan(1)->extraAttributes(['class' => 'gais-fill-column']),
             ]);
     }
 
@@ -198,7 +206,8 @@ class ProblemReportResource extends Resource
             ])
             ->defaultSort('reported_at', 'desc')
             ->filters([
-                SelectFilter::make('problem_report_category_id')->label('Jenis')->relationship('category', 'name')->preload(),
+                TrashedFilter::make(),
+                SelectFilter::make('problem_report_category_id')->label('Jenis')->relationship('category', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())->preload(),
                 SelectFilter::make('status')->label('Status')->options(ProblemReportStatus::class),
                 SelectFilter::make('client_status')->label('Konfirmasi')->options([0 => 'Menunggu', 1 => 'Selesai']),
                 Filter::make('reported_at')
@@ -211,6 +220,7 @@ class ProblemReportResource extends Resource
                         ->when($data['until'] ?? null, fn (Builder $q, string $until) => $q->whereDate('reported_at', '<=', $until))),
             ])
             ->recordActions([
+                RestoreAction::make(),
                 ViewAction::make(),
                 ActionGroup::make([
                     ...static::workflowActions(),
@@ -219,6 +229,8 @@ class ProblemReportResource extends Resource
             ])
             ->toolbarActions([
                 BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
                     ExportBulkAction::make()
                         ->label('Ekspor Excel')
                         ->exports([
@@ -238,7 +250,7 @@ class ProblemReportResource extends Resource
         $workflow = app(ProblemReportWorkflow::class);
         $user = fn (): ?User => auth()->user();
 
-        return [
+        $actions = [
             Action::make('process')
                 ->label('Proses (Executor)')
                 ->icon('heroicon-o-wrench-screwdriver')
@@ -281,6 +293,8 @@ class ProblemReportResource extends Resource
                     'Terima kasih, laporan ditandai selesai.',
                 )),
         ];
+
+        return $actions;
     }
 
     public static function getPages(): array

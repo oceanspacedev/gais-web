@@ -2,6 +2,9 @@
 
 namespace App\Models;
 
+use App\Access\HasVisibility;
+use App\Access\Rules\EveryoneGrant;
+use App\Access\Visibility;
 use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -11,7 +14,7 @@ use Illuminate\Support\Facades\Storage;
 
 class VehicleChecksheet extends Model
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, HasVisibility, SoftDeletes;
 
     protected $fillable = [
         'asset_id',
@@ -40,7 +43,7 @@ class VehicleChecksheet extends Model
 
     public function asset(): BelongsTo
     {
-        return $this->belongsTo(Asset::class, 'asset_id');
+        return $this->belongsTo(Asset::class, 'asset_id')->withTrashed();
     }
 
     protected static function booted()
@@ -49,8 +52,11 @@ class VehicleChecksheet extends Model
             $vehicleChecksheet->calculateRentalDetails();
         });
 
+        // Soft delete menyimpan file supaya record yang dipulihkan masih utuh; file dihapus saat hapus permanen.
         static::deleting(function ($vehicleChecksheet) {
-            $vehicleChecksheet->deleteRelatedFiles();
+            if ($vehicleChecksheet->isForceDeleting()) {
+                $vehicleChecksheet->deleteRelatedFiles();
+            }
         });
 
         static::updating(function ($vehicleChecksheet) {
@@ -121,5 +127,13 @@ class VehicleChecksheet extends Model
         if ($this->isDirty('return_damage_report') && $this->getOriginal('return_damage_report')) {
             Storage::disk('public')->delete($this->getOriginal('return_damage_report'));
         }
+    }
+
+    /**
+     * Semua record terlihat; pembatasan hanya lewat izin Shield di policy.
+     */
+    public static function visibility(): Visibility
+    {
+        return Visibility::make()->grant(new EveryoneGrant);
     }
 }

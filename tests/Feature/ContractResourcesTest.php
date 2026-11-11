@@ -9,7 +9,9 @@ use App\Filament\Resources\InsuranceResource\Pages\ViewInsurance;
 use App\Filament\Resources\InsuranceResource\RelationManagers\UpdatesRelationManager;
 use App\Filament\Resources\RentResource\Pages\ListRents;
 use App\Models\Insurance;
+use App\Models\InsuranceCategory;
 use App\Models\InsuranceProvider;
+use App\Models\InsuranceScope;
 use App\Models\Rent;
 use App\Models\User;
 use Filament\Facades\Filament;
@@ -44,11 +46,16 @@ class ContractResourcesTest extends TestCase
     public function test_insurance_can_be_created_and_renewed_from_the_panel(): void
     {
         $provider = InsuranceProvider::create(['name' => 'Provider Uji']);
+        $category = InsuranceCategory::create(['name' => 'Kategori Uji']);
+        $scope = InsuranceScope::create(['name' => 'Cakupan Uji']);
 
         Livewire::test(CreateInsurance::class)
             ->fillForm([
                 'policy_number' => 'POL-UJI-1',
                 'insured_name' => 'Gudang Uji',
+                // Sumo mewajibkan kategori dan cakupan saat membuat polis.
+                'insurance_category_id' => $category->id,
+                'insurance_scope_id' => $scope->id,
                 'stock_provider_id' => $provider->id,
                 'stock_worth' => 150000000,
                 'stock_premium' => 450000,
@@ -108,7 +115,7 @@ class ContractResourcesTest extends TestCase
         $this->assertSame('LEBIH', $rent->fresh()->billingSummary()['status']);
 
         $rent->update(['online_fund' => 0]);
-        $this->assertSame('KURANG', $rent->fresh()->billingSummary()['status']);
+        $this->assertSame('BELUM LUNAS', $rent->fresh()->billingSummary()['status']);
 
         Livewire::test(ListRents::class)->assertOk()->searchTable('RENT-UJI')->assertCanSeeTableRecords([$rent]);
     }

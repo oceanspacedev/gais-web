@@ -2,13 +2,14 @@
 
 namespace App\Policies;
 
+use App\Access\AuthorizesVisibleRecords;
 use App\Models\ObChecksheet;
 use App\Models\User;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
 class ObChecksheetPolicy
 {
-    use HandlesAuthorization;
+    use AuthorizesVisibleRecords, HandlesAuthorization;
 
     /**
      * Determine whether the user can view any models.
@@ -23,8 +24,7 @@ class ObChecksheetPolicy
      */
     public function view(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('view_ob::checksheet')
-            && ($this->isOwnedBy($user, $obChecksheet) || $this->viewAll($user));
+        return $user->can('view_ob::checksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -41,6 +41,7 @@ class ObChecksheetPolicy
     public function update(User $user, ObChecksheet $obChecksheet): bool
     {
         return $user->can('update_ob::checksheet')
+            && $this->editable($user, $obChecksheet)
             && ($this->isOwnedBy($user, $obChecksheet) || $this->updateAll($user));
     }
 
@@ -50,6 +51,7 @@ class ObChecksheetPolicy
     public function delete(User $user, ObChecksheet $obChecksheet): bool
     {
         return $user->can('delete_ob::checksheet')
+            && $this->editable($user, $obChecksheet)
             && ($this->isOwnedBy($user, $obChecksheet) || $this->deleteAll($user));
     }
 
@@ -66,7 +68,7 @@ class ObChecksheetPolicy
      */
     public function forceDelete(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('force_delete_ob::checksheet');
+        return $user->can('force_delete_ob::checksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -82,7 +84,7 @@ class ObChecksheetPolicy
      */
     public function restore(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('restore_ob::checksheet');
+        return $user->can('restore_ob::checksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -98,7 +100,7 @@ class ObChecksheetPolicy
      */
     public function replicate(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('replicate_ob::checksheet');
+        return $user->can('replicate_ob::checksheet') && $this->editable($user, $obChecksheet);
     }
 
     /**

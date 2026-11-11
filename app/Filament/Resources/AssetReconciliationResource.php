@@ -18,9 +18,12 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
+use Filament\Support\Enums\FontWeight;
+use Filament\Support\Enums\TextSize;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 
 class AssetReconciliationResource extends Resource
 {
@@ -73,7 +76,7 @@ class AssetReconciliationResource extends Resource
                         ->columnSpanFull(),
                     Select::make('business_entity_id')
                         ->label('Badan Usaha Default')
-                        ->relationship('businessEntity', 'name')
+                        ->relationship('businessEntity', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                         ->searchable()
                         ->preload()
                         ->required()
@@ -125,11 +128,7 @@ class AssetReconciliationResource extends Resource
                 TextColumn::make('source_system')
                     ->label('Jenis')
                     ->badge()
-                    ->formatStateUsing(fn (?string $state): string => match ($state) {
-                        'VEHICLE_AUDIT' => 'Kendaraan',
-                        'CSA' => 'CSA',
-                        default => $state ?? '-',
-                    })
+                    ->formatStateUsing(fn (?string $state): string => self::sourceLabel($state))
                     ->color(fn (?string $state): string => $state === 'VEHICLE_AUDIT' ? 'info' : 'gray'),
                 TextColumn::make('businessEntity.name')->label('Badan Usaha Default')->searchable(query: RelationSearch::on('businessEntity', 'name'))->sortable()->toggleable(),
                 TextColumn::make('status')
@@ -171,88 +170,93 @@ class AssetReconciliationResource extends Resource
 
     public static function infolist(Schema $schema): Schema
     {
-        return $schema->schema([
-            Section::make('2. Laporan Hasil Banding')
-                ->description('Tinjau Inline, Gap, dan Blocked sebelum Apply. Tidak ada mutasi GAIS pada tahap ini.')
-                ->schema([
-                    Grid::make(4)->schema([
-                        TextEntry::make('status')
+        $isVehicle = fn (?AssetReconciliation $record): bool => ($record?->source_system ?? null) === 'VEHICLE_AUDIT';
+        $count = fn (TextEntry $entry): TextEntry => $entry->numeric()->size(TextSize::Large)->weight(FontWeight::Bold);
+
+        // Satu kolom selebar layar: data batch, angka hasil banding, lalu hasil apply.
+        return $schema
+            ->columns(1)
+            ->schema([
+                Section::make('Penyebab Gagal')
+                    ->icon('heroicon-o-x-circle')
+                    ->iconColor('danger')
+                    ->visible(fn (?AssetReconciliation $record): bool => filled($record?->failure_message))
+                    ->schema([
+                        TextEntry::make('failure_message')->hiddenLabel()->color('danger'),
+                    ]),
+
+                Section::make('Informasi Batch')
+                    ->icon('heroicon-o-document-text')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            TextEntry::make('status')
+                                ->label('Status')
+                                ->badge()
+                                ->formatStateUsing(fn (string $state): string => self::statusLabel($state))
+                                ->color(fn (string $state): string => self::statusColor($state)),
+                            TextEntry::make('source_system')
+                                ->label('Jenis Audit')
+                                ->badge()
+                                ->formatStateUsing(fn (?string $state): string => self::sourceLabel($state))
+                                ->color(fn (?string $state): string => $state === 'VEHICLE_AUDIT' ? 'info' : 'gray'),
+                            TextEntry::make('source_sheet')->label('Sheet')->placeholder('-'),
+                            TextEntry::make('businessEntity.name')
+                                ->label('Badan Usaha Default')
+                                ->placeholder('Batch lama: belum ditentukan')
+                                ->color(fn (?string $state): ?string => filled($state) ? null : 'danger'),
+                            TextEntry::make('original_filename')
+                                ->label('Workbook')
+                                ->icon('heroicon-o-table-cells')
+                                ->columnSpan(['default' => 2]),
+                            TextEntry::make('compared_at')->label('Waktu Laporan')->dateTime('d M Y, H:i')->placeholder('-'),
+                            TextEntry::make('applied_at')->label('Waktu Apply')->dateTime('d M Y, H:i')->placeholder('Belum diterapkan'),
+                            TextEntry::make('parent.uuid')
+                                ->label('Batch Induk')
+                                ->columnSpan(['default' => 2])
+                                ->visible(fn (?AssetReconciliation $record): bool => filled($record?->parent_id)),
+                        ]),
+                    ]),
+
+                Section::make('Hasil Banding')
+                    ->icon('heroicon-o-scale')
+                    ->description('Tinjau Inline, Gap, dan Blocked sebelum Apply. Tidak ada mutasi GAIS pada tahap ini.')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            $count(TextEntry::make('total_rows')->label('Total Baris')),
+                            $count(TextEntry::make('inline_rows')->label('Sudah Inline'))->color('success'),
+                            $count(TextEntry::make('gap_rows')->label('Perlu Koreksi'))->color('warning'),
+                            $count(TextEntry::make('blocked_rows')->label('Terblokir'))->color('danger'),
+                        ]),
+                    ]),
+
+                Section::make('Hasil Apply')
+                    ->icon('heroicon-o-check-badge')
+                    ->schema([
+                        Grid::make(['default' => 2, 'lg' => 4])->schema([
+                            $count(TextEntry::make('created_rows')->label('Aset Dibuat')),
+                            $count(TextEntry::make('updated_rows')->label('Aset Disesuaikan')),
+                            $count(TextEntry::make('retired_rows')
+                                ->label(fn (?AssetReconciliation $record): string => $isVehicle($record) ? 'Dinonaktifkan / Terjual' : 'Saldo Jadi 0')),
+                            $count(TextEntry::make('orphan_gais_plates')
+                                ->label('Plat GAIS tanpa pasangan audit')
+                                ->state(fn (?AssetReconciliation $record): ?int => $record?->summary['orphan_gais_plates'] ?? null)
+                                ->helperText('Observasi saja — tidak dihapus otomatis (FR-VA-013).'))
+                                ->visible(fn (?AssetReconciliation $record): bool => $isVehicle($record)
+                                    && array_key_exists('orphan_gais_plates', $record?->summary ?? [])),
+                        ]),
+                        // summary.actions berbentuk aksi => jumlah; state dibangun di sini karena
+                        // Filament memformat tiap nilai array satu per satu (hasilnya dulu "-, -, -").
+                        TextEntry::make('preview_actions')
+                            ->label('Ringkasan Aksi Preview')
+                            ->state(fn (?AssetReconciliation $record): array => collect($record?->summary['actions'] ?? [])
+                                ->map(fn (int $total, string $action): string => self::actionLabel($action).": {$total}")
+                                ->values()
+                                ->all())
                             ->badge()
-                            ->formatStateUsing(fn (string $state): string => self::statusLabel($state))
-                            ->color(fn (string $state): string => self::statusColor($state)),
-                        TextEntry::make('source_system')->label('Sumber'),
-                        TextEntry::make('source_sheet')->label('Sheet'),
-                        TextEntry::make('original_filename')->label('Workbook'),
+                            ->color('gray')
+                            ->visible(fn (?AssetReconciliation $record): bool => filled($record?->summary['actions'] ?? null)),
                     ]),
-                    TextEntry::make('businessEntity.name')
-                        ->label('Badan Usaha Default')
-                        ->placeholder('Batch lama: belum ditentukan')
-                        ->color(fn (?string $state): string => filled($state) ? 'primary' : 'danger'),
-                    Grid::make(4)->schema([
-                        TextEntry::make('total_rows')->label('Total Baris')->numeric(),
-                        TextEntry::make('inline_rows')->label('Sudah Inline')->numeric()->color('success'),
-                        TextEntry::make('gap_rows')->label('Perlu Koreksi')->numeric()->color('warning'),
-                        TextEntry::make('blocked_rows')->label('Terblokir')->numeric()->color('danger'),
-                    ]),
-                    Grid::make(3)->schema([
-                        TextEntry::make('created_rows')->label('Aset Dibuat')->numeric(),
-                        TextEntry::make('updated_rows')->label('Aset Disesuaikan')->numeric(),
-                        TextEntry::make('retired_rows')
-                            ->label(fn (?AssetReconciliation $record): string => ($record?->source_system ?? null) === 'VEHICLE_AUDIT'
-                                ? 'Dinonaktifkan / Terjual'
-                                : 'Saldo Jadi 0')
-                            ->numeric(),
-                    ]),
-                    TextEntry::make('summary.actions')
-                        ->label('Ringkasan Aksi Preview')
-                        ->formatStateUsing(function (mixed $state): string {
-                            if (! is_array($state) || $state === []) {
-                                return '-';
-                            }
-
-                            $labels = [
-                                'mark_sold' => 'Tandai terjual',
-                                'retire_duplicate' => 'Nonaktifkan duplikat',
-                                'create_missing' => 'Buat aset',
-                                'enrich' => 'Lengkapi identitas',
-                                'none' => 'Tanpa aksi',
-                                'create' => 'Buat aset',
-                                'adjust' => 'Sesuaikan',
-                                'retire' => 'Saldo 0',
-                                'review' => 'Tinjau',
-                            ];
-
-                            return collect($state)
-                                ->map(fn (int $count, string $action): string => ($labels[$action] ?? $action).": {$count}")
-                                ->implode(' · ');
-                        })
-                        ->columnSpanFull()
-                        ->visible(fn (?AssetReconciliation $record): bool => filled($record?->summary['actions'] ?? null)),
-                    TextEntry::make('summary.orphan_gais_plates')
-                        ->label('Plat GAIS tanpa pasangan audit')
-                        ->numeric()
-                        ->helperText('Observasi saja — tidak dihapus otomatis (FR-VA-013).')
-                        ->visible(fn (?AssetReconciliation $record): bool => ($record?->source_system ?? null) === 'VEHICLE_AUDIT'
-                            && array_key_exists('orphan_gais_plates', $record?->summary ?? [])),
-                    TextEntry::make('parent.uuid')
-                        ->label('Batch Induk')
-                        ->placeholder('-')
-                        ->visible(fn (?AssetReconciliation $record): bool => filled($record?->parent_id)),
-                    TextEntry::make('compared_at')
-                        ->label('Waktu Laporan')
-                        ->dateTime('d M Y H:i')
-                        ->placeholder('-'),
-                    TextEntry::make('applied_at')
-                        ->label('Waktu Apply')
-                        ->dateTime('d M Y H:i')
-                        ->placeholder('-'),
-                    TextEntry::make('failure_message')
-                        ->label('Penyebab Gagal')
-                        ->color('danger')
-                        ->columnSpanFull()
-                        ->visible(fn (?AssetReconciliation $record): bool => filled($record?->failure_message)),
-                ]),
-        ]);
+            ]);
     }
 
     public static function getRelations(): array
@@ -288,6 +292,30 @@ class AssetReconciliationResource extends Resource
             AssetReconciliation::STATUS_APPLIED => 'Koreksi diterapkan',
             AssetReconciliation::STATUS_FAILED => 'Gagal',
             default => $status,
+        };
+    }
+
+    public static function sourceLabel(?string $source): string
+    {
+        return match ($source) {
+            'VEHICLE_AUDIT' => 'Kendaraan',
+            'CSA' => 'CSA',
+            default => $source ?? '-',
+        };
+    }
+
+    public static function actionLabel(string $action): string
+    {
+        return match ($action) {
+            'mark_sold' => 'Tandai terjual',
+            'retire_duplicate' => 'Nonaktifkan duplikat',
+            'create', 'create_missing' => 'Buat aset',
+            'enrich' => 'Lengkapi identitas',
+            'adjust' => 'Sesuaikan',
+            'retire' => 'Saldo 0',
+            'review' => 'Tinjau',
+            'none' => 'Tanpa aksi',
+            default => $action,
         };
     }
 

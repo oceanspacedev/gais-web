@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources;
 
+use App\Access\ScopesVisibleRecords;
 use App\Filament\Resources\ItemRequestLogResource\Pages;
 use App\Models\ItemRequestLog;
 use App\Support\RelationSearch;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Resources\Resource;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 /**
@@ -14,6 +20,8 @@ use Filament\Tables\Table;
  */
 class ItemRequestLogResource extends Resource
 {
+    use ScopesVisibleRecords;
+
     protected static ?string $model = ItemRequestLog::class;
 
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-clock';
@@ -47,8 +55,18 @@ class ItemRequestLogResource extends Resource
                 TextColumn::make('activity')->label('Aktivitas')->wrap()->searchable(),
             ])
             ->defaultSort('created_at', 'desc')
-            ->recordActions([])
-            ->toolbarActions([]);
+            ->filters([
+                TrashedFilter::make(),
+            ])
+            ->recordActions([
+                RestoreAction::make(),
+            ])
+            ->toolbarActions([
+                BulkActionGroup::make([
+                    RestoreBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getPages(): array
