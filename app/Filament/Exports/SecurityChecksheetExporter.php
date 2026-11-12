@@ -3,6 +3,7 @@
 namespace App\Filament\Exports;
 
 use App\Filament\Resources\SecurityChecksheetResource;
+use App\Models\SecurityChecklistItem;
 use App\Models\SecurityChecksheet;
 use App\Support\StoredFile;
 use Filament\Actions\Exports\Enums\ExportFormat;
@@ -39,6 +40,13 @@ class SecurityChecksheetExporter extends Exporter
 
             ...self::checklistColumns(),
 
+            ExportColumn::make('mismatch_count')
+                ->label('Jumlah Tidak Sesuai'),
+
+            ExportColumn::make('mismatched_questions')
+                ->label('Butir Tidak Sesuai')
+                ->state(fn (SecurityChecksheet $record): string => implode(', ', $record->mismatchedQuestions())),
+
             ExportColumn::make('findings')
                 ->label('Kondisi Darurat / Temuan Kejadian'),
 
@@ -55,23 +63,21 @@ class SecurityChecksheetExporter extends Exporter
     }
 
     /**
-     * Satu kolom per butir checklist, mis. "Keamanan - Pintu utama / gerbang".
+     * Satu kolom per pertanyaan, mis. "Keamanan - Pintu utama / gerbang",
+     * termasuk pertanyaan nonaktif/terhapus agar laporan lama tetap lengkap.
      *
      * @return list<ExportColumn>
      */
     private static function checklistColumns(): array
     {
-        $columns = [];
-
-        foreach (SecurityChecksheet::CHECKLIST as $sectionKey => $section) {
-            foreach ($section['items'] as $itemKey => $label) {
-                $columns[] = ExportColumn::make("checklist_{$sectionKey}_{$itemKey}")
-                    ->label("{$section['title']} - {$label}")
-                    ->state(fn (SecurityChecksheet $record): ?string => $record->checklist[$sectionKey][$itemKey] ?? null);
-            }
-        }
-
-        return $columns;
+        return SecurityChecklistItem::withTrashed()
+            ->ordered()
+            ->get()
+            ->map(fn (SecurityChecklistItem $item): ExportColumn => ExportColumn::make("checklist_q{$item->id}")
+                ->label("{$item->section} - {$item->question}")
+                ->state(fn (SecurityChecksheet $record): ?string => $record->answerFor($item->id)))
+            ->values()
+            ->all();
     }
 
     /**

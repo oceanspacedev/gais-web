@@ -154,7 +154,7 @@
                             ['Aset', 'Data aset, BA transfer (serah terima, pengalihan, pengembalian), servis, rekonsiliasi audit, riwayat label QR.'],
                             ['Master Aset', 'Merek, kategori, atribut kustom (STNK, KIR, dan sejenisnya), vendor.'],
                             ['OB / Kebersihan', 'Checksheet kebersihan, pekerjaan, shift.'],
-                            ['Security', 'Laporan jaga security: checklist keamanan, kelistrikan, aset, kebersihan, temuan, foto/video.'],
+                            ['Security', 'Laporan jaga security: checklist centang ala Google Form dengan kunci jawaban, temuan, foto/video.'],
                             ['Kendaraan', 'Catatan penggunaan kendaraan: KM, tujuan, kerusakan.'],
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
@@ -771,7 +771,8 @@
                 </div>
                 <div class="pg-block">
                     <h3>Security</h3>
-                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist keamanan, kelistrikan, kondisi aset, dan kebersihan, lalu temuan kejadian bila ada.</p>
+                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist yang cukup dicentang atau dipilih, lalu temuan kejadian bila ada.</p>
+                    <p>Pertanyaan checklist diatur seperti Google Form di menu Security › Pertanyaan Checksheet: tulis pertanyaan, pilih cara menjawab (Pilih satu, Ya / Tidak, Pilih beberapa, atau Isian teks), isi pilihan jawaban lalu centang "Benar" pada jawaban yang normal. Di daftar, jawaban benar tampil hijau. Urutannya bisa diseret, dan tombol Lihat Form Security menampilkan form persis seperti di HP petugas. Jawaban yang berbeda dari kunci ditandai "Tidak Sesuai" di laporan dan bisa difilter. Mengubah pertanyaan tidak mengubah laporan yang sudah terkirim.</p>
                     <p>Lampiran bisa foto atau video (maksimal 10 file, 50 MB per file). Petugas hanya melihat laporannya sendiri; atasan dengan izin Lihat Data Semua User melihat semuanya. Data bisa diexport.</p>
                 </div>
                 <div class="pg-block">

@@ -17,46 +17,6 @@ class SecurityChecksheet extends Model
 {
     use HasFactory, HasVisibility, SoftDeletes;
 
-    /**
-     * Isi checklist: bagian => [judul, butir => label]. Jawaban tersimpan dengan
-     * kunci yang sama di kolom `checklist`, jadi kunci yang sudah dipakai jangan diganti.
-     *
-     * @var array<string, array{title: string, items: array<string, string>}>
-     */
-    public const CHECKLIST = [
-        'keamanan' => [
-            'title' => 'Keamanan',
-            'items' => [
-                'pintu_utama' => 'Pintu utama / gerbang',
-                'ruangan_kantor' => 'Ruangan kantor',
-                'gudang_ruangan' => 'Gudang & ruangan',
-            ],
-        ],
-        'kelistrikan' => [
-            'title' => 'Kelistrikan',
-            'items' => [
-                'lampu_parkir' => 'Lampu area parkir',
-                'lampu_gudang' => 'Lampu gudang',
-                'ac_ruangan' => 'AC ruangan',
-            ],
-        ],
-        'kondisi_aset' => [
-            'title' => 'Kondisi Aset',
-            'items' => [
-                'mobil' => 'Mobil',
-                'motor' => 'Motor',
-                'apar' => 'APAR',
-            ],
-        ],
-        'kebersihan' => [
-            'title' => 'Kebersihan',
-            'items' => [
-                'halaman_parkir' => 'Halaman parkir',
-                'area_toko' => 'Area toko / ruangan',
-            ],
-        ],
-    ];
-
     private const VIDEO_EXTENSIONS = ['mp4', 'mov', 'm4v', 'webm', '3gp', 'mkv', 'avi'];
 
     protected $fillable = [
@@ -66,6 +26,7 @@ class SecurityChecksheet extends Model
         'report_date',
         'checked_at',
         'checklist',
+        'mismatch_count',
         'findings',
         'attachments',
     ];
@@ -74,6 +35,7 @@ class SecurityChecksheet extends Model
         'report_date' => 'date',
         'checked_at' => 'datetime',
         'checklist' => 'array',
+        'mismatch_count' => 'integer',
         'attachments' => 'array',
     ];
 
@@ -87,38 +49,69 @@ class SecurityChecksheet extends Model
         return filled($this->findings);
     }
 
+    public function hasMismatch(): bool
+    {
+        return $this->mismatch_count > 0;
+    }
+
     /**
-     * Checklist siap tampil: bagian dan butir sesuai urutan form, ditambah
-     * jawaban lama yang butirnya sudah tidak ada di form.
+     * Snapshot checklist: satu entri per pertanyaan berisi salinan pertanyaan,
+     * jawaban, dan hasil pencocokan dengan kunci (lihat SecurityChecklist).
      *
-     * @return list<array{title: string, items: list<array{label: string, value: string}>}>
+     * @return list<array<string, mixed>>
+     */
+    public function checklistEntries(): array
+    {
+        $entries = is_array($this->checklist) ? $this->checklist : [];
+
+        return array_is_list($entries) ? array_values(array_filter($entries, 'is_array')) : [];
+    }
+
+    /**
+     * Checklist siap tampil per bagian, sesuai urutan saat laporan dibuat.
+     *
+     * @return list<array{title: string, items: list<array{label: string, value: string, matches: bool|null, answer_key: string|null}>}>
      */
     public function checklistSections(): array
     {
-        $answers = is_array($this->checklist) ? $this->checklist : [];
         $sections = [];
 
-        foreach (self::CHECKLIST as $sectionKey => $section) {
-            $sections[$sectionKey] = ['title' => $section['title'], 'items' => []];
+        foreach ($this->checklistEntries() as $entry) {
+            $title = (string) ($entry['section'] ?? '-');
+            $sections[$title] ??= ['title' => $title, 'items' => []];
+            $sections[$title]['items'][] = [
+                'label' => (string) ($entry['question'] ?? '-'),
+                'value' => SecurityChecklistItem::formatAnswer($entry['answer'] ?? null) ?? '',
+                'matches' => $entry['matches'] ?? null,
+                'answer_key' => SecurityChecklistItem::formatAnswer($entry['answer_key'] ?? null),
+            ];
+        }
 
-            foreach ($section['items'] as $itemKey => $label) {
-                $sections[$sectionKey]['items'][$itemKey] = [
-                    'label' => $label,
-                    'value' => (string) ($answers[$sectionKey][$itemKey] ?? ''),
-                ];
+        return array_values($sections);
+    }
+
+    /**
+     * Jawaban untuk satu pertanyaan master, mis. untuk kolom export.
+     */
+    public function answerFor(int $itemId): ?string
+    {
+        foreach ($this->checklistEntries() as $entry) {
+            if ((int) ($entry['item_id'] ?? 0) === $itemId) {
+                return SecurityChecklistItem::formatAnswer($entry['answer'] ?? null);
             }
         }
 
-        foreach ($answers as $sectionKey => $items) {
-            foreach (is_array($items) ? $items : [] as $itemKey => $value) {
-                $sections[$sectionKey] ??= ['title' => Str::headline((string) $sectionKey), 'items' => []];
-                $sections[$sectionKey]['items'][$itemKey] ??= ['label' => Str::headline((string) $itemKey), 'value' => (string) $value];
-            }
-        }
+        return null;
+    }
 
+    /**
+     * @return list<string>
+     */
+    public function mismatchedQuestions(): array
+    {
         return array_values(array_map(
-            fn (array $section): array => ['title' => $section['title'], 'items' => array_values($section['items'])],
-            $sections,
+            fn (array $entry): string => (string) ($entry['question'] ?? '-'),
+            array_filter($this->checklistEntries(), fn (array $entry): bool => ($entry['matches'] ?? null) === false),
         ));
     }
 

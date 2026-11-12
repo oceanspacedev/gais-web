@@ -211,8 +211,8 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 
 ### Security
 
-- **Resource:** `SecurityChecksheetResource`
-- **Logika:** butir checklist di `SecurityChecksheet::CHECKLIST`, jawaban tersimpan sebagai JSON; lampiran foto/video lewat `FileUpload` (batas unggah sementara Livewire dinaikkan di `AppServiceProvider::configureLivewireUploads()`)
+- **Resource:** `SecurityChecksheetResource`, `SecurityChecklistItemResource` (Pertanyaan Checksheet)
+- **Logika:** pertanyaan checklist ala Google Form di tabel `security_checklist_items` (bagian, judul, tipe jawaban `SecurityAnswerType`, opsi, kunci jawaban, urutan); `App\Support\SecurityChecklist` membangun field form dan menyimpan jawaban bersama salinan pertanyaannya (snapshot JSON di kolom `checklist`), jawaban yang berbeda dari kunci ditandai `matches=false` dan dihitung di `mismatch_count`; lampiran foto/video lewat `FileUpload` (batas unggah sementara Livewire dinaikkan di `AppServiceProvider::configureLivewireUploads()`)
 - **Asal:** GAIS
 
 ### Kendaraan
@@ -310,6 +310,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | `ObShift` / `ObRoom` | many-to-many via `ob_shift_rooms` |
 | `ObChecksheet` | belongsTo `User`, `ObRoom`, `ObShift` |
 | `SecurityChecksheet` | belongsTo `User` |
+| `SecurityChecklistItem` | - (disalin ke `SecurityChecksheet.checklist`) |
 | `Task` | belongsTo `Vendor`, `User`, `BusinessEntity` |
 | `ItemRequest` | belongsTo `User`, `ItemRequestType`, `BusinessEntity`; hasMany `ItemRequestDetail` (→ `Product`), `ItemRequestApproval`, `ItemRequestLog` |
 | `ItemRequestType` | belongsTo `Division` (`pic_division_id`) |

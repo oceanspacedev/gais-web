@@ -8,6 +8,7 @@ use App\Filament\Resources\SecurityChecksheetResource\Pages;
 use App\Models\AssetLocation;
 use App\Models\SecurityChecksheet;
 use App\Support\RelationSearch;
+use App\Support\SecurityChecklist;
 use App\Support\StoredFile;
 use Filament\Actions\ActionGroup;
 use Filament\Actions\BulkActionGroup;
@@ -29,6 +30,7 @@ use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Components\ViewEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Group;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
@@ -72,9 +74,13 @@ class SecurityChecksheetResource extends Resource
 
     public static function form(Schema $form): Schema
     {
+        // Di layar lebar kotak checklist, temuan, dan lampiran berdampingan dua kolom; di HP satu kolom.
         return $form
+            ->columns(['default' => 1, 'lg' => 2])
             ->schema([
                 Section::make('Informasi Laporan')
+                    ->compact()
+                    ->columnSpanFull()
                     ->schema([
                         Grid::make(['default' => 1, 'sm' => 2, 'md' => 3])
                             ->schema([
@@ -111,9 +117,17 @@ class SecurityChecksheetResource extends Resource
                             ]),
                     ]),
 
-                ...self::checklistSections(),
+                // Laporan baru memakai pertanyaan aktif; laporan lama memakai pertanyaan yang tersimpan di laporannya.
+                Group::make()
+                    ->columnSpanFull()
+                    ->columns(['default' => 1, 'lg' => 2])
+                    ->schema(fn (?SecurityChecksheet $record): array => SecurityChecklist::formSections(
+                        $record ? SecurityChecklist::recordDefinitions($record) : SecurityChecklist::activeDefinitions(),
+                    )),
 
                 Section::make('Kondisi Darurat / Temuan Kejadian')
+                    ->compact()
+                    ->columnSpan(1)
                     ->schema([
                         Textarea::make('findings')
                             ->hiddenLabel()
@@ -124,6 +138,8 @@ class SecurityChecksheetResource extends Resource
                     ]),
 
                 Section::make('Lampiran Foto / Video')
+                    ->compact()
+                    ->columnSpan(1)
                     ->schema([
                         FileUpload::make('attachments')
                             ->hiddenLabel()
@@ -207,8 +223,21 @@ class SecurityChecksheetResource extends Resource
                         TextColumn::make('findings_status')
                             ->label('Temuan')
                             ->badge()
-                            ->state(fn (SecurityChecksheet $record): string => $record->hasFindings() ? 'Ada Temuan' : 'Aman')
+                            // "Aman" hanya bila tidak ada temuan dan semua jawaban sesuai kunci.
+                            ->state(fn (SecurityChecksheet $record): ?string => match (true) {
+                                $record->hasFindings() => 'Ada Temuan',
+                                $record->hasMismatch() => null,
+                                default => 'Aman',
+                            })
                             ->color(fn (string $state): string => $state === 'Aman' ? 'success' : 'danger')
+                            ->grow(false),
+                        TextColumn::make('mismatch_count')
+                            ->label('Tidak Sesuai')
+                            ->badge()
+                            ->color('warning')
+                            ->icon('heroicon-m-exclamation-circle')
+                            ->formatStateUsing(fn (int $state): string => "{$state} tidak sesuai")
+                            ->state(fn (SecurityChecksheet $record): ?int => $record->hasMismatch() ? $record->mismatch_count : null)
                             ->grow(false),
                     ]),
 
@@ -280,6 +309,11 @@ class SecurityChecksheetResource extends Resource
                         return $indicators;
                     }),
 
+                Filter::make('has_mismatch')
+                    ->label('Ada jawaban tidak sesuai')
+                    ->toggle()
+                    ->query(fn (Builder $query): Builder => $query->where('mismatch_count', '>', 0)),
+
                 Filter::make('has_findings')
                     ->label('Ada temuan kejadian')
                     ->toggle()
@@ -326,35 +360,6 @@ class SecurityChecksheetResource extends Resource
             'view' => Pages\ViewSecurityChecksheet::route('/{record}'),
             'edit' => Pages\EditSecurityChecksheet::route('/{record}/edit'),
         ];
-    }
-
-    /**
-     * Satu section per bagian checklist; tiap butir diisi kondisinya dengan teks bebas.
-     *
-     * @return list<Section>
-     */
-    private static function checklistSections(): array
-    {
-        $sections = [];
-        $number = 0;
-
-        foreach (SecurityChecksheet::CHECKLIST as $sectionKey => $section) {
-            $number++;
-
-            $sections[] = Section::make("{$number}. {$section['title']}")
-                ->columns(['default' => 1, 'md' => count($section['items'])])
-                ->schema(array_map(
-                    fn (string $itemKey, string $label): TextInput => TextInput::make("checklist.{$sectionKey}.{$itemKey}")
-                        ->label($label)
-                        ->placeholder('Tulis kondisinya')
-                        ->required()
-                        ->maxLength(255),
-                    array_keys($section['items']),
-                    $section['items'],
-                ));
-        }
-
-        return $sections;
     }
 
     /**
