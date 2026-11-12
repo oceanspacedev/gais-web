@@ -19,10 +19,10 @@
             <x-filament::badge color="gray">{{ $choice }}</x-filament::badge>
         @endif
     @empty
-        <span class="text-sm text-gray-500 dark:text-gray-400">Diketik security · tidak dinilai</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400">—</span>
     @endforelse
 
     @if ($choices !== [] && $keys === [])
-        <span class="text-sm text-gray-500 dark:text-gray-400">· tidak dinilai</span>
+        <span class="text-sm text-gray-500 dark:text-gray-400">tanpa kunci</span>
     @endif
 </div>

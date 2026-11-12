@@ -95,10 +95,10 @@
         .pg-badge { align-self: flex-start; font-size: .7rem; font-weight: 600; letter-spacing: .03em; padding: .1rem .5rem; border-radius: 999px; background: color-mix(in srgb, var(--h, #64748b) 16%, transparent); color: var(--h, #64748b); border: 1px solid color-mix(in srgb, var(--h, #64748b) 40%, transparent); }
         .pg-a-pemohon { --h: #2563eb; } .pg-a-accounting { --h: #b45309; } .pg-a-manager { --h: #7c3aed; }
         .pg-a-executor { --h: #047857; } .pg-a-ga { --h: #be185d; } .pg-a-admin { --h: #0e7490; }
-        .pg-a-sistem { --h: #64748b; } .pg-a-user { --h: #4f46e5; }
+        .pg-a-sistem { --h: #64748b; } .pg-a-user { --h: #4f46e5; } .pg-a-security { --h: #b91c1c; }
         .dark .pg-a-pemohon { --h: #60a5fa; } .dark .pg-a-accounting { --h: #fbbf24; } .dark .pg-a-manager { --h: #a78bfa; }
         .dark .pg-a-executor { --h: #34d399; } .dark .pg-a-ga { --h: #f472b6; } .dark .pg-a-admin { --h: #22d3ee; }
-        .dark .pg-a-sistem { --h: #94a3b8; } .dark .pg-a-user { --h: #818cf8; }
+        .dark .pg-a-sistem { --h: #94a3b8; } .dark .pg-a-user { --h: #818cf8; } .dark .pg-a-security { --h: #f87171; }
 
         .pg-paused .pg-dot-on, .pg-paused .pg-card-on, .pg-paused .pg-fill { animation-play-state: paused; }
 
@@ -205,6 +205,7 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-14').scrollIntoView({ behavior: 'smooth' })">14. Pekerjaan Vendor</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-15').scrollIntoView({ behavior: 'smooth' })">15. Import &amp; Laporan Audit stok (CSA)</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-16').scrollIntoView({ behavior: 'smooth' })">16. Penjualan aset antar badan usaha</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-17').scrollIntoView({ behavior: 'smooth' })">17. Security Checksheet: pertanyaan dan laporan jaga</a></li>
                     </ol>
                 </div>
 
@@ -623,6 +624,52 @@
                         <li>Baris penjualan bisa diperbaiki (tanggal, harga, dokumen BAST/invoice, catatan) dan dihapus ke Sampah; menghapus tidak membalik kepemilikan. Riwayatnya bisa diekspor ke Excel lewat <em>Ekspor Semua Penjualan</em>.</li>
                     </ul>
                 </div>
+
+                <div class="pg-block" id="bab-17">
+                    <h2>17. Security Checksheet: pertanyaan dan laporan jaga</h2>
+                    <p>Cara kerjanya seperti Google Form: atasan menyiapkan pertanyaan dan kunci jawabannya, petugas security tinggal memilih jawaban.</p>
+
+                    <h3>17.1 Atasan menyiapkan pertanyaan</h3>
+                    <x-guide.demo name="security-pertanyaan" caption="Animasi: menambah pertanyaan APAR lobi bertipe Pilih beberapa, mencentang dua jawaban yang benar, lalu membuka Pratinjau." :shots="[
+                        'security-pertanyaan-01-daftar-pertanyaan.png' => 'Daftar pertanyaan',
+                        'security-pertanyaan-02-form-pertanyaan.png' => 'Form pertanyaan',
+                        'security-pertanyaan-03-pertanyaan-tersimpan.png' => 'Pertanyaan tersimpan',
+                        'security-pertanyaan-04-pratinjau.png' => 'Pratinjau',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Security</strong>, <strong>Pertanyaan Checksheet</strong>, tombol <strong>Tambah</strong>. Hanya role yang punya izin Pertanyaan Checksheet (bawaan: super_admin, admin, general_affair) yang melihat menu ini.</li>
+                        <li><strong>Tipe jawaban</strong>: <em>Pilih satu</em>, <em>Ya / Tidak</em>, <em>Pilih beberapa</em>, atau <em>Isian teks</em>.</li>
+                        <li>Isi <strong>Pilihan jawaban</strong>, lalu centang <strong>Benar</strong> pada jawaban yang normal. Di <em>Pilih satu</em> hanya satu yang bisa dicentang. Tanpa centang, pertanyaan tidak dinilai. <em>Isian teks</em> tidak pernah dinilai.</li>
+                        <li><strong>Kelompok</strong> menentukan kotak tempat pertanyaan tampil (mis. Keamanan). Seret baris di daftar untuk mengubah urutan. Matikan <strong>Aktif</strong> untuk menyembunyikan pertanyaan dari laporan baru.</li>
+                        <li>Di daftar, jawaban benar tampil <strong>hijau dengan tanda centang</strong>. Tombol <strong>Pratinjau</strong> menampilkan form seperti di HP petugas.</li>
+                        <li>Mengubah atau menghapus pertanyaan tidak mengubah laporan yang sudah terkirim: tiap laporan menyimpan pertanyaannya sendiri.</li>
+                    </ul>
+
+                    <h3>17.2 Petugas security mengisi laporan</h3>
+                    <x-guide.demo name="security-laporan" caption="Animasi: petugas memilih jawaban, satu jawaban berbeda dari kunci, menulis temuan dan melampirkan foto, lalu laporan ditandai 1 tidak sesuai." :shots="[
+                        'security-laporan-01-daftar-laporan.png' => 'Daftar laporan',
+                        'security-laporan-02-checklist-dicentang.png' => 'Checklist dicentang',
+                        'security-laporan-03-temuan-dan-lampiran.png' => 'Temuan dan lampiran',
+                        'security-laporan-04-laporan-terkirim.png' => 'Laporan terkirim',
+                        'security-laporan-05-detail-tidak-sesuai.png' => 'Detail tidak sesuai',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Security Checksheet</strong>, tombol <strong>Buat</strong>. Lokasi kerja terisi otomatis dari laporan terakhir petugas.</li>
+                        <li>Semua pertanyaan wajib dijawab. Di layar lebar kotak pertanyaan tampil dua kolom; di HP satu kolom.</li>
+                        <li><strong>Kondisi Darurat / Temuan Kejadian</strong> dikosongkan bila aman. <strong>Lampiran</strong> boleh foto atau video, maksimal 10 file, 50 MB per file.</li>
+                        <li>Tekan <strong>Kirim Laporan</strong>. Nama petugas, tanggal, jam, dan nomor referensi (SEC-tanggal-urutan) tercatat otomatis.</li>
+                        <li>Bila isian belum terkirim lalu halaman termuat ulang (mis. saat kamera dibuka), checklist dipulihkan. Lampiran perlu dipilih ulang.</li>
+                    </ul>
+
+                    <h3>17.3 Atasan memeriksa laporan</h3>
+                    <ul class="pg-list">
+                        <li>Kartu laporan menunjukkan <strong>Aman</strong>, <strong>Ada Temuan</strong>, atau <strong>N tidak sesuai</strong>.</li>
+                        <li>Filter <strong>Ada jawaban tidak sesuai</strong>, <strong>Ada temuan kejadian</strong>, tanggal, dan petugas.</li>
+                        <li>Di detail, jawaban yang tidak sesuai tampil merah beserta kuncinya.</li>
+                        <li>Pilih laporan lalu <strong>Export Dipilih</strong>: satu kolom per pertanyaan, ditambah Jumlah Tidak Sesuai dan Butir Tidak Sesuai.</li>
+                        <li>Petugas hanya melihat laporannya sendiri. Izin <strong>Lihat Data Semua User</strong> membuka semua laporan; <strong>Edit Data Semua User</strong> bisa mengganti petugas.</li>
+                    </ul>
+                </div>
             </section>
 
             {{-- ============ LOGIN ============ --}}
@@ -771,9 +818,9 @@
                 </div>
                 <div class="pg-block">
                     <h3>Security</h3>
-                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist yang cukup dicentang atau dipilih, lalu temuan kejadian bila ada.</p>
-                    <p>Pertanyaan checklist diatur seperti Google Form di menu Security › Pertanyaan Checksheet: tulis pertanyaan, pilih cara menjawab (Pilih satu, Ya / Tidak, Pilih beberapa, atau Isian teks), isi pilihan jawaban lalu centang "Benar" pada jawaban yang normal. Di daftar, jawaban benar tampil hijau. Urutannya bisa diseret, dan tombol Lihat Form Security menampilkan form persis seperti di HP petugas. Jawaban yang berbeda dari kunci ditandai "Tidak Sesuai" di laporan dan bisa difilter. Mengubah pertanyaan tidak mengubah laporan yang sudah terkirim.</p>
-                    <p>Lampiran bisa foto atau video (maksimal 10 file, 50 MB per file). Petugas hanya melihat laporannya sendiri; atasan dengan izin Lihat Data Semua User melihat semuanya. Data bisa diexport.</p>
+                    <p class="pg-lead">Laporan jaga ala Google Form: atasan menyiapkan pertanyaan dan kunci jawaban, petugas security tinggal memilih jawaban.</p>
+                    <x-guide.flow :steps="$flows['security']" />
+                    <p>Tipe jawaban: Pilih satu, Ya / Tidak, Pilih beberapa, atau Isian teks. Jawaban yang beda dari kunci ditandai Tidak Sesuai dan bisa difilter. Laporan menyimpan pertanyaannya sendiri, jadi mengubah pertanyaan tidak mengubah laporan lama. Lampiran foto atau video maksimal 10 file, 50 MB per file. Langkahnya ada di bab 17.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Kendaraan</h3>
@@ -831,8 +878,8 @@
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>
                             <tr><td><code>office_boy</code></td><td>OB</td><td>Melihat dan membuat OB checksheet.</td></tr>
-                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya.</td></tr>
-                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
+                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya. Tidak bisa mengubah pertanyaan.</td></tr>
+                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. <code>admin</code> dan <code>general_affair</code> juga mengatur Pertanyaan Checksheet dan melihat semua laporan security. Role ini dibuat manual, tidak otomatis ada.</td></tr>
                         </tbody>
                     </table>
                 </div>

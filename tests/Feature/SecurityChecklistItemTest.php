@@ -164,7 +164,7 @@ class SecurityChecklistItemTest extends TestCase
 
         Livewire::test(ManageSecurityChecklistItems::class)
             ->mountAction('preview')
-            ->assertMountedActionModalSee(['Tampilan form di HP security', 'Pintu gudang pratinjau', 'Terkunci']);
+            ->assertMountedActionModalSee(['Form Security', 'Pintu gudang pratinjau', 'Terkunci']);
     }
 
     public function test_security_guards_cannot_manage_questions(): void

@@ -23,12 +23,13 @@ Akun contoh dari `GuideCaptureSeeder` (semua kata sandi `password`). Bagian memi
 
 | Akun | Role | Dipakai di |
 |---|---|---|
-| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna, audit kendaraan dan CSA, asuransi, sewa, Notifikasi WA, Pekerjaan Vendor |
+| `admin` | super_admin | aset, BA, servis, OB (menugaskan), pertanyaan Security Checksheet, kendaraan, pengguna, audit kendaraan dan CSA, asuransi, sewa, Notifikasi WA, Pekerjaan Vendor |
 | `pemohon` | requester | membuat pengajuan dan laporan gangguan, konfirmasi |
 | `accounting` | accounting | status PO |
 | `executor` | executor | setujui jumlah, proses pengajuan dan gangguan |
 | `ob` | office_boy | foto sebelum dan sesudah |
 | `ga`, `budi` | general_affair, requester | pihak BA (serah terima, pengalihan, pengembalian) |
+| `satpam` | security | mengisi Security Checksheet |
 
 Reset (`resetData`) menghapus pengajuan, laporan, BA, servis, checksheet, dan data buatan bagian `setup`/`isi-aset`/`user-baru`, lalu menjalankan ulang seeder sehingga aset stok kembali Tersedia.
 

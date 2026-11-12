@@ -10,17 +10,12 @@ class ManageSecurityChecklistItems extends ManageRecords
 {
     protected static string $resource = SecurityChecklistItemResource::class;
 
-    public function getSubheading(): ?string
-    {
-        return 'Pertanyaan yang dijawab security di Security Checksheet. Seret baris untuk mengubah urutan.';
-    }
-
     protected function getHeaderActions(): array
     {
         return [
             SecurityChecklistItemResource::previewAction(),
             Actions\CreateAction::make()
-                ->label('Tambah Pertanyaan')
+                ->label('Tambah')
                 ->slideOver()
                 ->modalWidth('lg')
                 ->mutateDataUsing(fn (array $data): array => SecurityChecklistItemResource::fromFormData($data)),

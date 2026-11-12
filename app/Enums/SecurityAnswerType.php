@@ -26,17 +26,6 @@ enum SecurityAnswerType: string
         };
     }
 
-    /** Penjelasan singkat di bawah tombol tipe, ditulis dari sisi petugas. */
-    public function description(): string
-    {
-        return match ($this) {
-            self::Choice => 'Security memilih satu jawaban, mis. Aman / Rusak.',
-            self::YesNo => 'Security cukup menjawab Ya atau Tidak.',
-            self::Checkboxes => 'Security boleh mencentang lebih dari satu.',
-            self::Text => 'Security mengetik sendiri. Tidak dinilai.',
-        };
-    }
-
     public function icon(): string
     {
         return match ($this) {
@@ -85,19 +74,6 @@ enum SecurityAnswerType: string
         }
 
         return $options;
-    }
-
-    /**
-     * @return array<string, string>
-     */
-    public static function descriptions(): array
-    {
-        $descriptions = [];
-        foreach (self::cases() as $case) {
-            $descriptions[$case->value] = $case->description();
-        }
-
-        return $descriptions;
     }
 
     /**
