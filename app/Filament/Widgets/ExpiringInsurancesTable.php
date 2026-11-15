@@ -25,7 +25,7 @@ class ExpiringInsurancesTable extends TableWidget
     public function table(Table $table): Table
     {
         return $table
-            ->heading('Asuransi Terdekat Jatuh Tempo')
+            ->heading('Asuransi Bangunan Terdekat Jatuh Tempo')
             ->description('Polis berjalan dengan jatuh tempo efektif terdekat (pembaharuan terakhir bila ada).')
             ->query(fn () => InsuranceResource::orderByEffectiveExpiry(InsuranceResource::getEloquentQuery()->activeContracts()->with('updates')->withMax('updates', 'expired_date'))->limit(5))
             ->paginated(false)

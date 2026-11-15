@@ -159,7 +159,7 @@
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
                             ['Lapor Gangguan', 'Laporan gangguan dan kategorinya.'],
-                            ['Asuransi & Sewa', 'Polis asuransi dan kontrak sewa beserta penyedia, kategori, cakupan.'],
+                            ['Asuransi & Sewa', 'Asuransi bangunan (stok dan bangunan gudang), asuransi kendaraan, dan kontrak sewa beserta penyedia, kategori, cakupan.'],
                             ['Organisasi', 'Area, lokasi, badan usaha, divisi, jabatan, pengguna.'],
                             ['Pengaturan', 'Pengaturan notifikasi WhatsApp, Impor Data Sumo, dan peralatan admin lain.'],
                         ] as $k => [$name, $desc])
@@ -303,7 +303,7 @@
                     ]" />
                     <ul class="pg-list">
                         <li>Menu <strong>Pengajuan Barang</strong>, tombol <strong>Buat Pengajuan</strong>.</li>
-                        <li>Pilih <strong>Tipe Pengajuan</strong>. Tipe yang kuotanya sudah penuh (2 pengajuan terbuka) tidak muncul.</li>
+                        <li>Pilih <strong>Tipe Pengajuan</strong>. Tipe yang kuotanya sudah penuh (2 pengajuan terbuka) atau sudah nonaktif tidak muncul. Tipe NOTA sudah tidak bisa diajukan lagi; pengajuan NOTA lama tetap bisa dilihat dan diselesaikan.</li>
                         <li>Isi <strong>Barang</strong> dan <strong>Jumlah</strong>. Tekan <strong>Tambah barang</strong> untuk baris berikutnya. Bila tipenya mewajibkan, unggah <strong>File Persetujuan Atasan</strong>.</li>
                         <li>Setelah <strong>Buat</strong>, pengajuan mendapat kode <code>REQ…</code> dan empat tahap approval yang masih <em>Belum</em>.</li>
                     </ul>
@@ -526,7 +526,7 @@
 
                 <div class="pg-block" id="bab-13">
                     <h2>13. Asuransi, Sewa, dan pengingat WhatsApp</h2>
-                    <h3>13.1 Mencatat polis asuransi</h3>
+                    <h3>13.1 Mencatat polis asuransi bangunan</h3>
                     <x-guide.demo name="asuransi" caption="Animasi: membuat polis asuransi stok dengan periode, status, dan nomor WA pengingat." :shots="[
                         'asuransi-01-daftar-asuransi.png' => 'Daftar asuransi',
                         'asuransi-02-polis-dan-nilai.png' => 'Polis dan nilai',
@@ -534,9 +534,16 @@
                         'asuransi-04-asuransi-tersimpan.png' => 'Asuransi tersimpan',
                     ]" />
                     <ul class="pg-list">
-                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi</strong>, tombol <strong>Buat Asuransi</strong>. Wajib: Nomor Polis, Nama Tertanggung, Tanggal Mulai, Tanggal Berakhir.</li>
+                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi Bangunan</strong>, tombol <strong>Buat Asuransi Bangunan</strong>. Untuk polis gudang: nilai dan premi stok serta bangunan. Wajib: Nomor Polis, Nama Tertanggung, Tanggal Mulai, Tanggal Berakhir.</li>
                         <li><strong>Nomor WA Pengingat</strong>: pisahkan dengan koma. Bila kosong, pengingat dikirim ke nomor global di Notifikasi WA.</li>
                         <li>Saat polis diperpanjang, buka detailnya lalu <strong>Tambah Pembaharuan</strong>. Data lama bisa diimpor sekaligus lewat <strong>Impor Excel</strong>.</li>
+                    </ul>
+
+                    <h3>Asuransi kendaraan</h3>
+                    <ul class="pg-list">
+                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi Kendaraan</strong>, tombol <strong>Buat Asuransi Kendaraan</strong>. Pilih kendaraan (cari dengan plat nomor), lalu isi nomor polis, tertanggung, provider, jenis pertanggungan (mis. ALL RISK), nilai pertanggungan, premi, dan periode.</li>
+                        <li>Perpanjangan dicatat lewat <strong>Tambah Pembaharuan</strong> di detail polis, sama seperti asuransi bangunan. Pengingat WA memakai pengaturan asuransi yang sama.</li>
+                        <li>Asuransi kendaraan tidak lagi dicatat di atribut aset "Asuransi"; data lama sudah dipindah ke menu ini, dan kolom asuransi di workbook audit kendaraan ikut masuk ke sini.</li>
                     </ul>
 
                     <h3>13.2 Mencatat perjanjian sewa</h3>
@@ -549,7 +556,7 @@
                     <ul class="pg-list">
                         <li>Menu <strong>Perjanjian Sewa</strong>, tombol <strong>Buat Perjanjian Sewa</strong>. Wajib: Kode Sewa, Objek Sewa, Pihak Pertama, Pihak Kedua, dan kedua tanggal.</li>
                         <li>Bagian <strong>Dokumen</strong> mencatat ada tidaknya bukti potong dan dokumen perjanjian, plus file scan-nya.</li>
-                        <li>Dasbor menampilkan tabel <strong>Asuransi/Sewa Terdekat Jatuh Tempo</strong>. Perpanjangan dicatat lewat <strong>Tambah Perpanjangan</strong> di detail sewa.</li>
+                        <li>Dasbor menampilkan tabel <strong>Asuransi Bangunan/Sewa Terdekat Jatuh Tempo</strong>. Perpanjangan dicatat lewat <strong>Tambah Perpanjangan</strong> di detail sewa.</li>
                     </ul>
 
                     <h3>13.3 Mengatur pengingat WhatsApp</h3>
@@ -559,7 +566,7 @@
                     ]" />
                     <ul class="pg-list">
                         <li>Menu <strong>Pengaturan</strong>, <strong>Notifikasi WA</strong>. <strong>Jam kirim</strong>: pengingat dikirim sekali sehari setelah jam ini.</li>
-                        <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi, dan cutoff pengajuan barang.</li>
+                        <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi (bangunan dan kendaraan), dan cutoff pengajuan barang.</li>
                         <li><strong>Kirim Uji Coba</strong> mengetes koneksi WhatsApp. <strong>Ganti Nomor</strong> mengganti satu nomor di semua kontrak sekaligus.</li>
                     </ul>
                 </div>
@@ -731,7 +738,7 @@
                         <li>Atasan (kolom "approver" di user) melihat pengajuan bawahannya.</li>
                         <li>Accounting melihat semua pengajuan dari tipe yang butuh Accounting.</li>
                         <li>Executor, manager, dan auditor melihat sesuai cakupan divisi, tipe, dan area (tabel <code>item_request_scopes</code>). Cakupan kosong berarti semua.</li>
-                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT.</li>
+                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA (sisa pengajuan lama) menunggu AUDIT.</li>
                         <li>Izin <code>view_all</code> melihat semuanya.</li>
                     </ul>
                 </div>
@@ -836,7 +843,7 @@
             <section x-show="tab === 'kontrak'" x-cloak class="pg-body" style="padding-top: 0">
                 <div class="pg-block">
                     <h2>Asuransi, Sewa, dan Pengingat WhatsApp</h2>
-                    <p class="pg-lead">Polis asuransi dan kontrak sewa punya tanggal berakhir. GAIS mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
+                    <p class="pg-lead">Polis asuransi bangunan, asuransi kendaraan, dan kontrak sewa punya tanggal berakhir. GAIS mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Data kontrak</h3>

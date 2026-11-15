@@ -114,7 +114,7 @@ class SumoDashboardWidgetsTest extends TestCase
             CustomAssetWidget::class => $component->assertSee('Nilai Aset Aktif')->assertSee('Rusak / Hilang'),
             SumoOverviewStats::class => $component->assertSee('Pengajuan Tahun Ini')->assertSee('Siap Diproses Executor'),
             ProblemReportOverviewStats::class => $component->assertSee('Laporan Terbuka')->assertSee('Rata-rata Penyelesaian'),
-            ContractOverviewStats::class => $component->assertSee('Polis Asuransi Aktif')->assertSee('Sewa Aktif'),
+            ContractOverviewStats::class => $component->assertSee('Polis Asuransi Bangunan Aktif')->assertSee('Sewa Aktif'),
             OperationsOverviewStats::class => $component->assertSee('Kebersihan Hari Ini')->assertSee('Pekerjaan Vendor Berjalan'),
             MasterDataOverview::class => $component->assertSee('Organisasi')->assertSee('Master Aset'),
             default => $component,

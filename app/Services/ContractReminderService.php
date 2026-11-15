@@ -6,6 +6,7 @@ use App\Enums\WaNotificationType;
 use App\Models\Insurance;
 use App\Models\ItemRequestSetting;
 use App\Models\Rent;
+use App\Models\VehicleInsurance;
 use App\Models\WaNotificationLog;
 use App\Models\WaNotificationSetting;
 use App\Support\ContractDue;
@@ -48,6 +49,7 @@ class ContractReminderService
 
         if ($setting->remind_insurance) {
             $this->remindInsurances($setting, $global, $today, $dryRun);
+            $this->remindVehicleInsurances($setting, $global, $today, $dryRun);
         }
 
         if ($setting->remind_request_cutoff) {
@@ -134,7 +136,7 @@ class ContractReminderService
             }
 
             $policy = $insurance->latestUpdate()?->policy_number ?? $insurance->policy_number;
-            $message = "🔔 *PENGINGAT JATUH TEMPO ASURANSI*\n\n"
+            $message = "🔔 *PENGINGAT JATUH TEMPO ASURANSI BANGUNAN*\n\n"
                 ."Halo Admin, polis asuransi berikut mendekati masa kedaluwarsa:\n\n"
                 ."• *No. Polis:* {$policy}\n"
                 ."• *Tertanggung:* {$insurance->insured_name}\n"
@@ -145,6 +147,40 @@ class ContractReminderService
                 .'Buka sistem: '.url('/admin/insurances');
 
             $this->dispatch(WaNotificationType::Insurance, $insurance->id, "Asuransi [{$policy}]", $this->phonesFor($insurance->reminder_phones, $global), $message, $today, $dryRun);
+        });
+    }
+
+    /**
+     * Asuransi kendaraan memakai sakelar dan daftar hari yang sama dengan asuransi
+     * bangunan, tapi tipe log sendiri supaya id kedua tabel tidak saling bentrok.
+     *
+     * @param  list<string>  $global
+     */
+    private function remindVehicleInsurances(WaNotificationSetting $setting, array $global, CarbonInterface $today, bool $dryRun): void
+    {
+        $milestones = $setting->daysBefore('insurance_days_before');
+
+        VehicleInsurance::query()->activeContracts()->with(['updates', 'asset'])->each(function (VehicleInsurance $insurance) use ($milestones, $global, $today, $dryRun): void {
+            $expiry = $insurance->effectiveExpiredDate();
+            $days = $this->daysUntil($today, $expiry);
+
+            if ($days === null || ! $this->isMilestone($days, $milestones)) {
+                return;
+            }
+
+            $policy = $insurance->latestUpdate()?->policy_number ?? $insurance->policy_number;
+            $vehicle = collect([$insurance->licensePlate(), $insurance->asset?->name])->filter()->implode(' · ') ?: '-';
+            $message = "🔔 *PENGINGAT JATUH TEMPO ASURANSI KENDARAAN*\n\n"
+                ."Halo Admin, polis asuransi kendaraan berikut mendekati masa kedaluwarsa:\n\n"
+                ."• *No. Polis:* {$policy}\n"
+                ."• *Kendaraan:* {$vehicle}\n"
+                .'• *Tertanggung:* '.($insurance->insured_name ?? '-')."\n"
+                .'• *Tgl Berakhir:* '.$this->formatDate($expiry)."\n"
+                .'• *Sisa Waktu:* '.$this->remainingLabel($days, 'JATUH TEMPO HARI INI')."\n\n"
+                ."Mohon segera proses pembaharuan polis atau konfirmasi perpanjangan asuransi.\n"
+                .'Buka sistem: '.url('/admin/vehicle-insurances');
+
+            $this->dispatch(WaNotificationType::VehicleInsurance, $insurance->id, "Asuransi kendaraan [{$policy}]", $this->phonesFor($insurance->reminder_phones, $global), $message, $today, $dryRun);
         });
     }
 

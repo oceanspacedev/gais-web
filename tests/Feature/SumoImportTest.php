@@ -113,6 +113,8 @@ class SumoImportTest extends TestCase
         $this->assertSame('Pengajuan ATK Uji', DB::table('item_request_settings')->where('id', self::B + 1)->value('request_detail'));
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 1)->value('requires_accounting_approval'));
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('requires_products'));
+        $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('is_active'));
+        $this->assertEquals(0, DB::table('item_request_types')->where('id', self::B + 3)->value('is_active'), 'Tipe NOTA sudah tidak boleh diajukan.');
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
         $this->assertTrue(ItemRequestScope::query()->where('division_id', self::B + 9)->firstOrFail()->approves_quantity, 'WHM menyetujui jumlah ATK area TOP.');
         $this->assertFalse(ItemRequestScope::query()->where('division_id', self::B + 6)->firstOrFail()->approves_quantity);

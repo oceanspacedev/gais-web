@@ -64,10 +64,11 @@ return [
     'access_all_business_entities_roles' => [1, 2, 3],
 
     // Flag alur per nama tipe pengajuan sumo (request_type.request_type).
+    // is_active false: tipe diimpor sebagai nonaktif (NOTA sudah tidak boleh diajukan).
     'type_flags' => [
         'ASSET/NONASSET' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => true],
         'ATK' => ['requires_attachment' => false, 'requires_products' => true, 'requires_accounting_approval' => false],
-        'NOTA' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => false],
+        'NOTA' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => false, 'is_active' => false],
     ],
 
     /*

@@ -243,7 +243,8 @@ Menu dikelompokkan dalam 10 grup, urutannya diatur di `AdminPanelProvider::navig
 
 ### Asuransi & Sewa
 
-- **Resource:** `InsuranceResource`, `InsuranceCategoryResource`, `InsuranceProviderResource`, `InsuranceScopeResource`, `RentResource`
+- **Resource:** `InsuranceResource` (menu Asuransi Bangunan: polis gudang stok + bangunan), `VehicleInsuranceResource` (menu Asuransi Kendaraan: tabel `vehicle_insurances` + `vehicle_insurance_updates`, satu polis per aset MOBIL/MOTOR, izin `*_vehicle::insurance`), `InsuranceCategoryResource`, `InsuranceProviderResource`, `InsuranceScopeResource`, `RentResource`
+- **Asuransi kendaraan:** dulu atribut dokumen aset "Asuransi"; migrasi `2026_11_16_100002` memindahkannya ke `vehicle_insurances` dan menonaktifkan atribut itu. Workbook audit kendaraan menulis/membaca polis lewat `VehicleInsuranceAuditSync`. Pengingat WA memakai sakelar dan hari asuransi yang sama, tipe log `VEHICLE_INSURANCE`
 - **Logika:** `ContractReminderService`, command `reminder:whatsapp`
 - **Impor/ekspor pembaharuan:** header action tab Riwayat (`Filament/Actions/ContractUpdateExcelActions`) memakai `InsuranceUpdateImport`/`RentUpdateImport` dan `InsuranceUpdateExport`/`RentUpdateExport`. Kolom mengikuti template sumo (`no_polis_induk` / `kode_sewa_induk` wajib sama dengan kontrak yang dibuka); baris lama dicocokkan per (kontrak, `no_polis`/`kode`), sel kosong tidak mengubah baris lama, baris baru wajib bertanggal, status kosong = BERJALAN, `kode` kosong = `RentUpdate::nextCode()`. Kesalahan dilempar sebagai `ImportStoppedException` agar tampil sebagai notifikasi dan seluruh file dibatalkan. Izin: `import_*` dan `export_*` kontrak
 - **Asal:** sumo-web
@@ -317,6 +318,7 @@ Setiap domain terhubung ke inti lewat `user_id` dan/atau `business_entity_id`.
 | `Product` | belongsTo `ProductCategory`, `UnitType` |
 | `ProblemReport` | belongsTo `User`, `ProblemReportCategory`, `BusinessEntity` |
 | `Insurance` | belongsTo `InsuranceCategory`, `InsuranceScope`, `InsuranceProvider` (×2: `stock_provider_id`, `building_provider_id`), `User`, `BusinessEntity`; hasMany `InsuranceUpdate` |
+| `VehicleInsurance` | belongsTo `Asset`, `InsuranceProvider`, `InsuranceCategory`, `User`, `BusinessEntity`; hasMany `VehicleInsuranceUpdate` |
 | `Rent` | belongsTo `User`, `BusinessEntity`; hasMany `RentUpdate` |
 
 ### Tabel bawaan dan soft delete

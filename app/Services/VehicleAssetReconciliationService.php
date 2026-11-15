@@ -25,6 +25,7 @@ class VehicleAssetReconciliationService
 {
     public function __construct(
         private readonly VehicleAssetAuditWorkbookParser $parser,
+        private readonly VehicleInsuranceAuditSync $insuranceSync,
     ) {}
 
     public function compare(AssetReconciliation $reconciliation): AssetReconciliation
@@ -813,6 +814,10 @@ class VehicleAssetReconciliationService
             }
         }
 
+        if ($this->insuranceSync->needsSync($asset, $payload)) {
+            return true;
+        }
+
         if ($this->textNeedsSync($asset, $payload['holder'] ?? null, config('vehicle-asset-reconciliation.holder_attribute_name', 'Pemegang Inventaris'))) {
             return true;
         }
@@ -881,6 +886,7 @@ class VehicleAssetReconciliationService
         AssetReconciliation $batch,
     ): void {
         $this->syncDocumentExpiryAttributes($asset, $item);
+        $this->insuranceSync->sync($asset, $item->raw_payload ?? []);
         $this->syncTextAttributes($asset, $item);
         $this->syncLocation($asset, $item, $batch);
         $this->syncRecipient($asset, $item);
@@ -947,13 +953,7 @@ class VehicleAssetReconciliationService
      */
     private function documentFieldMap(array $payload): array
     {
-        $insuranceNotes = collect([
-            $payload['insurance_name'] ?? null,
-            $payload['insurance_type'] ?? null,
-            $payload['insurance_insured'] ?? null,
-            isset($payload['insurance_join_date']) ? 'Join: '.$payload['insurance_join_date'] : null,
-        ])->filter()->implode(' | ');
-
+        // Asuransi tidak lagi atribut aset; lihat VehicleInsuranceAuditSync.
         return [
             config('vehicle-asset-reconciliation.stnk_attribute_name', 'STNK') => [
                 'expires_at' => $payload['stnk_expires_at'] ?? null,
@@ -966,11 +966,6 @@ class VehicleAssetReconciliationService
             config('vehicle-asset-reconciliation.tax_attribute_name', 'Pajak') => [
                 'expires_at' => $payload['tax_expires_at'] ?? null,
                 'document_number' => $payload['license_plate'] ?? null,
-            ],
-            config('vehicle-asset-reconciliation.insurance_attribute_name', 'Asuransi') => [
-                'expires_at' => $payload['insurance_expires_at'] ?? null,
-                'document_number' => $payload['insurance_policy_number'] ?? ($payload['license_plate'] ?? null),
-                'notes' => $insuranceNotes !== '' ? $insuranceNotes : null,
             ],
         ];
     }

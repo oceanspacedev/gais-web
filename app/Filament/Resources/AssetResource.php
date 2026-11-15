@@ -4,9 +4,9 @@ namespace App\Filament\Resources;
 
 use App\Access\ScopesVisibleRecords;
 use App\Enums\AssetCondition;
-use App\Enums\AssetServiceStatus;
 use App\Enums\NbhStatus;
 use App\Filament\Resources\AssetResource\Pages;
+use App\Filament\Resources\AssetResource\RelationManagers\AssetServicesRelationManager;
 use App\Filament\Resources\AssetResource\RelationManagers\AssetTransfersRelationManager;
 use App\Filament\Resources\AssetResource\RelationManagers\QrScansRelationManager;
 use App\Models\Asset;
@@ -1184,6 +1184,7 @@ class AssetResource extends Resource
     {
         return [
             AssetTransfersRelationManager::class,
+            AssetServicesRelationManager::class,
             QrScansRelationManager::class,
         ];
     }
@@ -1370,28 +1371,6 @@ class AssetResource extends Resource
                                     ->url(fn (?Asset $record) => self::resolveDocumentUrl($record?->sale_document_path), true)
                                     ->visible(fn (?Asset $record): bool => filled($record?->sale_document_path)),
                             ]),
-                        ]),
-
-                    Section::make('Riwayat Servis Aset')
-                        ->icon('heroicon-o-wrench-screwdriver')
-                        ->visible(fn (?Asset $record): bool => (bool) $record?->services()->exists())
-                        ->schema([
-                            RepeatableEntry::make('services')
-                                ->hiddenLabel()
-                                ->table([
-                                    TableColumn::make(__('No. Servis')),
-                                    TableColumn::make(__('Tgl Servis')),
-                                    TableColumn::make(__('Pelaksana')),
-                                    TableColumn::make(__('Biaya'))->alignment(Alignment::End),
-                                    TableColumn::make(__('Status')),
-                                ])
-                                ->schema([
-                                    TextEntry::make('service_number')->label(__('No. Servis'))->weight('bold'),
-                                    TextEntry::make('service_date')->label(__('Tgl Servis'))->date('d M Y')->placeholder('-'),
-                                    TextEntry::make('provider_label')->label(__('Pelaksana'))->placeholder('-'),
-                                    TextEntry::make('total_cost')->label(__('Biaya'))->state(fn ($record) => 'Rp '.number_format($record->total_cost ?: 0, 0, ',', '.'))->alignEnd(),
-                                    TextEntry::make('status')->label(__('Status'))->badge()->color(fn ($state) => $state instanceof AssetServiceStatus ? $state->color() : 'gray')->formatStateUsing(fn ($state) => $state instanceof AssetServiceStatus ? $state->label() : (string) $state),
-                                ]),
                         ]),
                 ])->columnSpan(['default' => 1, 'lg' => 2])->extraAttributes(['class' => 'gais-fill-column']),
 
