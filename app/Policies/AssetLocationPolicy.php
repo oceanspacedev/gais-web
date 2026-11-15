@@ -16,7 +16,7 @@ class AssetLocationPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset::location');
+        return $user->can('ViewAny:AssetLocation');
     }
 
     /**
@@ -24,7 +24,7 @@ class AssetLocationPolicy
      */
     public function view(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('view_asset::location') && $this->visible($user, $assetLocation);
+        return $user->can('View:AssetLocation') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -32,7 +32,7 @@ class AssetLocationPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_asset::location');
+        return $user->can('Create:AssetLocation');
     }
 
     /**
@@ -40,7 +40,7 @@ class AssetLocationPolicy
      */
     public function update(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('update_asset::location') && $this->editable($user, $assetLocation);
+        return $user->can('Update:AssetLocation') && $this->editable($user, $assetLocation);
     }
 
     /**
@@ -48,7 +48,7 @@ class AssetLocationPolicy
      */
     public function delete(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('delete_asset::location') && $this->editable($user, $assetLocation);
+        return $user->can('Delete:AssetLocation') && $this->editable($user, $assetLocation);
     }
 
     /**
@@ -56,7 +56,7 @@ class AssetLocationPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset::location');
+        return $user->can('DeleteAny:AssetLocation');
     }
 
     /**
@@ -64,7 +64,7 @@ class AssetLocationPolicy
      */
     public function forceDelete(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('force_delete_asset::location') && $this->visible($user, $assetLocation);
+        return $user->can('ForceDelete:AssetLocation') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -72,7 +72,7 @@ class AssetLocationPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset::location');
+        return $user->can('ForceDeleteAny:AssetLocation');
     }
 
     /**
@@ -80,7 +80,7 @@ class AssetLocationPolicy
      */
     public function restore(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('restore_asset::location') && $this->visible($user, $assetLocation);
+        return $user->can('Restore:AssetLocation') && $this->visible($user, $assetLocation);
     }
 
     /**
@@ -88,7 +88,7 @@ class AssetLocationPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset::location');
+        return $user->can('RestoreAny:AssetLocation');
     }
 
     /**
@@ -96,7 +96,7 @@ class AssetLocationPolicy
      */
     public function replicate(User $user, AssetLocation $assetLocation): bool
     {
-        return $user->can('replicate_asset::location') && $this->editable($user, $assetLocation);
+        return $user->can('Replicate:AssetLocation') && $this->editable($user, $assetLocation);
     }
 
     /**
@@ -104,6 +104,6 @@ class AssetLocationPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset::location');
+        return $user->can('Reorder:AssetLocation');
     }
 }

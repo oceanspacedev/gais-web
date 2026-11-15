@@ -117,7 +117,7 @@ class UserRelationTabsTest extends TestCase
     public function test_tabs_hide_records_the_viewer_cannot_see_in_their_own_menus(): void
     {
         // Akses ke menu-menu itu ada, tapi hanya badan usaha lain dan tanpa "lihat semua".
-        $viewer = $this->viewer(['view_any_item::request', 'view_any_problem::report', 'view_any_asset', 'view_any_asset::transfer']);
+        $viewer = $this->viewer(['ViewAny:ItemRequest', 'ViewAny:ProblemReport', 'ViewAny:Asset', 'ViewAny:AssetTransfer']);
         $this->actingAs($viewer);
 
         foreach ([AssetTransfersRelationManager::class, ItemRequestsRelationManager::class, ItemRequestApprovalsRelationManager::class, ProblemReportsRelationManager::class, HeldAssetsRelationManager::class] as $tab) {
@@ -134,7 +134,7 @@ class UserRelationTabsTest extends TestCase
 
     public function test_tabs_are_hidden_without_access_to_the_related_menu(): void
     {
-        $this->actingAs($this->viewer(['view_any_user', 'view_user']));
+        $this->actingAs($this->viewer(['ViewAny:User', 'View:User']));
 
         foreach ([AssetTransfersRelationManager::class, ItemRequestsRelationManager::class, ItemRequestApprovalsRelationManager::class, HeldAssetsRelationManager::class] as $tab) {
             $this->assertFalse($tab::canViewForRecord($this->owner, EditUser::class), $tab);

@@ -37,6 +37,7 @@ class ProblemReportWorkflow
 
         return ProblemReport::create([
             'user_id' => $reporter->id,
+            'division_id' => $reporter->division_id,
             'problem_report_category_id' => $data['problem_report_category_id'],
             'business_entity_id' => $reporter->business_entity_id,
             'reported_at' => now(),

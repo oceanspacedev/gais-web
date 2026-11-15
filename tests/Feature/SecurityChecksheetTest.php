@@ -76,11 +76,11 @@ class SecurityChecksheetTest extends TestCase
     {
         $security = Role::findByName('security', 'web');
 
-        $this->assertTrue($security->hasPermissionTo('view_any_security::checksheet'));
-        $this->assertTrue($security->hasPermissionTo('view_security::checksheet'));
-        $this->assertTrue($security->hasPermissionTo('create_security::checksheet'));
-        $this->assertFalse($security->hasPermissionTo('view_all_security::checksheet'));
-        $this->assertFalse($security->hasPermissionTo('delete_security::checksheet'));
+        $this->assertTrue($security->hasPermissionTo('ViewAny:SecurityChecksheet'));
+        $this->assertTrue($security->hasPermissionTo('View:SecurityChecksheet'));
+        $this->assertTrue($security->hasPermissionTo('Create:SecurityChecksheet'));
+        $this->assertFalse($security->hasPermissionTo('ViewAll:SecurityChecksheet'));
+        $this->assertFalse($security->hasPermissionTo('Delete:SecurityChecksheet'));
     }
 
     public function test_guard_answers_by_picking_and_mismatches_against_the_key_are_flagged(): void
@@ -201,8 +201,8 @@ class SecurityChecksheetTest extends TestCase
 
         // Edit memakai pertanyaan yang tersimpan, termasuk yang sudah dihapus dari master.
         $supervisor = User::factory()->create()->givePermissionTo(Permission::whereIn('name', [
-            'view_any_security::checksheet', 'view_security::checksheet', 'update_security::checksheet',
-            'view_all_security::checksheet', 'update_all_security::checksheet',
+            'ViewAny:SecurityChecksheet', 'View:SecurityChecksheet', 'Update:SecurityChecksheet',
+            'ViewAll:SecurityChecksheet', 'UpdateAll:SecurityChecksheet',
         ])->get());
         $this->actingAs($supervisor);
 
@@ -224,7 +224,7 @@ class SecurityChecksheetTest extends TestCase
     public function test_guard_only_sees_own_reports_unless_allowed_to_view_all(): void
     {
         $guard = $this->guard();
-        $supervisor = User::factory()->create()->givePermissionTo(Permission::findByName('view_all_security::checksheet', 'web'));
+        $supervisor = User::factory()->create()->givePermissionTo(Permission::findByName('ViewAll:SecurityChecksheet', 'web'));
 
         $own = $this->report($guard, 'HO Petra');
         $other = $this->report($this->guard(), 'Gudang Lain');

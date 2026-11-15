@@ -58,6 +58,8 @@ trait ImportsItemRequests
             ], 'item_requests');
         });
 
+        $this->fillDivisionFromRequester('item_requests');
+
         $this->importItemRequestDetails();
         $this->importItemRequestApprovals();
         $this->importItemRequestLogs();

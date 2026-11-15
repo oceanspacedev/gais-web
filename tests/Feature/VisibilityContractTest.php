@@ -154,7 +154,7 @@ class VisibilityContractTest extends TestCase
     public function test_ob_checksheets_are_own_unclaimed_or_all_with_permission(): void
     {
         $officer = User::factory()->create();
-        $supervisor = User::factory()->create()->givePermissionTo(Permission::findOrCreate('view_all_ob::checksheet', 'web'));
+        $supervisor = User::factory()->create()->givePermissionTo(Permission::findOrCreate('ViewAll:ObChecksheet', 'web'));
 
         $own = ObChecksheet::create(['user_id' => $officer->id, 'room' => '__vc_own__', 'before_photo' => 'ob/a.jpg']);
         $others = ObChecksheet::create(['user_id' => User::factory()->create()->id, 'room' => '__vc_other__', 'before_photo' => 'ob/b.jpg']);
@@ -175,7 +175,7 @@ class VisibilityContractTest extends TestCase
     {
         $creator = User::factory()->create();
         $technician = User::factory()->create();
-        $supervisor = User::factory()->create()->givePermissionTo(Permission::findOrCreate('view_all_asset::service', 'web'));
+        $supervisor = User::factory()->create()->givePermissionTo(Permission::findOrCreate('ViewAll:AssetService', 'web'));
         $asset = Asset::create(['name' => '__vc_service_asset__', 'business_entity_id' => $this->alpha->id]);
 
         $service = fn (User $createdBy, User $servicedBy): AssetService => AssetService::create([

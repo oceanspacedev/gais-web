@@ -199,7 +199,7 @@ final class ItemRequestRecapExport implements FromArray, ShouldAutoSize, WithHea
         $rows = $this->applyStatusFilter($this->matchingRequests())
             ->join('item_request_details', 'item_request_details.item_request_id', '=', 'item_requests.id')
             ->join('users', 'users.id', '=', 'item_requests.user_id')
-            ->join('divisions', 'divisions.id', '=', 'users.division_id')
+            ->join('divisions', 'divisions.id', '=', 'item_requests.division_id')
             ->where('divisions.area_id', $this->area->id)
             ->whereNull('divisions.deleted_at')
             ->whereNull('item_request_details.deleted_at')

@@ -19,7 +19,7 @@ use Illuminate\Support\Facades\DB;
  * Dasbor > Pengajuan Barang: antrean per tahap, hasil tahun berjalan, biaya,
  * dan periode cutoff yang sedang berlaku. Angka mengikuti hak lihat pengguna
  * (pemohon melihat pengajuannya sendiri). Nama kelas dipertahankan karena izin
- * `widget_SumoOverviewStats` sudah dipegang role pemohon, accounting, dan executor.
+ * `View:SumoOverviewStats` sudah dipegang role pemohon, accounting, dan executor.
  */
 class SumoOverviewStats extends StatsOverviewWidget
 {

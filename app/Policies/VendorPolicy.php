@@ -16,7 +16,7 @@ class VendorPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_vendor');
+        return $user->can('ViewAny:Vendor');
     }
 
     /**
@@ -24,7 +24,7 @@ class VendorPolicy
      */
     public function view(User $user, Vendor $vendor): bool
     {
-        return $user->can('view_vendor') && $this->visible($user, $vendor);
+        return $user->can('View:Vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -32,7 +32,7 @@ class VendorPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_vendor');
+        return $user->can('Create:Vendor');
     }
 
     /**
@@ -40,7 +40,7 @@ class VendorPolicy
      */
     public function update(User $user, Vendor $vendor): bool
     {
-        return $user->can('update_vendor') && $this->editable($user, $vendor);
+        return $user->can('Update:Vendor') && $this->editable($user, $vendor);
     }
 
     /**
@@ -48,7 +48,7 @@ class VendorPolicy
      */
     public function delete(User $user, Vendor $vendor): bool
     {
-        return $user->can('delete_vendor') && $this->editable($user, $vendor);
+        return $user->can('Delete:Vendor') && $this->editable($user, $vendor);
     }
 
     /**
@@ -56,7 +56,7 @@ class VendorPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_vendor');
+        return $user->can('DeleteAny:Vendor');
     }
 
     /**
@@ -64,7 +64,7 @@ class VendorPolicy
      */
     public function forceDelete(User $user, Vendor $vendor): bool
     {
-        return $user->can('force_delete_vendor') && $this->visible($user, $vendor);
+        return $user->can('ForceDelete:Vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -72,7 +72,7 @@ class VendorPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_vendor');
+        return $user->can('ForceDeleteAny:Vendor');
     }
 
     /**
@@ -80,7 +80,7 @@ class VendorPolicy
      */
     public function restore(User $user, Vendor $vendor): bool
     {
-        return $user->can('restore_vendor') && $this->visible($user, $vendor);
+        return $user->can('Restore:Vendor') && $this->visible($user, $vendor);
     }
 
     /**
@@ -88,7 +88,7 @@ class VendorPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_vendor');
+        return $user->can('RestoreAny:Vendor');
     }
 
     /**
@@ -96,7 +96,7 @@ class VendorPolicy
      */
     public function replicate(User $user, Vendor $vendor): bool
     {
-        return $user->can('replicate_vendor') && $this->editable($user, $vendor);
+        return $user->can('Replicate:Vendor') && $this->editable($user, $vendor);
     }
 
     /**
@@ -104,6 +104,6 @@ class VendorPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_vendor');
+        return $user->can('Reorder:Vendor');
     }
 }

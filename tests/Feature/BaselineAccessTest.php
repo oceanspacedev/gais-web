@@ -2,8 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Filament\Resources\ItemRequestResource;
 use App\Filament\Resources\ProblemReportResource;
+use App\Models\Division;
+use App\Models\ItemRequest;
 use App\Models\ProblemReport;
+use App\Models\Product;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
@@ -36,6 +40,32 @@ class BaselineAccessTest extends TestCase
 
         $this->get(ProblemReportResource::getUrl('index'))->assertOk();
         $this->get(ProblemReportResource::getUrl('create'))->assertOk();
+    }
+
+    public function test_employee_placed_in_a_division_can_request_items_without_a_role(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $division = Division::create(['name' => 'TOKO-uji-akses-dasar']);
+        $member = User::factory()->create(['division_id' => $division->id]);
+        $unplaced = User::factory()->create();
+
+        $this->assertTrue($member->can('viewAny', ItemRequest::class));
+        $this->assertTrue($member->can('create', ItemRequest::class));
+        $this->assertTrue($member->can('viewAny', Product::class));
+        $this->assertFalse($unplaced->can('viewAny', ItemRequest::class));
+        $this->assertFalse($unplaced->can('create', ItemRequest::class));
+
+        // Hanya izin pemohon: memproses, menyetujui, melihat semua, dan ekspor tetap butuh izin Shield.
+        foreach (['Process:ItemRequest', 'ApproveManager:ItemRequest', 'ViewAll:ItemRequest', 'Export:ItemRequest', 'Update:ItemRequest', 'Create:Product'] as $permission) {
+            $this->assertFalse($member->can($permission), $permission);
+        }
+
+        $this->actingAs($member);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $this->get(ItemRequestResource::getUrl('index'))->assertOk();
+        $this->get(ItemRequestResource::getUrl('create'))->assertOk();
     }
 
     public function test_employee_only_sees_their_own_reports(): void

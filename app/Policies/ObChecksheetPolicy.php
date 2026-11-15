@@ -16,7 +16,7 @@ class ObChecksheetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_ob::checksheet');
+        return $user->can('ViewAny:ObChecksheet');
     }
 
     /**
@@ -24,7 +24,7 @@ class ObChecksheetPolicy
      */
     public function view(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('view_ob::checksheet') && $this->visible($user, $obChecksheet);
+        return $user->can('View:ObChecksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -32,7 +32,7 @@ class ObChecksheetPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_ob::checksheet');
+        return $user->can('Create:ObChecksheet');
     }
 
     /**
@@ -40,7 +40,7 @@ class ObChecksheetPolicy
      */
     public function update(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('update_ob::checksheet')
+        return $user->can('Update:ObChecksheet')
             && $this->editable($user, $obChecksheet)
             && ($this->isOwnedBy($user, $obChecksheet) || $this->updateAll($user));
     }
@@ -50,7 +50,7 @@ class ObChecksheetPolicy
      */
     public function delete(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('delete_ob::checksheet')
+        return $user->can('Delete:ObChecksheet')
             && $this->editable($user, $obChecksheet)
             && ($this->isOwnedBy($user, $obChecksheet) || $this->deleteAll($user));
     }
@@ -60,7 +60,7 @@ class ObChecksheetPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_ob::checksheet');
+        return $user->can('DeleteAny:ObChecksheet');
     }
 
     /**
@@ -68,7 +68,7 @@ class ObChecksheetPolicy
      */
     public function forceDelete(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('force_delete_ob::checksheet') && $this->visible($user, $obChecksheet);
+        return $user->can('ForceDelete:ObChecksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -76,7 +76,7 @@ class ObChecksheetPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_ob::checksheet');
+        return $user->can('ForceDeleteAny:ObChecksheet');
     }
 
     /**
@@ -84,7 +84,7 @@ class ObChecksheetPolicy
      */
     public function restore(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('restore_ob::checksheet') && $this->visible($user, $obChecksheet);
+        return $user->can('Restore:ObChecksheet') && $this->visible($user, $obChecksheet);
     }
 
     /**
@@ -92,7 +92,7 @@ class ObChecksheetPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_ob::checksheet');
+        return $user->can('RestoreAny:ObChecksheet');
     }
 
     /**
@@ -100,7 +100,7 @@ class ObChecksheetPolicy
      */
     public function replicate(User $user, ObChecksheet $obChecksheet): bool
     {
-        return $user->can('replicate_ob::checksheet') && $this->editable($user, $obChecksheet);
+        return $user->can('Replicate:ObChecksheet') && $this->editable($user, $obChecksheet);
     }
 
     /**
@@ -108,7 +108,7 @@ class ObChecksheetPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_ob::checksheet');
+        return $user->can('Reorder:ObChecksheet');
     }
 
     /**
@@ -116,7 +116,7 @@ class ObChecksheetPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_ob::checksheet');
+        return $user->can('Export:ObChecksheet');
     }
 
     /**
@@ -124,7 +124,7 @@ class ObChecksheetPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_ob::checksheet');
+        return $user->can('Import:ObChecksheet');
     }
 
     /**
@@ -132,17 +132,17 @@ class ObChecksheetPolicy
      */
     public function viewAll(User $user): bool
     {
-        return $user->can('view_all_ob::checksheet');
+        return $user->can('ViewAll:ObChecksheet');
     }
 
     public function updateAll(User $user): bool
     {
-        return $user->can('update_all_ob::checksheet');
+        return $user->can('UpdateAll:ObChecksheet');
     }
 
     public function deleteAll(User $user): bool
     {
-        return $user->can('delete_all_ob::checksheet');
+        return $user->can('DeleteAll:ObChecksheet');
     }
 
     /**
@@ -150,7 +150,7 @@ class ObChecksheetPolicy
      */
     public function assign(User $user): bool
     {
-        return $user->can('assign_ob::checksheet');
+        return $user->can('Assign:ObChecksheet');
     }
 
     /**

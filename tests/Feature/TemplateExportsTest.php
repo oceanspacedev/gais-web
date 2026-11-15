@@ -58,11 +58,11 @@ class TemplateExportsTest extends TestCase
         $this->exporter->givePermissionTo(array_map(
             fn (string $name) => Permission::findOrCreate($name, 'web'),
             [
-                'view_any_product', 'view_product', 'export_product',
-                'view_any_insurance', 'view_insurance', 'export_insurance',
-                'view_any_rent', 'view_rent', 'export_rent',
-                'view_any_user', 'view_user', 'export_user',
-                'view_any_problem::report', 'view_problem::report', 'export_problem::report', 'view_all_problem::report',
+                'ViewAny:Product', 'View:Product', 'Export:Product',
+                'ViewAny:Insurance', 'View:Insurance', 'Export:Insurance',
+                'ViewAny:Rent', 'View:Rent', 'Export:Rent',
+                'ViewAny:User', 'View:User', 'Export:User',
+                'ViewAny:ProblemReport', 'View:ProblemReport', 'Export:ProblemReport', 'ViewAll:ProblemReport',
             ],
         ));
 
@@ -150,7 +150,7 @@ class TemplateExportsTest extends TestCase
         $viewer = User::factory()->create(['access_all_business_entities' => true]);
         $viewer->givePermissionTo(array_map(
             fn (string $name) => Permission::findOrCreate($name, 'web'),
-            ['view_any_product', 'view_any_insurance', 'view_any_rent', 'view_any_user', 'view_any_problem::report'],
+            ['ViewAny:Product', 'ViewAny:Insurance', 'ViewAny:Rent', 'ViewAny:User', 'ViewAny:ProblemReport'],
         ));
         $this->actingAs($viewer);
 

@@ -99,7 +99,7 @@ class Guide extends Page
                 ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running memuat dump ke tabel berawalan sumo_dump_ di database GAIS. Nama tabel di dump diberi awalan, jadi tabel GAIS tidak tersentuh.'],
                 ['actor' => 'sistem', 'title' => 'Uji coba otomatis', 'text' => 'Semua langkah dijalankan lalu di-rollback. Laporan jumlah, pemetaan badan usaha, dan peringatan user tampil di run.'],
                 ['actor' => 'admin', 'title' => 'Impor sungguhan', 'text' => 'Ketik IMPOR. Satu transaksi dan idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
-                ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke pengajuan_admin, accounting, executor, requester. Cache permission direset.'],
+                ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke general_affair (ADMIN), accounting, executor, requester. Cache permission direset.'],
             ],
         ];
     }

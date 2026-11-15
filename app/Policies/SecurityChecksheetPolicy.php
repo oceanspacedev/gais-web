@@ -16,7 +16,7 @@ class SecurityChecksheetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_security::checksheet');
+        return $user->can('ViewAny:SecurityChecksheet');
     }
 
     /**
@@ -24,7 +24,7 @@ class SecurityChecksheetPolicy
      */
     public function view(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('view_security::checksheet') && $this->visible($user, $securityChecksheet);
+        return $user->can('View:SecurityChecksheet') && $this->visible($user, $securityChecksheet);
     }
 
     /**
@@ -32,7 +32,7 @@ class SecurityChecksheetPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_security::checksheet');
+        return $user->can('Create:SecurityChecksheet');
     }
 
     /**
@@ -40,7 +40,7 @@ class SecurityChecksheetPolicy
      */
     public function update(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('update_security::checksheet')
+        return $user->can('Update:SecurityChecksheet')
             && $this->editable($user, $securityChecksheet)
             && ($this->isOwnedBy($user, $securityChecksheet) || $this->updateAll($user));
     }
@@ -50,7 +50,7 @@ class SecurityChecksheetPolicy
      */
     public function delete(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('delete_security::checksheet')
+        return $user->can('Delete:SecurityChecksheet')
             && $this->editable($user, $securityChecksheet)
             && ($this->isOwnedBy($user, $securityChecksheet) || $this->deleteAll($user));
     }
@@ -60,7 +60,7 @@ class SecurityChecksheetPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_security::checksheet');
+        return $user->can('DeleteAny:SecurityChecksheet');
     }
 
     /**
@@ -68,7 +68,7 @@ class SecurityChecksheetPolicy
      */
     public function forceDelete(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('force_delete_security::checksheet') && $this->visible($user, $securityChecksheet);
+        return $user->can('ForceDelete:SecurityChecksheet') && $this->visible($user, $securityChecksheet);
     }
 
     /**
@@ -76,7 +76,7 @@ class SecurityChecksheetPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_security::checksheet');
+        return $user->can('ForceDeleteAny:SecurityChecksheet');
     }
 
     /**
@@ -84,7 +84,7 @@ class SecurityChecksheetPolicy
      */
     public function restore(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('restore_security::checksheet') && $this->visible($user, $securityChecksheet);
+        return $user->can('Restore:SecurityChecksheet') && $this->visible($user, $securityChecksheet);
     }
 
     /**
@@ -92,7 +92,7 @@ class SecurityChecksheetPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_security::checksheet');
+        return $user->can('RestoreAny:SecurityChecksheet');
     }
 
     /**
@@ -100,7 +100,7 @@ class SecurityChecksheetPolicy
      */
     public function replicate(User $user, SecurityChecksheet $securityChecksheet): bool
     {
-        return $user->can('replicate_security::checksheet') && $this->editable($user, $securityChecksheet);
+        return $user->can('Replicate:SecurityChecksheet') && $this->editable($user, $securityChecksheet);
     }
 
     /**
@@ -108,7 +108,7 @@ class SecurityChecksheetPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_security::checksheet');
+        return $user->can('Reorder:SecurityChecksheet');
     }
 
     /**
@@ -116,7 +116,7 @@ class SecurityChecksheetPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_security::checksheet');
+        return $user->can('Export:SecurityChecksheet');
     }
 
     /**
@@ -124,7 +124,7 @@ class SecurityChecksheetPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_security::checksheet');
+        return $user->can('Import:SecurityChecksheet');
     }
 
     /**
@@ -132,17 +132,17 @@ class SecurityChecksheetPolicy
      */
     public function viewAll(User $user): bool
     {
-        return $user->can('view_all_security::checksheet');
+        return $user->can('ViewAll:SecurityChecksheet');
     }
 
     public function updateAll(User $user): bool
     {
-        return $user->can('update_all_security::checksheet');
+        return $user->can('UpdateAll:SecurityChecksheet');
     }
 
     public function deleteAll(User $user): bool
     {
-        return $user->can('delete_all_security::checksheet');
+        return $user->can('DeleteAll:SecurityChecksheet');
     }
 
     /**

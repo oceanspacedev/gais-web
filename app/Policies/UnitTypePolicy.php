@@ -13,61 +13,61 @@ class UnitTypePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_unit::type');
+        return $user->can('ViewAny:UnitType');
     }
 
     public function view(User $user, UnitType $unitType): bool
     {
-        return $user->can('view_unit::type') && $this->visible($user, $unitType);
+        return $user->can('View:UnitType') && $this->visible($user, $unitType);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_unit::type');
+        return $user->can('Create:UnitType');
     }
 
     public function update(User $user, UnitType $unitType): bool
     {
-        return $user->can('update_unit::type') && $this->editable($user, $unitType);
+        return $user->can('Update:UnitType') && $this->editable($user, $unitType);
     }
 
     public function delete(User $user, UnitType $unitType): bool
     {
-        return $user->can('delete_unit::type') && $this->editable($user, $unitType);
+        return $user->can('Delete:UnitType') && $this->editable($user, $unitType);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_unit::type');
+        return $user->can('DeleteAny:UnitType');
     }
 
     public function forceDelete(User $user, UnitType $unitType): bool
     {
-        return $user->can('force_delete_unit::type') && $this->visible($user, $unitType);
+        return $user->can('ForceDelete:UnitType') && $this->visible($user, $unitType);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_unit::type');
+        return $user->can('ForceDeleteAny:UnitType');
     }
 
     public function restore(User $user, UnitType $unitType): bool
     {
-        return $user->can('restore_unit::type') && $this->visible($user, $unitType);
+        return $user->can('Restore:UnitType') && $this->visible($user, $unitType);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_unit::type');
+        return $user->can('RestoreAny:UnitType');
     }
 
     public function replicate(User $user, UnitType $unitType): bool
     {
-        return $user->can('replicate_unit::type') && $this->editable($user, $unitType);
+        return $user->can('Replicate:UnitType') && $this->editable($user, $unitType);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_unit::type');
+        return $user->can('Reorder:UnitType');
     }
 }

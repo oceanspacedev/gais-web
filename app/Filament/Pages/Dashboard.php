@@ -52,7 +52,7 @@ use Illuminate\Contracts\Support\Htmlable;
 /**
  * Dasbor manajemen: antrean lintas modul di atas, lalu satu seksi per modul
  * (Aset, Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, Operasional,
- * Organisasi & Data Master). Tiap widget dijaga izin `widget_*` Shield; seksi
+ * Organisasi & Data Master). Tiap widget dijaga izin `View:{NamaKelas}` Shield; seksi
  * yang tidak punya widget yang boleh dilihat tidak dirender, jadi pemohon
  * hanya melihat ringkasan pengajuannya sendiri sedangkan manajemen melihat
  * semuanya. Seksi bisa dilipat dan pilihannya diingat per browser.

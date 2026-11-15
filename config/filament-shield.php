@@ -194,6 +194,7 @@ return [
                 'forceDeleteAny',
             ],
             UserResource::class => [
+                'export',
                 'import',
                 'impersonate',
                 // Username, email, password, role, dan login WhatsApp.

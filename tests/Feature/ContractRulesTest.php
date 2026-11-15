@@ -37,7 +37,7 @@ class ContractRulesTest extends TestCase
         $viewer = User::factory()->create(['access_all_business_entities' => true]);
         $viewer->givePermissionTo(array_map(
             fn (string $name) => Permission::findOrCreate($name, 'web'),
-            ['view_any_insurance', 'view_insurance', 'view_any_rent', 'view_rent'],
+            ['ViewAny:Insurance', 'View:Insurance', 'ViewAny:Rent', 'View:Rent'],
         ));
 
         $this->actingAs($viewer);

@@ -33,34 +33,34 @@ class PermissionOnlyAuthorizationTest extends TestCase
 
     /** @var array<string, array{0: string, 1: class-string}> */
     private const ABILITIES = [
-        'view_any_asset::qr::label::history' => ['viewAny', AssetQrLabelHistory::class],
-        'manage_condition_asset' => ['manageCondition', Asset::class],
-        'repair_validation_asset' => ['repairValidation', Asset::class],
-        'regenerate_qr_asset' => ['regenerateQr', Asset::class],
-        'update_recipient_asset' => ['updateRecipient', Asset::class],
-        'merge_asset' => ['merge', Asset::class],
-        'manage_stock_asset::transfer' => ['manageStock', AssetTransfer::class],
-        'update_core_asset::transfer' => ['updateCore', AssetTransfer::class],
-        'delete_detail_asset::transfer' => ['deleteDetail', AssetTransfer::class],
-        'view_all_asset::service' => ['viewAll', AssetService::class],
-        'update_all_asset::service' => ['updateAll', AssetService::class],
-        'delete_all_asset::service' => ['deleteAll', AssetService::class],
-        'export_asset::service' => ['export', AssetService::class],
-        'view_all_ob::checksheet' => ['viewAll', ObChecksheet::class],
-        'update_all_ob::checksheet' => ['updateAll', ObChecksheet::class],
-        'delete_all_ob::checksheet' => ['deleteAll', ObChecksheet::class],
-        'import_user' => ['import', User::class],
-        'export_user' => ['export', User::class],
-        'manage_access_user' => ['manageAccess', User::class],
-        'manage_business_entity_access_user' => ['manageBusinessEntityAccess', User::class],
+        'ViewAny:AssetQrLabelHistory' => ['viewAny', AssetQrLabelHistory::class],
+        'ManageCondition:Asset' => ['manageCondition', Asset::class],
+        'RepairValidation:Asset' => ['repairValidation', Asset::class],
+        'RegenerateQr:Asset' => ['regenerateQr', Asset::class],
+        'UpdateRecipient:Asset' => ['updateRecipient', Asset::class],
+        'Merge:Asset' => ['merge', Asset::class],
+        'ManageStock:AssetTransfer' => ['manageStock', AssetTransfer::class],
+        'UpdateCore:AssetTransfer' => ['updateCore', AssetTransfer::class],
+        'DeleteDetail:AssetTransfer' => ['deleteDetail', AssetTransfer::class],
+        'ViewAll:AssetService' => ['viewAll', AssetService::class],
+        'UpdateAll:AssetService' => ['updateAll', AssetService::class],
+        'DeleteAll:AssetService' => ['deleteAll', AssetService::class],
+        'Export:AssetService' => ['export', AssetService::class],
+        'ViewAll:ObChecksheet' => ['viewAll', ObChecksheet::class],
+        'UpdateAll:ObChecksheet' => ['updateAll', ObChecksheet::class],
+        'DeleteAll:ObChecksheet' => ['deleteAll', ObChecksheet::class],
+        'Import:User' => ['import', User::class],
+        'Export:User' => ['export', User::class],
+        'ManageAccess:User' => ['manageAccess', User::class],
+        'ManageBusinessEntityAccess:User' => ['manageBusinessEntityAccess', User::class],
     ];
 
     /** @var list<string> */
     private const EXTRA_PERMISSIONS = [
-        'view_any_asset', 'view_asset',
-        'view_any_ob::checksheet', 'view_ob::checksheet', 'delete_ob::checksheet', 'delete_any_ob::checksheet',
-        'create_asset::qr::label::history', 'update_asset::qr::label::history',
-        'delete_asset::qr::label::history', 'delete_any_asset::qr::label::history',
+        'ViewAny:Asset', 'View:Asset',
+        'ViewAny:ObChecksheet', 'View:ObChecksheet', 'Delete:ObChecksheet', 'DeleteAny:ObChecksheet',
+        'Create:AssetQrLabelHistory', 'Update:AssetQrLabelHistory',
+        'Delete:AssetQrLabelHistory', 'DeleteAny:AssetQrLabelHistory',
     ];
 
     protected function setUp(): void
@@ -109,15 +109,15 @@ class PermissionOnlyAuthorizationTest extends TestCase
         $service = (new AssetService)->forceFill(['created_by' => $owner->id]);
         $service->exists = true;
 
-        $ownOnly = $this->userWithRole('__own_only__', ['view_ob::checksheet', 'update_ob::checksheet', 'view_asset::service', 'update_asset::service']);
+        $ownOnly = $this->userWithRole('__own_only__', ['View:ObChecksheet', 'Update:ObChecksheet', 'View:AssetService', 'Update:AssetService']);
         $this->assertFalse($ownOnly->can('view', $checksheet));
         $this->assertFalse($ownOnly->can('update', $checksheet));
         $this->assertFalse($ownOnly->can('view', $service));
         $this->assertFalse($ownOnly->can('update', $service));
 
         $supervisor = $this->userWithRole('__supervisor__', [
-            'view_ob::checksheet', 'view_all_ob::checksheet',
-            'view_asset::service', 'view_all_asset::service',
+            'View:ObChecksheet', 'ViewAll:ObChecksheet',
+            'View:AssetService', 'ViewAll:AssetService',
         ]);
         $this->assertTrue($supervisor->can('view', $checksheet));
         $this->assertFalse($supervisor->can('update', $checksheet));
@@ -128,8 +128,8 @@ class PermissionOnlyAuthorizationTest extends TestCase
     public function test_qr_label_history_stays_read_only_whatever_the_permissions(): void
     {
         $this->actingAs($this->userWithRole('__qr_everything__', [
-            'view_any_asset::qr::label::history', 'create_asset::qr::label::history', 'update_asset::qr::label::history',
-            'delete_asset::qr::label::history', 'delete_any_asset::qr::label::history',
+            'ViewAny:AssetQrLabelHistory', 'Create:AssetQrLabelHistory', 'Update:AssetQrLabelHistory',
+            'Delete:AssetQrLabelHistory', 'DeleteAny:AssetQrLabelHistory',
         ]));
         $history = new AssetQrLabelHistory;
 
@@ -143,8 +143,8 @@ class PermissionOnlyAuthorizationTest extends TestCase
     public function test_bulk_delete_skips_records_of_other_users_without_delete_all(): void
     {
         $user = $this->userWithRole('__ob_bulk__', [
-            'view_any_ob::checksheet', 'view_ob::checksheet', 'view_all_ob::checksheet',
-            'delete_ob::checksheet', 'delete_any_ob::checksheet',
+            'ViewAny:ObChecksheet', 'View:ObChecksheet', 'ViewAll:ObChecksheet',
+            'Delete:ObChecksheet', 'DeleteAny:ObChecksheet',
         ]);
         $own = ObChecksheet::create(['user_id' => $user->id, 'room' => '__perm_own__', 'before_photo' => 'ob/own.jpg']);
         $other = ObChecksheet::create(['user_id' => User::factory()->create()->id, 'room' => '__perm_other__', 'before_photo' => 'ob/other.jpg']);
@@ -162,7 +162,7 @@ class PermissionOnlyAuthorizationTest extends TestCase
     {
         $alpha = BusinessEntity::create(['name' => '__perm_alpha__']);
         $beta = BusinessEntity::create(['name' => '__perm_beta__']);
-        $user = $this->userWithRole('__merger__', ['view_any_asset', 'view_asset', 'merge_asset']);
+        $user = $this->userWithRole('__merger__', ['ViewAny:Asset', 'View:Asset', 'Merge:Asset']);
         $user->update(['business_entity_id' => $alpha->id]);
         $target = Asset::create(['name' => '__perm_merge_target__', 'business_entity_id' => $alpha->id]);
         $outside = Asset::create(['name' => '__perm_merge_outside__', 'business_entity_id' => $beta->id]);
@@ -181,7 +181,7 @@ class PermissionOnlyAuthorizationTest extends TestCase
     {
         $alpha = BusinessEntity::create(['name' => '__perm_alpha__']);
         $beta = BusinessEntity::create(['name' => '__perm_beta__']);
-        $user = $this->userWithRole('__recipient_editor__', ['update_recipient_asset']);
+        $user = $this->userWithRole('__recipient_editor__', ['UpdateRecipient:Asset']);
         $user->update(['business_entity_id' => $alpha->id]);
         $inAlpha = User::factory()->create(['business_entity_id' => $alpha->id]);
         $inBeta = User::factory()->create(['business_entity_id' => $beta->id]);

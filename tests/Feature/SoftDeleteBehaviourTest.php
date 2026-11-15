@@ -61,7 +61,7 @@ class SoftDeleteBehaviourTest extends TestCase
     public function test_trashed_records_are_read_only_until_restored(): void
     {
         $entity = BusinessEntity::create(['name' => '__sd_entity__']);
-        $user = $this->userWith(['view_asset::transfer', 'update_asset::transfer', 'delete_asset::transfer', 'restore_asset::transfer', 'force_delete_asset::transfer', 'replicate_asset::transfer'], $entity);
+        $user = $this->userWith(['View:AssetTransfer', 'Update:AssetTransfer', 'Delete:AssetTransfer', 'Restore:AssetTransfer', 'ForceDelete:AssetTransfer', 'Replicate:AssetTransfer'], $entity);
         $transfer = $this->transfer($entity);
 
         $this->assertTrue($user->can('update', $transfer));
@@ -88,8 +88,8 @@ class SoftDeleteBehaviourTest extends TestCase
     {
         $insurance = Insurance::create(['policy_number' => '__SD-POL__', 'insured_name' => 'SD', 'join_date' => '2026-01-01', 'expired_date' => '2026-12-31']);
         $update = InsuranceUpdate::create(['insurance_id' => $insurance->id, 'policy_number' => '__SD-POL-2__', 'join_date' => '2026-01-01', 'expired_date' => '2027-12-31']);
-        $editor = $this->userWith(['view_insurance', 'update_insurance']);
-        $purger = $this->userWith(['view_insurance', 'update_insurance', 'force_delete_insurance', 'force_delete_any_insurance']);
+        $editor = $this->userWith(['View:Insurance', 'Update:Insurance']);
+        $purger = $this->userWith(['View:Insurance', 'Update:Insurance', 'ForceDelete:Insurance', 'ForceDeleteAny:Insurance']);
 
         $this->assertTrue($editor->can('delete', $update));
         $this->assertTrue($editor->can('restore', $update));
@@ -137,7 +137,7 @@ class SoftDeleteBehaviourTest extends TestCase
         }
 
         $superAdmin = Role::findOrCreate(config('filament-shield.super_admin.name', 'super_admin'), 'web');
-        $this->assertTrue($superAdmin->hasPermissionTo('force_delete_asset'), 'Migrasi memberi hapus permanen ke role super admin.');
+        $this->assertTrue($superAdmin->hasPermissionTo('ForceDelete:Asset'), 'Migrasi memberi hapus permanen ke role super admin.');
     }
 
     public function test_custom_record_actions_are_hidden_for_trashed_rows(): void

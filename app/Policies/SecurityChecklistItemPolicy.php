@@ -13,57 +13,57 @@ class SecurityChecklistItemPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_security::checklist::item');
+        return $user->can('ViewAny:SecurityChecklistItem');
     }
 
     public function view(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('view_security::checklist::item') && $this->visible($user, $item);
+        return $user->can('View:SecurityChecklistItem') && $this->visible($user, $item);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_security::checklist::item');
+        return $user->can('Create:SecurityChecklistItem');
     }
 
     public function update(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('update_security::checklist::item') && $this->editable($user, $item);
+        return $user->can('Update:SecurityChecklistItem') && $this->editable($user, $item);
     }
 
     public function delete(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('delete_security::checklist::item') && $this->editable($user, $item);
+        return $user->can('Delete:SecurityChecklistItem') && $this->editable($user, $item);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_security::checklist::item');
+        return $user->can('DeleteAny:SecurityChecklistItem');
     }
 
     public function forceDelete(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('force_delete_security::checklist::item') && $this->visible($user, $item);
+        return $user->can('ForceDelete:SecurityChecklistItem') && $this->visible($user, $item);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_security::checklist::item');
+        return $user->can('ForceDeleteAny:SecurityChecklistItem');
     }
 
     public function restore(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('restore_security::checklist::item') && $this->visible($user, $item);
+        return $user->can('Restore:SecurityChecklistItem') && $this->visible($user, $item);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_security::checklist::item');
+        return $user->can('RestoreAny:SecurityChecklistItem');
     }
 
     public function replicate(User $user, SecurityChecklistItem $item): bool
     {
-        return $user->can('create_security::checklist::item') && $this->editable($user, $item);
+        return $user->can('Create:SecurityChecklistItem') && $this->editable($user, $item);
     }
 
     /**
@@ -71,6 +71,6 @@ class SecurityChecklistItemPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('update_security::checklist::item');
+        return $user->can('Update:SecurityChecklistItem');
     }
 }

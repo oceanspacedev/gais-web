@@ -35,6 +35,11 @@ class AssetSelectSearchTest extends TestCase
 
         $this->car = Asset::factory()->create([
             'name' => 'Toyota Avanza Uji',
+            // Nilai tetap: tipe/serial acak dari factory bisa ikut memuat kata cari.
+            'type' => 'BARANG ELEKTRONIK',
+            'serial_number' => 'SN-UJI-MOBIL',
+            'imei1' => null,
+            'imei2' => null,
             'business_entity_id' => $entity->id,
             'brand_id' => Brand::create(['name' => 'Merek Uji Toyota'])->id,
             'asset_location_id' => AssetLocation::create(['name' => 'Gudang Uji Cikarang'])->id,

@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Builder;
 /**
  * Dasbor > Aset: jumlah, nilai perolehan, kondisi, pembelian setahun terakhir,
  * dan audit terakhir. Angka mengikuti akses badan usaha pengguna, sama seperti
- * daftar aset. Nama kelas dipertahankan karena izin `widget_CustomAssetWidget`
+ * daftar aset. Nama kelas dipertahankan karena izin `View:CustomAssetWidget`
  * sudah dipegang role di produksi.
  */
 class CustomAssetWidget extends StatsOverviewWidget

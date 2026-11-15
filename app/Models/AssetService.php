@@ -168,7 +168,7 @@ class AssetService extends Model
     public static function visibility(): Visibility
     {
         return Visibility::make()->grant(
-            new PermissionGrant('view_all_asset::service'),
+            new PermissionGrant('ViewAll:AssetService'),
             new OwnerGrant('created_by'),
             new OwnerGrant('serviced_by_user_id'),
         );

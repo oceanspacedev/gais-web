@@ -81,7 +81,7 @@ class AdminPanelProvider extends PanelProvider
             ->profile(null)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
-            // Dasbor manajemen: seksi per modul, widget dijaga izin widget_* (lihat App\Filament\Pages\Dashboard).
+            // Dasbor manajemen: seksi per modul, widget dijaga izin View:{NamaKelas} (lihat App\Filament\Pages\Dashboard).
             ->pages([
                 Dashboard::class,
             ])

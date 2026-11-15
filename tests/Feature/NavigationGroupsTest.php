@@ -45,7 +45,7 @@ class NavigationGroupsTest extends TestCase
     public function test_office_boy_only_sees_the_ob_group(): void
     {
         $officeBoy = User::factory()->create();
-        $officeBoy->givePermissionTo($this->permissions(['view_any_ob::checksheet', 'view_ob::checksheet', 'create_ob::checksheet']));
+        $officeBoy->givePermissionTo($this->permissions(['ViewAny:ObChecksheet', 'View:ObChecksheet', 'Create:ObChecksheet']));
 
         $navigation = $this->navigationFor($officeBoy);
 

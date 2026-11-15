@@ -43,7 +43,7 @@ class VisibilityArchitectureTest extends TestCase
         RoleResource::class => 'model Spatie (vendor)',
         ExceptionResource::class => 'model paket filament-exceptions (vendor)',
         SumoImportRunResource::class => 'alat impor, dijaga izin Manage:SumoImport di resource',
-        AssetReconciliationResource::class => 'alat impor, dijaga izin import_asset di resource',
+        AssetReconciliationResource::class => 'alat impor, dijaga izin Import:Asset di resource',
     ];
 
     /** @var array<class-string, string> model fitur tanpa soft delete */

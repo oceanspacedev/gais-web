@@ -33,14 +33,14 @@ class FilamentShieldIntegrationTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
     }
 
-    public function test_shield_preserves_permission_keys_used_by_existing_roles_and_policies(): void
+    public function test_resources_widgets_and_pages_share_the_shield_v4_key_format(): void
     {
         $rolePermissions = FilamentShield::getResourcePolicyActionsWithPermissions(RoleResource::class);
         $widget = FilamentShield::getWidgets()[CustomAssetWidget::class];
         $settingsPage = FilamentShield::getPages()[SettingsHub::class];
 
-        $this->assertSame('view_any_role', $rolePermissions['viewAny']);
-        $this->assertSame('widget_CustomAssetWidget', array_key_first($widget['permissions']));
+        $this->assertSame('ViewAny:Role', $rolePermissions['viewAny']);
+        $this->assertSame('View:CustomAssetWidget', array_key_first($widget['permissions']));
         $this->assertSame('View:SettingsHub', array_key_first($settingsPage['permissions']));
     }
 
@@ -61,18 +61,18 @@ class FilamentShieldIntegrationTest extends TestCase
         $this->assertSame('SingleParamMethod', $assetStubVariables['import']['stub']);
 
         $this->assertResourcePermissions(AssetResource::class, [
-            'export' => 'export_asset',
-            'import' => 'import_asset',
+            'export' => 'Export:Asset',
+            'import' => 'Import:Asset',
         ]);
         $this->assertResourcePermissions(AssetTransferResource::class, [
-            'export' => 'export_asset::transfer',
+            'export' => 'Export:AssetTransfer',
         ]);
         $this->assertResourcePermissions(UserResource::class, [
-            'import' => 'import_user',
+            'import' => 'Import:User',
         ]);
         $this->assertResourcePermissions(VehicleChecksheetResource::class, [
-            'export' => 'export_vehicle::checksheet',
-            'import' => 'import_vehicle::checksheet',
+            'export' => 'Export:VehicleChecksheet',
+            'import' => 'Import:VehicleChecksheet',
         ]);
     }
 
@@ -196,13 +196,13 @@ class FilamentShieldIntegrationTest extends TestCase
     public function test_shielded_asset_widget_honors_the_authenticated_users_permission(): void
     {
         $deniedUser = Mockery::mock(User::class);
-        $deniedUser->shouldReceive('can')->once()->with('widget_CustomAssetWidget')->andReturnFalse();
+        $deniedUser->shouldReceive('can')->once()->with('View:CustomAssetWidget')->andReturnFalse();
         Filament::auth()->setUser($deniedUser);
 
         $this->assertFalse(CustomAssetWidget::canView());
 
         $allowedUser = Mockery::mock(User::class);
-        $allowedUser->shouldReceive('can')->once()->with('widget_CustomAssetWidget')->andReturnTrue();
+        $allowedUser->shouldReceive('can')->once()->with('View:CustomAssetWidget')->andReturnTrue();
         Filament::auth()->setUser($allowedUser);
 
         $this->assertTrue(CustomAssetWidget::canView());

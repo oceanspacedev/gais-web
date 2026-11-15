@@ -19,7 +19,7 @@ class ItemRequestDetailPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_item::request');
+        return $user->can('ViewAny:ItemRequest');
     }
 
     public function view(User $user, ItemRequestDetail $detail): bool
@@ -29,7 +29,7 @@ class ItemRequestDetailPolicy
 
     public function create(User $user): bool
     {
-        return $user->can('create_item::request') || $user->can('update_item::request');
+        return $user->can('Create:ItemRequest') || $user->can('Update:ItemRequest');
     }
 
     public function update(User $user, ItemRequestDetail $detail): bool
@@ -44,7 +44,7 @@ class ItemRequestDetailPolicy
             return false;
         }
 
-        if ($user->can('approve_manager_item::request')) {
+        if ($user->can('ApproveManager:ItemRequest')) {
             return true;
         }
 
@@ -59,7 +59,7 @@ class ItemRequestDetailPolicy
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('update_item::request');
+        return $user->can('Update:ItemRequest');
     }
 
     /**
@@ -73,7 +73,7 @@ class ItemRequestDetailPolicy
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('update_item::request');
+        return $user->can('Update:ItemRequest');
     }
 
     /**
@@ -81,7 +81,7 @@ class ItemRequestDetailPolicy
      */
     public function forceDelete(User $user, ItemRequestDetail $detail): bool
     {
-        return $user->can('force_delete_item::request') && $this->manageable($user, $detail);
+        return $user->can('ForceDelete:ItemRequest') && $this->manageable($user, $detail);
     }
 
     /**
@@ -99,6 +99,6 @@ class ItemRequestDetailPolicy
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_item::request');
+        return $user->can('ForceDeleteAny:ItemRequest');
     }
 }

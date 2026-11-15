@@ -29,10 +29,19 @@ class ItemRequestWorkflow
         return max(1, (int) config('item-request.max_open_per_type', 2));
     }
 
+    /**
+     * Kuota dihitung per divisi/toko pemohon (sumo: per akun toko), supaya
+     * akun pribadi karyawan satu toko berbagi kuota yang sama; pemohon tanpa
+     * divisi dihitung per orang.
+     */
     public function openCountByType(User $requester, int $typeId): int
     {
         return ItemRequest::query()
-            ->where('user_id', $requester->id)
+            ->when(
+                $requester->division_id !== null,
+                fn (Builder $query) => $query->where('division_id', $requester->division_id),
+                fn (Builder $query) => $query->where('user_id', $requester->id),
+            )
             ->where('item_request_type_id', $typeId)
             ->open()
             ->count();
@@ -93,6 +102,7 @@ class ItemRequestWorkflow
         return DB::transaction(function () use ($actor, $requester, $type, $data, $items): ItemRequest {
             $request = ItemRequest::create([
                 'user_id' => $requester->id,
+                'division_id' => $requester->division_id,
                 'item_request_type_id' => $type->id,
                 'business_entity_id' => $requester->business_entity_id,
                 'requested_at' => now(),
@@ -238,6 +248,7 @@ class ItemRequestWorkflow
 
             $request->forceFill([
                 'user_id' => $newApplicant->id,
+                'division_id' => $newApplicant->division_id,
                 'business_entity_id' => $newApplicant->business_entity_id,
             ])->save();
 
@@ -294,10 +305,12 @@ class ItemRequestWorkflow
                         }
 
                         if ($scope->area_id !== null) {
-                            $inside->whereIn('item_requests.user_id', User::query()->select('users.id')->whereIn(
-                                'division_id',
+                            // Tanpa divisi = di luar area mana pun; NULL di dalam NOT (... IN ...)
+                            // akan ikut menyaring barisnya.
+                            $inside->whereNotNull('item_requests.division_id')->whereIn(
+                                'item_requests.division_id',
                                 Division::withTrashed()->select('divisions.id')->where('area_id', $scope->area_id),
-                            ));
+                            );
                         }
                     });
                 }
@@ -375,8 +388,8 @@ class ItemRequestWorkflow
             return $scopes;
         }
 
-        $request->loadMissing('user.division');
-        $areaId = $request->user?->division?->area_id;
+        $request->loadMissing('division');
+        $areaId = $request->division?->area_id;
 
         return $scopes
             ->filter(fn (ItemRequestScope $scope): bool => $scope->matches($request->item_request_type_id, $areaId))

@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\BusinessEntity;
+use App\Models\Division;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Support\PhoneNumber;
@@ -10,6 +11,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 use RuntimeException;
 use Throwable;
@@ -43,6 +45,9 @@ class TalentaUserImportService
 
     /** @var list<string> */
     private const BRANCH_KEYS = ['branch', 'business_entity', 'badan_usaha', 'organization'];
+
+    /** @var list<string> */
+    private const ORGANIZATION_KEYS = ['organization'];
 
     /** @var list<string> */
     private const JOB_KEYS = ['job', 'job_position', 'position', 'position_name', 'jabatan', 'title'];
@@ -201,6 +206,15 @@ class TalentaUserImportService
         $job = $this->firstScalarValue($row, self::JOB_KEYS);
         if ($job !== '') {
             $payload['job_title_id'] = $this->findOrCreateJobTitle($job);
+        }
+
+        // Divisi hanya diisi bila masih kosong: penempatan toko oleh GA (lebih
+        // rinci dari organisasi Talenta) dan divisi akun pemroses tidak ditimpa.
+        if ($existing?->division_id === null) {
+            $divisionId = $this->divisionForOrganization($this->firstScalarValue($row, self::ORGANIZATION_KEYS));
+            if ($divisionId !== null) {
+                $payload['division_id'] = $divisionId;
+            }
         }
 
         if ($existing) {
@@ -551,6 +565,28 @@ class TalentaUserImportService
         }
 
         return $entity->id;
+    }
+
+    /**
+     * Divisi yang "Organisasi di Talenta"-nya (menu Divisi) sama dengan
+     * organisasi karyawan. Organisasi yang mencakup banyak divisi/toko tidak
+     * dipetakan, jadi divisinya diisi GA.
+     */
+    private function divisionForOrganization(string $organization): ?int
+    {
+        if ($organization === '') {
+            return null;
+        }
+
+        $divisions = once(fn (): array => Schema::hasColumn('divisions', 'talenta_organization')
+            ? Division::query()
+                ->whereNotNull('talenta_organization')
+                ->pluck('id', 'talenta_organization')
+                ->mapWithKeys(fn (int $id, string $name): array => [$this->canonicalName($name) => $id])
+                ->all()
+            : []);
+
+        return $divisions[$this->canonicalName($organization)] ?? null;
     }
 
     private function findOrCreateJobTitle(string $title): int

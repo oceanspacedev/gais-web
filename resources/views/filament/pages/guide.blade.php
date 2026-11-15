@@ -692,7 +692,7 @@
                 <div class="pg-block">
                     <h3>2. Kode OTP lewat WhatsApp</h3>
                     <x-guide.flow :steps="$flows['login']" />
-                    <div class="pg-note"><p>Admin mengisi <strong>Nomor WhatsApp login</strong> di form user (perlu izin <code>manage_access_user</code>). Nomor harus unik. Nomor kontak biasa tidak bisa dipakai untuk login.</p></div>
+                    <div class="pg-note"><p>Admin mengisi <strong>Nomor WhatsApp login</strong> di form user (perlu izin <code>ManageAccess:User</code>). Nomor harus unik. Nomor kontak biasa tidak bisa dipakai untuk login.</p></div>
                 </div>
             </section>
 
@@ -880,7 +880,7 @@
                         <thead><tr><th>Role</th><th>Untuk siapa</th><th>Bisa apa</th></tr></thead>
                         <tbody>
                             <tr><td><code>super_admin</code></td><td>Pemegang sistem</td><td>Semua, termasuk semua badan usaha dan mengelola akses user.</td></tr>
-                            <tr><td><code>pengajuan_admin</code></td><td>Admin pengajuan</td><td>Semua izin pengajuan, laporan gangguan, dan master terkait.</td></tr>
+                            <tr><td><code>general_affair</code></td><td>Staf GA (sama dengan ADMIN di sumo lama)</td><td>Hak penuh modul sumo: pengajuan, laporan gangguan, asuransi, sewa, master barang, user dan divisi, Notifikasi WA. Ditambah hak aset di baris paling bawah.</td></tr>
                             <tr><td><code>accounting</code></td><td>Tim Accounting</td><td>Melihat dan menyetujui tahap Accounting, export, melihat master.</td></tr>
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>

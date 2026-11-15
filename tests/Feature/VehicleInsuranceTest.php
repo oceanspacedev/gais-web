@@ -42,7 +42,7 @@ class VehicleInsuranceTest extends TestCase
     use DatabaseTransactions;
 
     private const VEHICLE_PERMISSIONS = [
-        'view_any_vehicle::insurance', 'view_vehicle::insurance', 'create_vehicle::insurance', 'update_vehicle::insurance',
+        'ViewAny:VehicleInsurance', 'View:VehicleInsurance', 'Create:VehicleInsurance', 'Update:VehicleInsurance',
     ];
 
     private Category $car;
@@ -125,8 +125,8 @@ class VehicleInsuranceTest extends TestCase
 
     public function test_building_and_vehicle_insurance_have_separate_menus_and_permissions(): void
     {
-        $buildingOnly = $this->userWith(['view_any_insurance', 'view_insurance']);
-        $vehicleOnly = $this->userWith(['view_any_vehicle::insurance', 'view_vehicle::insurance']);
+        $buildingOnly = $this->userWith(['ViewAny:Insurance', 'View:Insurance']);
+        $vehicleOnly = $this->userWith(['ViewAny:VehicleInsurance', 'View:VehicleInsurance']);
 
         $this->actingAs($buildingOnly);
         $this->assertTrue(InsuranceResource::canViewAny());
@@ -147,15 +147,20 @@ class VehicleInsuranceTest extends TestCase
     {
         $migration = include database_path('migrations/2026_11_16_100003_create_vehicle_insurance_permissions.php');
         $role = Role::findOrCreate('uji_pengelola_asuransi', 'web');
+        // Saat migrasi ini jalan nama izin masih format lama; rename menyusul paling akhir.
+        $rename = require database_path('migrations/2026_11_16_200001_rename_permissions_to_shield_v4_format.php');
+        $rename->down();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
         $role->givePermissionTo(Permission::findOrCreate('view_any_insurance', 'web'), Permission::findOrCreate('update_insurance', 'web'));
 
         $migration->up();
+        $rename->up();
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $role->refresh();
-        $this->assertTrue($role->hasPermissionTo('view_any_vehicle::insurance'));
-        $this->assertTrue($role->hasPermissionTo('update_vehicle::insurance'));
-        $this->assertFalse($role->hasPermissionTo('delete_vehicle::insurance'), 'Hanya izin yang setara dengan izin asuransi lamanya.');
+        $this->assertTrue($role->hasPermissionTo('ViewAny:VehicleInsurance'));
+        $this->assertTrue($role->hasPermissionTo('Update:VehicleInsurance'));
+        $this->assertFalse($role->hasPermissionTo('Delete:VehicleInsurance'), 'Hanya izin yang setara dengan izin asuransi lamanya.');
     }
 
     public function test_reminder_is_sent_for_vehicle_insurance_with_its_own_log_type(): void

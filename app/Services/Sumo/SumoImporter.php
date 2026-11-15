@@ -186,6 +186,17 @@ class SumoImporter
         $this->forgetIds($table);
     }
 
+    /**
+     * Baris impor baru belum punya divisi: diisi dari divisi pemohon/pelapornya
+     * (akun toko sumo), seperti yang dilakukan model saat record dibuat di panel.
+     */
+    protected function fillDivisionFromRequester(string $table): void
+    {
+        DB::table($table)->whereNull('division_id')->whereNotNull('user_id')->update([
+            'division_id' => DB::table('users')->select('division_id')->whereColumn('users.id', "{$table}.user_id"),
+        ]);
+    }
+
     protected function str(mixed $value): ?string
     {
         if ($value === null) {

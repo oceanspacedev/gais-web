@@ -80,7 +80,7 @@ class AssetServiceHistoryTest extends TestCase
 
     public function test_viewer_without_view_all_only_sees_services_they_are_involved_in(): void
     {
-        $this->actingAs($this->viewer($this->technician, ['view_any_asset', 'view_asset', 'view_any_asset::service']));
+        $this->actingAs($this->viewer($this->technician, ['ViewAny:Asset', 'View:Asset', 'ViewAny:AssetService']));
 
         $this->assertTrue(AssetServicesRelationManager::canViewForRecord($this->asset, ViewAsset::class));
         $this->assertSame('1', AssetServicesRelationManager::getBadge($this->asset, ViewAsset::class));
@@ -94,7 +94,7 @@ class AssetServiceHistoryTest extends TestCase
 
     public function test_tab_is_hidden_without_access_to_asset_services(): void
     {
-        $viewer = $this->viewer(User::factory()->create(), ['view_any_asset', 'view_asset']);
+        $viewer = $this->viewer(User::factory()->create(), ['ViewAny:Asset', 'View:Asset']);
         $this->actingAs($viewer);
 
         $this->assertFalse(AssetServicesRelationManager::canViewForRecord($this->asset, ViewAsset::class));

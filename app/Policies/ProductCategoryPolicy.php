@@ -13,61 +13,61 @@ class ProductCategoryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_product::category');
+        return $user->can('ViewAny:ProductCategory');
     }
 
     public function view(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('view_product::category') && $this->visible($user, $productCategory);
+        return $user->can('View:ProductCategory') && $this->visible($user, $productCategory);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_product::category');
+        return $user->can('Create:ProductCategory');
     }
 
     public function update(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('update_product::category') && $this->editable($user, $productCategory);
+        return $user->can('Update:ProductCategory') && $this->editable($user, $productCategory);
     }
 
     public function delete(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('delete_product::category') && $this->editable($user, $productCategory);
+        return $user->can('Delete:ProductCategory') && $this->editable($user, $productCategory);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_product::category');
+        return $user->can('DeleteAny:ProductCategory');
     }
 
     public function forceDelete(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('force_delete_product::category') && $this->visible($user, $productCategory);
+        return $user->can('ForceDelete:ProductCategory') && $this->visible($user, $productCategory);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_product::category');
+        return $user->can('ForceDeleteAny:ProductCategory');
     }
 
     public function restore(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('restore_product::category') && $this->visible($user, $productCategory);
+        return $user->can('Restore:ProductCategory') && $this->visible($user, $productCategory);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_product::category');
+        return $user->can('RestoreAny:ProductCategory');
     }
 
     public function replicate(User $user, ProductCategory $productCategory): bool
     {
-        return $user->can('replicate_product::category') && $this->editable($user, $productCategory);
+        return $user->can('Replicate:ProductCategory') && $this->editable($user, $productCategory);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_product::category');
+        return $user->can('Reorder:ProductCategory');
     }
 }

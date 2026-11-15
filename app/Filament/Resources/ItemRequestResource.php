@@ -191,7 +191,7 @@ class ItemRequestResource extends Resource
                         ->schema([
                             Grid::make(['default' => 2, 'xl' => 3])->schema([
                                 TextEntry::make('user.name')->label('Pemohon')->placeholder('-')->weight(FontWeight::SemiBold)
-                                    ->helperText(fn (ItemRequest $record): ?string => $record->user?->division?->name),
+                                    ->helperText(fn (ItemRequest $record): ?string => $record->division?->name),
                                 TextEntry::make('requested_at')->label('Tanggal Pengajuan')->dateTime('d M Y, H:i'),
                                 TextEntry::make('client_status')->label('Status')->badge(),
                                 TextEntry::make('type.name')->label('Tipe Pengajuan'),
@@ -263,10 +263,10 @@ class ItemRequestResource extends Resource
         $workflow = app(ItemRequestWorkflow::class);
 
         return $table
-            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user.division', 'type', 'approvals', 'closedBy']))
+            ->modifyQueryUsing(fn (Builder $query): Builder => $query->with(['user', 'division', 'type', 'approvals', 'closedBy']))
             ->columns([
                 TextColumn::make('request_code')->label('Kode')->searchable()->sortable()->badge()->color('primary'),
-                TextColumn::make('user.name')->label('Pemohon')->searchable(query: RelationSearch::on('user', 'name'))->sortable()->description(fn (ItemRequest $record): ?string => $record->user?->division?->name),
+                TextColumn::make('user.name')->label('Pemohon')->searchable(query: RelationSearch::on('user', 'name'))->sortable()->description(fn (ItemRequest $record): ?string => $record->division?->name),
                 TextColumn::make('type.name')->label('Tipe')->sortable(),
                 TextColumn::make('requested_at')->label('Tanggal')->dateTime('d/m/Y H:i')->sortable(),
                 TextColumn::make('details_count')->label('Item')->counts('details')->badge()->color('gray'),

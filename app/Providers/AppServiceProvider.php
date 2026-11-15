@@ -80,7 +80,6 @@ use App\Support\ObservabilityAccess;
 use App\Support\StoredFile;
 use Apriansyahrs\MekayaTheme\Mekaya;
 use BezhanSalleh\FilamentExceptions\Models\Exception;
-use BezhanSalleh\FilamentShield\Facades\FilamentShield;
 use BezhanSalleh\LanguageSwitch\LanguageSwitch;
 use Filament\Actions\Action;
 use Filament\Actions\ExportAction;
@@ -97,7 +96,6 @@ use Filament\Actions\RestoreBulkAction;
 use Filament\Actions\ViewAction;
 use Filament\Forms\Components\FileUpload;
 use Filament\Infolists\Components\ImageEntry;
-use Filament\Resources\Resource;
 use Filament\Schemas\Components\Fieldset;
 use Filament\Schemas\Components\Grid;
 use Filament\Schemas\Components\Section;
@@ -105,20 +103,22 @@ use Filament\Support\Facades\FilamentColor;
 use Filament\Tables\Columns\ImageColumn;
 use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
-use Filament\Widgets\Widget;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\URL;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
-use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
+use STS\FilamentImpersonate\Events\EnterImpersonation;
+use STS\FilamentImpersonate\Events\LeaveImpersonation;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -160,9 +160,9 @@ class AppServiceProvider extends ServiceProvider
         Livewire::component('email-login', EmailLogin::class);
         ObservabilityAccess::register();
         $this->registerAuthorization();
+        $this->logImpersonation();
         $this->configureHttps();
         $this->configureLivewireUploads();
-        $this->configureFilamentShield();
         $this->configureRateLimiting();
         $this->registerFilamentBadgeColors();
 
@@ -201,6 +201,29 @@ class AppServiceProvider extends ServiceProvider
                 ->locales(['id', 'en'])
                 ->circular()
                 ->renderHook('panels::user-menu.before');
+        });
+    }
+
+    /**
+     * Proyek belum memakai activity log, jadi masuk dan keluar "Login Sebagai"
+     * dicatat ke log aplikasi agar tetap bisa diaudit.
+     */
+    protected function logImpersonation(): void
+    {
+        Event::listen(EnterImpersonation::class, function (EnterImpersonation $event): void {
+            Log::info('Impersonation started.', [
+                'impersonator_id' => $event->impersonator->getAuthIdentifier(),
+                'impersonated_id' => $event->impersonated->getAuthIdentifier(),
+                'ip' => request()->ip(),
+            ]);
+        });
+
+        Event::listen(LeaveImpersonation::class, function (LeaveImpersonation $event): void {
+            Log::info('Impersonation ended.', [
+                'impersonator_id' => $event->impersonator->getAuthIdentifier(),
+                'impersonated_id' => $event->impersonated?->getAuthIdentifier(),
+                'ip' => request()->ip(),
+            ]);
         });
     }
 
@@ -266,46 +289,6 @@ class AppServiceProvider extends ServiceProvider
             'livewire.temporary_file_upload.rules' => ['required', 'file', 'max:'.SecurityChecksheetResource::MAX_ATTACHMENT_KB],
             'livewire.temporary_file_upload.max_upload_time' => 15,
         ]);
-    }
-
-    /**
-     * Keep permissions attached to roles created before the Shield v4 upgrade.
-     *
-     * Settings Hub pages already authorize Shield v4's `View:*` keys, while
-     * application resources and widgets still have persisted Shield v3 keys.
-     */
-    protected function configureFilamentShield(): void
-    {
-        FilamentShield::buildPermissionKeyUsing(
-            function (string $entity, string $affix, string $subject, string $case, string $separator): string {
-                if (is_subclass_of($entity, Resource::class)) {
-                    return Str::of($affix)
-                        ->snake()
-                        ->append('_')
-                        ->append(
-                            Str::of($entity)
-                                ->afterLast('\\')
-                                ->beforeLast('Resource')
-                                ->snake()
-                                ->replace('_', '::')
-                        )
-                        ->toString();
-                }
-
-                if (is_subclass_of($entity, Widget::class)) {
-                    return Str::of('widget_')
-                        ->append(class_basename($entity))
-                        ->toString();
-                }
-
-                return FilamentShield::defaultPermissionKeyBuilder(
-                    affix: $affix,
-                    separator: $separator,
-                    subject: $subject,
-                    case: $case,
-                );
-            }
-        );
     }
 
     protected function configureRateLimiting(): void

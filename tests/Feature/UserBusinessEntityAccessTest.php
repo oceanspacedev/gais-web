@@ -21,7 +21,7 @@ class UserBusinessEntityAccessTest extends TestCase
 {
     use DatabaseTransactions;
 
-    private const MANAGE_PERMISSIONS = ['view_any_user', 'view_user', 'create_user', 'update_user', 'delete_user'];
+    private const MANAGE_PERMISSIONS = ['ViewAny:User', 'View:User', 'Create:User', 'Update:User', 'Delete:User'];
 
     private BusinessEntity $alpha;
 
@@ -36,7 +36,7 @@ class UserBusinessEntityAccessTest extends TestCase
         config(['permission.cache.store' => 'array']);
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
-        foreach ([...self::MANAGE_PERMISSIONS, 'manage_access_user', 'manage_business_entity_access_user', 'impersonate_user'] as $permission) {
+        foreach ([...self::MANAGE_PERMISSIONS, 'ManageAccess:User', 'ManageBusinessEntityAccess:User', 'Impersonate:User'] as $permission) {
             Permission::findOrCreate($permission, 'web');
         }
 
@@ -396,9 +396,9 @@ class UserBusinessEntityAccessTest extends TestCase
         $editor = $this->accessManager($this->alpha);
         $target = User::factory()->create(['business_entity_id' => $this->alpha->id]);
         $lesser = Role::findOrCreate('__bea_lesser__', 'web');
-        $lesser->syncPermissions(['view_user']);
+        $lesser->syncPermissions(['View:User']);
         $greater = Role::findOrCreate('__bea_greater__', 'web');
-        $greater->syncPermissions(['view_user', 'impersonate_user']);
+        $greater->syncPermissions(['View:User', 'Impersonate:User']);
 
         $this->actingAs($editor);
 
@@ -423,7 +423,7 @@ class UserBusinessEntityAccessTest extends TestCase
     {
         $editor = $this->accessManager($this->alpha);
         $greater = Role::findOrCreate('__bea_greater__', 'web');
-        $greater->syncPermissions(['view_user', 'impersonate_user']);
+        $greater->syncPermissions(['View:User', 'Impersonate:User']);
         $target = User::factory()->create(['business_entity_id' => $this->alpha->id]);
         $target->assignRole($greater);
 
@@ -459,7 +459,7 @@ class UserBusinessEntityAccessTest extends TestCase
     public function test_restricted_entity_access_manager_cannot_widen_access(): void
     {
         $manager = $this->scopedUser($this->alpha);
-        $manager->givePermissionTo('manage_business_entity_access_user');
+        $manager->givePermissionTo('ManageBusinessEntityAccess:User');
         $manager = $manager->fresh();
 
         $this->actingAs($manager);
@@ -481,7 +481,7 @@ class UserBusinessEntityAccessTest extends TestCase
     public function test_entity_access_permission_works_without_manage_access(): void
     {
         $manager = $this->scopedUser($this->alpha);
-        $manager->givePermissionTo('manage_business_entity_access_user');
+        $manager->givePermissionTo('ManageBusinessEntityAccess:User');
         $manager->forceFill(['access_all_business_entities' => true])->save();
         $target = User::factory()->create(['business_entity_id' => $this->alpha->id]);
 
@@ -512,7 +512,7 @@ class UserBusinessEntityAccessTest extends TestCase
     private function accessManager(BusinessEntity $own): User
     {
         $user = $this->scopedUser($own);
-        $user->givePermissionTo('manage_access_user');
+        $user->givePermissionTo('ManageAccess:User');
 
         return $user->fresh();
     }

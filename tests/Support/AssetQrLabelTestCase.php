@@ -60,7 +60,7 @@ abstract class AssetQrLabelTestCase extends TestCase
             (require database_path('migrations/'.$migration.'.php'))->up();
         }
 
-        $permissions = collect(['view_asset', 'view_any_asset::qr::label::history', 'view_asset::qr::label::history'])
+        $permissions = collect(['View:Asset', 'ViewAny:AssetQrLabelHistory', 'View:AssetQrLabelHistory'])
             ->map(fn (string $name): Permission => Permission::create(['name' => $name, 'guard_name' => 'web']));
         Role::create(['name' => 'super_admin', 'guard_name' => 'web'])->givePermissionTo($permissions);
     }

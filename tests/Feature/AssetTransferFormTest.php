@@ -26,9 +26,9 @@ class AssetTransferFormTest extends TestCase
 {
     use DatabaseTransactions;
 
-    private const TRANSFER_PERMISSIONS = ['view_any_asset::transfer', 'view_asset::transfer', 'create_asset::transfer'];
+    private const TRANSFER_PERMISSIONS = ['ViewAny:AssetTransfer', 'View:AssetTransfer', 'Create:AssetTransfer'];
 
-    private const MANAGE_STOCK_PERMISSION = 'manage_stock_asset::transfer';
+    private const MANAGE_STOCK_PERMISSION = 'ManageStock:AssetTransfer';
 
     private BusinessEntity $entity;
 

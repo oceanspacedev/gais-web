@@ -15,7 +15,7 @@ class ViewItemRequest extends ViewRecord
     // Relasi yang dibaca infolist (pemohon, divisi, approver per tahap) dimuat sekaligus.
     protected function resolveRecord(int|string $key): Model
     {
-        return parent::resolveRecord($key)->loadMissing(['user.division', 'type', 'closedBy', 'approvals.approver']);
+        return parent::resolveRecord($key)->loadMissing(['user', 'division', 'type', 'closedBy', 'approvals.approver']);
     }
 
     public function getTitle(): string

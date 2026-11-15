@@ -16,62 +16,62 @@ class VehicleInsurancePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_vehicle::insurance');
+        return $user->can('ViewAny:VehicleInsurance');
     }
 
     public function view(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('view_vehicle::insurance') && $this->visible($user, $insurance);
+        return $user->can('View:VehicleInsurance') && $this->visible($user, $insurance);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_vehicle::insurance');
+        return $user->can('Create:VehicleInsurance');
     }
 
     public function update(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('update_vehicle::insurance') && $this->editable($user, $insurance);
+        return $user->can('Update:VehicleInsurance') && $this->editable($user, $insurance);
     }
 
     public function delete(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('delete_vehicle::insurance') && $this->editable($user, $insurance);
+        return $user->can('Delete:VehicleInsurance') && $this->editable($user, $insurance);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_vehicle::insurance');
+        return $user->can('DeleteAny:VehicleInsurance');
     }
 
     public function forceDelete(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('force_delete_vehicle::insurance') && $this->visible($user, $insurance);
+        return $user->can('ForceDelete:VehicleInsurance') && $this->visible($user, $insurance);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_vehicle::insurance');
+        return $user->can('ForceDeleteAny:VehicleInsurance');
     }
 
     public function restore(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('restore_vehicle::insurance') && $this->visible($user, $insurance);
+        return $user->can('Restore:VehicleInsurance') && $this->visible($user, $insurance);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_vehicle::insurance');
+        return $user->can('RestoreAny:VehicleInsurance');
     }
 
     public function replicate(User $user, VehicleInsurance $insurance): bool
     {
-        return $user->can('replicate_vehicle::insurance') && $this->editable($user, $insurance);
+        return $user->can('Replicate:VehicleInsurance') && $this->editable($user, $insurance);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_vehicle::insurance');
+        return $user->can('Reorder:VehicleInsurance');
     }
 
     /**
@@ -79,6 +79,6 @@ class VehicleInsurancePolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_vehicle::insurance');
+        return $user->can('Export:VehicleInsurance');
     }
 }

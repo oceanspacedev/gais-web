@@ -61,7 +61,7 @@ class ItemRequestVisibilityTest extends TestCase
     public function test_accounting_sees_types_that_need_accounting_approval(): void
     {
         $accounting = User::factory()->create();
-        $accounting->givePermissionTo($this->permission('approve_accounting_item::request'));
+        $accounting->givePermissionTo($this->permission('ApproveAccounting:ItemRequest'));
 
         $assetRequest = $this->request(User::factory()->create(), $this->asset);
         $this->request(User::factory()->create(), $this->atk);
@@ -78,7 +78,7 @@ class ItemRequestVisibilityTest extends TestCase
         $hoDivision = Division::create(['name' => 'HO-DIV-test', 'area_id' => $ho->id]);
 
         $executor = User::factory()->create(['division_id' => $warehouse->id]);
-        $executor->givePermissionTo($this->permission('process_item::request'));
+        $executor->givePermissionTo($this->permission('Process:ItemRequest'));
         ItemRequestScope::create(['division_id' => $warehouse->id, 'item_request_type_id' => $this->atk->id, 'area_id' => $depo->id]);
 
         $depoAtk = $this->request(User::factory()->create(['division_id' => $depoDivision->id]), $this->atk);
@@ -92,11 +92,11 @@ class ItemRequestVisibilityTest extends TestCase
     {
         $hcm = Division::create(['name' => 'HCM-test']);
         $executor = User::factory()->create(['division_id' => $hcm->id]);
-        $executor->givePermissionTo($this->permission('process_item::request'));
+        $executor->givePermissionTo($this->permission('Process:ItemRequest'));
         ItemRequestScope::create(['division_id' => $hcm->id]);
 
         $admin = User::factory()->create();
-        $admin->givePermissionTo($this->permission('view_all_item::request'));
+        $admin->givePermissionTo($this->permission('ViewAll:ItemRequest'));
 
         $a = $this->request(User::factory()->create(), $this->atk);
         $b = $this->request(User::factory()->create(), $this->asset);
@@ -137,14 +137,14 @@ class ItemRequestVisibilityTest extends TestCase
             'restricted requester' => $restrictedRequester,
             'manager' => $manager,
             'stranger' => User::factory()->create(),
-            'accounting' => $this->userWith(['approve_accounting_item::request']),
-            'executor type+area' => $this->userWith(['process_item::request'], $warehouse),
-            'audit type only' => $this->userWith(['audit_item::request'], $audit),
-            'manager area only' => $this->userWith(['approve_manager_item::request'], $purchasing),
-            'executor everything' => $this->userWith(['process_item::request'], $hcm),
+            'accounting' => $this->userWith(['ApproveAccounting:ItemRequest']),
+            'executor type+area' => $this->userWith(['Process:ItemRequest'], $warehouse),
+            'audit type only' => $this->userWith(['Audit:ItemRequest'], $audit),
+            'manager area only' => $this->userWith(['ApproveManager:ItemRequest'], $purchasing),
+            'executor everything' => $this->userWith(['Process:ItemRequest'], $hcm),
             'scoped division without permission' => User::factory()->create(['division_id' => $hcm->id]),
-            'executor without division' => $this->userWith(['process_item::request']),
-            'view all' => $this->userWith(['view_all_item::request']),
+            'executor without division' => $this->userWith(['Process:ItemRequest']),
+            'view all' => $this->userWith(['ViewAll:ItemRequest']),
         ];
 
         $requests = [

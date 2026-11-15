@@ -47,7 +47,7 @@ class ItemRequestCostByDivisionChart extends ChartWidget
             ->join('item_request_details', 'item_request_details.item_request_id', '=', 'item_requests.id')
             ->leftJoin('products', 'products.id', '=', 'item_request_details.product_id')
             ->join('users', 'users.id', '=', 'item_requests.user_id')
-            ->leftJoin('divisions', 'divisions.id', '=', 'users.division_id')
+            ->leftJoin('divisions', 'divisions.id', '=', 'item_requests.division_id')
             ->whereNull('item_request_details.deleted_at')
             ->where('item_requests.client_status', '<>', ItemRequestClientStatus::Cancelled->value)
             ->where('item_requests.requested_at', '>=', now()->subYear());

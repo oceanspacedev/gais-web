@@ -26,15 +26,15 @@ use Tests\TestCase;
 /**
  * Impor Excel penjualan massal antar badan usaha dan ekspor riwayatnya dari
  * menu Penjualan Aset: baris lewat AssetSale::record(), satu baris salah
- * membatalkan seluruh file, tombol mengikuti izin import_/export_asset::sale.
+ * membatalkan seluruh file, tombol mengikuti izin Import:/Export:AssetSale.
  */
 class AssetSaleImportTest extends TestCase
 {
     use DatabaseTransactions;
 
     private const PERMISSIONS = [
-        'view_any_asset', 'view_asset',
-        'view_any_asset::sale', 'view_asset::sale', 'create_asset::sale', 'import_asset::sale', 'export_asset::sale',
+        'ViewAny:Asset', 'View:Asset',
+        'ViewAny:AssetSale', 'View:AssetSale', 'Create:AssetSale', 'Import:AssetSale', 'Export:AssetSale',
     ];
 
     private BusinessEntity $alpha;
@@ -198,13 +198,13 @@ class AssetSaleImportTest extends TestCase
 
         $this->assertSame(0, AssetSale::query()->whereIn('asset_id', [$asset->id, $outsider->id])->count());
 
-        $this->actingAs($this->userWith(['view_any_asset', 'view_asset', 'view_any_asset::sale', 'import_asset::sale'], unrestricted: true));
+        $this->actingAs($this->userWith(['ViewAny:Asset', 'View:Asset', 'ViewAny:AssetSale', 'Import:AssetSale'], unrestricted: true));
 
         try {
             Excel::import(new AssetSaleImport, $this->file([
                 $this->row(['id_aset' => $asset->id, 'badan_usaha_pembeli' => $this->beta->name, 'tanggal_penjualan' => '2026-01-10']),
             ]));
-            $this->fail('Tanpa izin create_asset::sale impor harus ditolak.');
+            $this->fail('Tanpa izin Create:AssetSale impor harus ditolak.');
         } catch (ImportStoppedException $exception) {
             $this->assertStringContainsString('izin', $exception->getUserMessage());
         }
@@ -247,7 +247,7 @@ class AssetSaleImportTest extends TestCase
             ->assertActionVisible('importSales')
             ->assertActionVisible('exportAll');
 
-        $this->actingAs($this->userWith(['view_any_asset::sale', 'view_asset::sale', 'create_asset::sale'], unrestricted: true));
+        $this->actingAs($this->userWith(['ViewAny:AssetSale', 'View:AssetSale', 'Create:AssetSale'], unrestricted: true));
 
         Livewire::test(ListAssetSales::class)
             ->assertOk()

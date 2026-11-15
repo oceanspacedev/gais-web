@@ -176,7 +176,7 @@ class SecurityChecksheet extends Model
     public static function visibility(): Visibility
     {
         return Visibility::make()->grant(
-            new PermissionGrant('view_all_security::checksheet'),
+            new PermissionGrant('ViewAll:SecurityChecksheet'),
             new OwnerGrant,
         );
     }

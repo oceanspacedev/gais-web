@@ -47,7 +47,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * Dasbor manajemen: setiap widget punya izin widget_* dan bisa dirender,
+ * Dasbor manajemen: setiap widget punya izin View:{NamaKelas} dan bisa dirender,
  * halaman dasbor menyusun seksi per modul sesuai izin pembaca.
  */
 class SumoDashboardWidgetsTest extends TestCase
@@ -104,7 +104,7 @@ class SumoDashboardWidgetsTest extends TestCase
     {
         $this->actingAsSuperAdmin();
 
-        $this->assertTrue(Permission::query()->where('name', 'widget_'.class_basename($widget))->where('guard_name', 'web')->exists(), 'Izin widget_'.class_basename($widget).' belum dibuat migrasi.');
+        $this->assertTrue(Permission::query()->where('name', 'View:'.class_basename($widget))->where('guard_name', 'web')->exists(), 'Izin View:'.class_basename($widget).' belum dibuat migrasi.');
         $this->assertTrue($widget::canView(), "{$widget} should be visible to a super admin.");
 
         $component = Livewire::test($widget)->assertOk();

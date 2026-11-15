@@ -84,7 +84,7 @@ class ItemRequestExportTest extends TestCase
         $this->alice = User::factory()->create(['name' => 'Alice Rekap', 'division_id' => $this->audit->id]);
         $this->bob = User::factory()->create(['name' => 'Bob Rekap', 'division_id' => $this->finance->id]);
         $this->carl = User::factory()->create(['name' => 'Carl Rekap', 'division_id' => $this->depo->id]);
-        $this->viewer = $this->userWithRole('pengajuan_admin');
+        $this->viewer = $this->userWithRole('general_affair');
 
         $this->seedRequests();
     }

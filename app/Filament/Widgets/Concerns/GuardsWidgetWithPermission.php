@@ -6,7 +6,7 @@ use BezhanSalleh\FilamentShield\Traits\HasWidgetShield;
 use Filament\Facades\Filament;
 
 /**
- * Widget dasbor hanya tampil bagi pemegang izin `widget_{NamaKelas}` (Shield).
+ * Widget dasbor hanya tampil bagi pemegang izin `View:{NamaKelas}` (Shield).
  * Widget yang belum punya izin terdaftar (mis. di test tanpa Shield) memakai
  * aturan bawaan Filament, bukan canAccess() milik Shield yang tidak ada di Widget.
  *

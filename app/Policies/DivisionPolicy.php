@@ -16,7 +16,7 @@ class DivisionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_division');
+        return $user->can('ViewAny:Division');
     }
 
     /**
@@ -24,7 +24,7 @@ class DivisionPolicy
      */
     public function view(User $user, Division $division): bool
     {
-        return $user->can('view_division') && $this->visible($user, $division);
+        return $user->can('View:Division') && $this->visible($user, $division);
     }
 
     /**
@@ -32,7 +32,7 @@ class DivisionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_division');
+        return $user->can('Create:Division');
     }
 
     /**
@@ -40,7 +40,7 @@ class DivisionPolicy
      */
     public function update(User $user, Division $division): bool
     {
-        return $user->can('update_division') && $this->editable($user, $division);
+        return $user->can('Update:Division') && $this->editable($user, $division);
     }
 
     /**
@@ -48,7 +48,7 @@ class DivisionPolicy
      */
     public function delete(User $user, Division $division): bool
     {
-        return $user->can('delete_division') && $this->editable($user, $division);
+        return $user->can('Delete:Division') && $this->editable($user, $division);
     }
 
     /**
@@ -56,7 +56,7 @@ class DivisionPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_division');
+        return $user->can('DeleteAny:Division');
     }
 
     /**
@@ -64,7 +64,7 @@ class DivisionPolicy
      */
     public function forceDelete(User $user, Division $division): bool
     {
-        return $user->can('force_delete_division') && $this->visible($user, $division);
+        return $user->can('ForceDelete:Division') && $this->visible($user, $division);
     }
 
     /**
@@ -72,7 +72,7 @@ class DivisionPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_division');
+        return $user->can('ForceDeleteAny:Division');
     }
 
     /**
@@ -80,7 +80,7 @@ class DivisionPolicy
      */
     public function restore(User $user, Division $division): bool
     {
-        return $user->can('restore_division') && $this->visible($user, $division);
+        return $user->can('Restore:Division') && $this->visible($user, $division);
     }
 
     /**
@@ -88,7 +88,7 @@ class DivisionPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_division');
+        return $user->can('RestoreAny:Division');
     }
 
     /**
@@ -96,7 +96,7 @@ class DivisionPolicy
      */
     public function replicate(User $user, Division $division): bool
     {
-        return $user->can('create_division') && $this->editable($user, $division);
+        return $user->can('Create:Division') && $this->editable($user, $division);
     }
 
     /**
@@ -104,6 +104,6 @@ class DivisionPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_division');
+        return $user->can('Reorder:Division');
     }
 }

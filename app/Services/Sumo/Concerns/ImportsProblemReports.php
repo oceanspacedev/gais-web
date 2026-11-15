@@ -50,5 +50,7 @@ trait ImportsProblemReports
                 'closed_at', 'result_desc', 'updated_at', 'deleted_at',
             ], 'problem_reports');
         });
+
+        $this->fillDivisionFromRequester('problem_reports');
     }
 }

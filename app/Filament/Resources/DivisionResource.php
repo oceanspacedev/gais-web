@@ -53,6 +53,12 @@ class DivisionResource extends Resource
                     ->options(fn (): array => Area::query()->orderBy('name')->pluck('name', 'id')->all())
                     ->searchable(),
 
+                Forms\Components\TextInput::make('talenta_organization')
+                    ->label('Organisasi di Talenta')
+                    ->helperText('Nama organisasi di Talenta yang sama dengan divisi ini (mis. HUMAN CAPITAL). Import Talenta mengisi divisi karyawan yang belum punya divisi dari sini. Kosongkan bila satu organisasi Talenta mencakup banyak divisi/toko.')
+                    ->unique(ignoreRecord: true)
+                    ->maxLength(255),
+
                 Forms\Components\Repeater::make('approvers')
                     ->label('Alur Persetujuan (Approval Flow)')
                     ->helperText('Tambahkan approver sesuai jabatan yang harus menyetujui. Seret untuk mengatur alur.')
@@ -161,6 +167,10 @@ class DivisionResource extends Resource
                     ->label('Area')
                     ->sortable()
                     ->placeholder('-'),
+                Tables\Columns\TextColumn::make('talenta_organization')
+                    ->label('Organisasi Talenta')
+                    ->placeholder('-')
+                    ->toggleable(),
                 Tables\Columns\TextColumn::make('users_count')
                     ->label('Anggota')
                     ->counts('users')

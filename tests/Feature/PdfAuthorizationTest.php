@@ -137,7 +137,7 @@ class PdfAuthorizationTest extends TestCase
             $table->unsignedBigInteger('role_id');
         });
 
-        foreach (['view_asset::transfer', 'view_task', 'view_asset::request'] as $permission) {
+        foreach (['View:AssetTransfer', 'View:Task', 'View:AssetRequest'] as $permission) {
             Permission::create(['name' => $permission, 'guard_name' => 'web']);
         }
 

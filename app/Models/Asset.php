@@ -273,8 +273,10 @@ class Asset extends Model
 
     /**
      * Label pilihan aset: "#ID · Nama · atribut · Badan Usaha". Atribut yang
-     * ditampilkan adalah yang cocok dengan pencarian (mis. plat nomor), supaya
-     * jelas kenapa aset itu muncul; tanpa pencarian, serial number.
+     * ditampilkan adalah yang paling cocok dengan pencarian (memuat kata cari
+     * terbanyak, mis. plat nomor untuk "b 4321", bukan atribut lain yang
+     * kebetulan memuat huruf "b"), supaya jelas kenapa aset itu muncul; tanpa
+     * pencarian, serial number.
      * Muat `attributes.customAttribute` dan `businessEntity` supaya tidak N+1.
      */
     public function optionLabel(?string $search = null): string
@@ -283,8 +285,21 @@ class Asset extends Model
         $terms = array_filter(array_map(self::normalizeIdentifier(...), preg_split('/\s+/', (string) $search) ?: []));
         $searchable = CustomAssetAttribute::searchableIds();
 
-        $matched = $terms === [] ? null : $attributes->first(fn (AssetAttribute $attribute): bool => in_array((int) $attribute->custom_attribute_id, $searchable, true)
-            && collect($terms)->contains(fn (string $term): bool => str_contains(self::normalizeIdentifier((string) $attribute->attribute_value), $term)));
+        $matchedTerms = function (AssetAttribute $attribute) use ($terms, $searchable): int {
+            if (! in_array((int) $attribute->custom_attribute_id, $searchable, true)) {
+                return 0;
+            }
+
+            $value = self::normalizeIdentifier((string) $attribute->attribute_value);
+
+            return count(array_filter($terms, fn (string $term): bool => str_contains($value, $term)));
+        };
+
+        // sortByDesc stabil: bila sama banyak, atribut pertama yang menang.
+        $matched = $terms === [] ? null : $attributes
+            ->filter(fn (AssetAttribute $attribute): bool => $matchedTerms($attribute) > 0)
+            ->sortByDesc($matchedTerms)
+            ->first();
 
         $detail = match (true) {
             $matched !== null => ($matched->customAttribute?->name ?? 'Atribut').': '.$matched->attribute_value,

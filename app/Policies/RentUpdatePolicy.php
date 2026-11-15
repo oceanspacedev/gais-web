@@ -17,32 +17,32 @@ class RentUpdatePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_rent');
+        return $user->can('ViewAny:Rent');
     }
 
     public function view(User $user, RentUpdate $update): bool
     {
-        return $user->can('view_rent') && $this->visibleParent($user, $update, 'rent');
+        return $user->can('View:Rent') && $this->visibleParent($user, $update, 'rent');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('update_rent');
+        return $user->can('Update:Rent');
     }
 
     public function update(User $user, RentUpdate $update): bool
     {
-        return $user->can('update_rent') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'rent');
+        return $user->can('Update:Rent') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'rent');
     }
 
     public function delete(User $user, RentUpdate $update): bool
     {
-        return $user->can('update_rent') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'rent');
+        return $user->can('Update:Rent') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'rent');
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('update_rent');
+        return $user->can('Update:Rent');
     }
 
     /**
@@ -50,21 +50,21 @@ class RentUpdatePolicy
      */
     public function forceDelete(User $user, RentUpdate $update): bool
     {
-        return $user->can('force_delete_rent') && $this->visibleParent($user, $update, 'rent');
+        return $user->can('ForceDelete:Rent') && $this->visibleParent($user, $update, 'rent');
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_rent');
+        return $user->can('ForceDeleteAny:Rent');
     }
 
     public function restore(User $user, RentUpdate $update): bool
     {
-        return $user->can('update_rent') && $this->visibleParent($user, $update, 'rent');
+        return $user->can('Update:Rent') && $this->visibleParent($user, $update, 'rent');
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('update_rent');
+        return $user->can('Update:Rent');
     }
 }

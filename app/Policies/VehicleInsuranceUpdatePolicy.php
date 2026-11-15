@@ -17,32 +17,32 @@ class VehicleInsuranceUpdatePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_vehicle::insurance');
+        return $user->can('ViewAny:VehicleInsurance');
     }
 
     public function view(User $user, VehicleInsuranceUpdate $update): bool
     {
-        return $user->can('view_vehicle::insurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
+        return $user->can('View:VehicleInsurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
     }
 
     public function create(User $user): bool
     {
-        return $user->can('update_vehicle::insurance');
+        return $user->can('Update:VehicleInsurance');
     }
 
     public function update(User $user, VehicleInsuranceUpdate $update): bool
     {
-        return $user->can('update_vehicle::insurance') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'vehicleInsurance');
+        return $user->can('Update:VehicleInsurance') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'vehicleInsurance');
     }
 
     public function delete(User $user, VehicleInsuranceUpdate $update): bool
     {
-        return $user->can('update_vehicle::insurance') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'vehicleInsurance');
+        return $user->can('Update:VehicleInsurance') && $this->notTrashed($update) && $this->visibleParent($user, $update, 'vehicleInsurance');
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('update_vehicle::insurance');
+        return $user->can('Update:VehicleInsurance');
     }
 
     /**
@@ -50,21 +50,21 @@ class VehicleInsuranceUpdatePolicy
      */
     public function forceDelete(User $user, VehicleInsuranceUpdate $update): bool
     {
-        return $user->can('force_delete_vehicle::insurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
+        return $user->can('ForceDelete:VehicleInsurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_vehicle::insurance');
+        return $user->can('ForceDeleteAny:VehicleInsurance');
     }
 
     public function restore(User $user, VehicleInsuranceUpdate $update): bool
     {
-        return $user->can('update_vehicle::insurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
+        return $user->can('Update:VehicleInsurance') && $this->visibleParent($user, $update, 'vehicleInsurance');
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('update_vehicle::insurance');
+        return $user->can('Update:VehicleInsurance');
     }
 }

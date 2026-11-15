@@ -75,7 +75,7 @@ Sejak rilis terbaru, **semua karyawan yang punya akun bisa masuk panel**, termas
 |---|---|---|
 | **super_admin** | Tim IT (Mas Apri) + 1 cadangan | Memegang semua izin. Membuat role manual, memberi role, mengatur **Akses Badan Usaha**, menjalankan **Impor Data Sumo**. |
 | **admin** (manual) | Admin GA senior | Impor JSON (Talenta), memberi role (hanya role yang izinnya ia miliki juga), Impersonate untuk uji tampilan. |
-| **pengajuan_admin** (ADMIN Sumo) | Admin Pengajuan GA | Mengelola master pengajuan/gangguan/asuransi/sewa dan user/divisi. **Tidak bisa** memberi role atau impor Talenta. |
+| **general_affair** (ADMIN Sumo) | Staf GA | Mengelola master pengajuan/gangguan/asuransi/sewa dan user/divisi. **Tidak bisa** memberi role atau impor Talenta. |
 | **executor** (divisi HCM) | Staf GA/HCM | Proses pengajuan & gangguan sesuai cakupan. Akses Asuransi, Sewa, master, dan Notifikasi WA **tidak otomatis dari divisi**: executor HCM hasil Impor Sumo mendapat izinnya langsung, staf HCM baru perlu role khusus (mis. `hcm`). |
 | **executor** (divisi lain, mis. MIS-IT, WHM) | Petugas pelaksana | Proses pengajuan dan laporan gangguan sesuai **Cakupan Divisi**, Setujui Jumlah (kalau divisinya penyetuju), Scan QR, ekspor. |
 | **accounting** | Tim Accounting | Mengisi **Status PO (Accounting)** untuk tipe yang lewat Accounting, ekspor. |
@@ -98,10 +98,10 @@ Sejak rilis terbaru, **semua karyawan yang punya akun bisa masuk panel**, termas
 | 3 | Redis + Horizon jalan (termasuk `supervisor-long`). Cron `* * * * * php artisan schedule:run` aktif | Server | IT | ☐ |
 | 4 | Cek halaman login: tombol **WhatsApp** dan **Email** muncul di bawah "Atau masuk dengan" | `/admin/login` | IT | ☐ |
 | 5 | Minimal 1 super_admin dengan **"Akses semua badan usaha"** aktif | Organisasi > Pengguna | IT | ☐ |
-| 6 | Buat role manual: `general_affair`, `admin`, `audit`, lalu **centang izinnya manual** (role yang dibuat setelah deploy tidak otomatis dapat izin; untuk `admin`: manage_access_user, import_user, impersonate_user, izin user/divisi) | Pengaturan > Roles (Shield) | IT | ☐ |
-| 6b | Buat role khusus untuk staf baru divisi **HCM** (izin asuransi, sewa, master, View:WaNotificationSettings, widget kontrak), **AUDIT** (audit_item::request), **MIS-IT** (view_all_item::request). Isinya ikut `config/sumo-import.php` division_permissions | Pengaturan > Roles (Shield) | IT | ☐ |
+| 6 | Buat role manual: `general_affair`, `admin`, `audit`, lalu **centang izinnya manual** (role yang dibuat setelah deploy tidak otomatis dapat izin; untuk `admin`: ManageAccess:User, Import:User, Impersonate:User, izin user/divisi) | Pengaturan > Roles (Shield) | IT | ☐ |
+| 6b | Buat role khusus untuk staf baru divisi **HCM** (izin asuransi, sewa, master, View:WaNotificationSettings, widget kontrak), **AUDIT** (Audit:ItemRequest), **MIS-IT** (ViewAll:ItemRequest). Isinya ikut `config/sumo-import.php` division_permissions | Pengaturan > Roles (Shield) | IT | ☐ |
 | 7 | Master Organisasi: **Badan Usaha, Area, Divisi (dengan Area), Jabatan** | Organisasi > Badan Usaha / Area / Divisi / Jabatan | GA/HCM | ☐ |
-| 8 | Master **Tipe Pengajuan** (+ toggle wajib lampiran / wajib daftar barang / Lewat tahap Accounting / Aktif) | Pengajuan Barang > Tipe Pengajuan | GA (pengajuan_admin) | ☐ |
+| 8 | Master **Tipe Pengajuan** (+ toggle wajib lampiran / wajib daftar barang / Lewat tahap Accounting / Aktif) | Pengajuan Barang > Tipe Pengajuan | GA (general_affair) | ☐ |
 | 9 | Master **Jenis Gangguan** | Lapor Gangguan > Jenis Gangguan | GA | ☐ |
 | 10 | Master Barang: **Kategori Barang**, **Tipe Unit Barang** (Satuan), **Barang** (dengan Harga). Bisa lewat **Ekspor / Impor > Impor Excel** | Pengajuan Barang > … | GA | ☐ |
 | 11 | **Periode Pengajuan** bulan berjalan | Pengajuan Barang > Periode Pengajuan | GA | ☐ |
@@ -259,7 +259,7 @@ flowchart TD
 - **Perpanjangan wajib dicatat sebagai baris riwayat baru**, bukan dengan mengedit induk.
 - Satu baris riwayat berstatus **Tutup/Refund** menghentikan seluruh kontrak.
 - Warna asuransi: kuning 15–30 hari, merah ≤ 14 hari. Status Stok: **Overlimit/Underlimit** kalau selisih ≥ 30%. Status Tagihan sewa: **LUNAS / LEBIH / BELUM LUNAS**.
-- Akses modul: super_admin, pengajuan_admin, dan user yang **diberi izin** asuransi/sewa (executor HCM hasil Impor Sumo, atau role `hcm` baru). Tidak ada akses otomatis berdasarkan divisi.
+- Akses modul: super_admin, general_affair, dan user yang **diberi izin** asuransi/sewa (executor HCM hasil Impor Sumo, atau role `hcm` baru). Tidak ada akses otomatis berdasarkan divisi.
 
 **Otomatisasi:** `reminder:whatsapp` tiap jam; kode RENT/RENTUP otomatis; "Diinput Oleh" otomatis; isian pembaharuan terisi dari induk; warna, Status Stok, dan Status Tagihan dihitung otomatis.
 
@@ -273,7 +273,7 @@ flowchart TD
 | **Pekerjaan OB** | `office_boy`; pemberi tugas (assign) | Buat ("Mulai Pekerjaan"): **Nama Pekerjaan** + **Foto Sebelum** → **Mulai** → **Foto Sesudah** → **Simpan & Selesaikan**. Pemberi tugas: **Tugaskan per Shift** / **Tambah Tugas** (kosongkan Petugas OB untuk kolam bersama) | Status: Belum Dikerjakan → Sedang Dikerjakan → Selesai. Ada **Mulai Semua & Foto Sebelum** (submit **Simpan & Mulai**) dan **Selesaikan Semua & Foto Sesudah**. Menu master sekarang bernama **Pekerjaan OB**. |
 | **Servis Aset di luar daftar** | Staf GA / teknisi | Aset > Servis Aset > Buat → "Aset yang diservis ada di daftar aset?" pilih **Tidak, aset di luar daftar** → Nama Aset, No. Seri → **Selesaikan** → **Simpan & Selesaikan** | Nomor SRV-YYYYMM-xxxx. Aset luar **tidak** masuk daftar aset. Untuk aset milik perusahaan, sebaiknya didaftarkan dulu. |
 | **PIC Pekerjaan Vendor otomatis** | Pembuat Task | Pekerjaan Vendor > Task > Buat. PIC otomatis = pembuat. Lalu Process → Complete → Download PDF → Upload | Kolom PIC dan Tanggal Dibuat tampil di tabel. PIC tidak bisa diganti, jadi Task harus dibuat oleh penanggung jawabnya. |
-| **Penjualan Aset antar Badan Usaha** | Staf GA (create_asset::sale) | Detail aset → **Jual ke Badan Usaha Lain** → Badan Usaha Pembeli, Tanggal, Harga Jual, Dokumen (BAST/Invoice ≤ 4 MB) → **Catat Penjualan**. Atau Aset > Penjualan Aset > **Catat Penjualan** / **Impor Excel** | Aset harus Tersedia dan tanpa pemegang. Pemilik pindah ke pembeli, muncul **Riwayat Kepemilikan**. Menghapus riwayat **tidak** mengembalikan kepemilikan. Impor: 1 baris salah membatalkan seluruh file. "Tandai Dijual" tetap dipakai untuk aset yang keluar dari grup. |
+| **Penjualan Aset antar Badan Usaha** | Staf GA (Create:AssetSale) | Detail aset → **Jual ke Badan Usaha Lain** → Badan Usaha Pembeli, Tanggal, Harga Jual, Dokumen (BAST/Invoice ≤ 4 MB) → **Catat Penjualan**. Atau Aset > Penjualan Aset > **Catat Penjualan** / **Impor Excel** | Aset harus Tersedia dan tanpa pemegang. Pemilik pindah ke pembeli, muncul **Riwayat Kepemilikan**. Menghapus riwayat **tidak** mengembalikan kepemilikan. Impor: 1 baris salah membatalkan seluruh file. "Tandai Dijual" tetap dipakai untuk aset yang keluar dari grup. |
 | **Dropdown Ekspor / Impor** | Semua sesuai izin | Satu dropdown **Ekspor / Impor** di Aset, Penjualan Aset, Pengguna, Asuransi, Sewa, Barang, Vehicle Checksheet | Ekspor Filament diproses di antrean (Horizon harus jalan). |
 | **Dasbor** | Semua (sesuai izin widget) | Kartu **Perlu Tindakan** (klik untuk membuka daftar terfilter) + seksi lipat per modul: Aset, Pengajuan Barang, Lapor Gangguan, Asuransi & Sewa, Operasional, Organisasi & Data Master | Kartu 0 berwarna abu-abu ("tidak ada antrean"). User tanpa role, `security`, dan `office_boy` tidak mendapat widget. |
 
@@ -296,7 +296,7 @@ flowchart LR
 - Uji coba **tidak mengubah** data GAIS (rollback). Impor sungguhan berjalan dalam satu transaksi: kalau gagal, tidak ada yang tersimpan.
 - Impor bisa diulang tanpa menggandakan data, tetapi **hanya menambah baris baru**. Perubahan status di Sumo setelah impor pertama **tidak** ikut diperbarui. Karena itu impor final harus dilakukan **setelah freeze**.
 - User Sumo login memakai **username & password Sumo lama**, kecuali akunnya digabung ke akun GAIS yang sudah punya login.
-- Role Sumo dipetakan: ADMIN → pengajuan_admin, ACCOUNTING → accounting, EXECUTOR → executor, USER → requester.
+- Role Sumo dipetakan: ADMIN → general_affair, ACCOUNTING → accounting, EXECUTOR → executor, USER → requester.
 - Cakupan divisi hasil Sumo (hanya diisi pada impor pertama): WHM, MKLI-HO, AUDIT bertanda **Menyetujui jumlah**; gangguan HCM hanya UMUM, MIS-IT selain UMUM.
 - Kode lama (REQ123) dan **label QR lama tetap berlaku**.
 
@@ -374,7 +374,7 @@ flowchart LR
 | Kode email tidak datang | Email dipakai lebih dari satu user. Rapikan duplikat, lalu cek log SMTP. |
 | Terlalu banyak salah OTP | **WA:** kirim maksimal 3 kali per 2 menit per nomor; 5 kali salah → ulang proses. **Email:** kirim maksimal 3 kali per 5 menit (10 per jam); kode hangus setelah 5 kali salah. |
 | Lupa kata sandi | Tidak ada reset mandiri. Admin mengubahnya di Edit Pengguna. |
-| pengajuan_admin tidak melihat field Roles | Bagian "Akses & Keamanan" hanya untuk super_admin/admin. |
+| general_affair tidak melihat field Roles | Bagian "Akses & Keamanan" hanya untuk super_admin/admin. |
 | Tipe pengajuan tidak muncul | Kuota 2 pengajuan terbuka penuh (biasanya ada yang Selesai belum dikonfirmasi) atau tipe tidak Aktif. |
 | Executor tidak melihat pengajuan | Cek: user punya Divisi, role punya izin proses, Divisi punya **Cakupan Pengajuan** yang cocok, Divisi pemohon punya Area, badan usaha masuk akses. |
 | Tombol **Proses (Executor)** tidak muncul | Masih menunggu Accounting (Status PO) atau **Setujui Jumlah (Manager)** dari divisi penyetuju. |
@@ -396,9 +396,9 @@ flowchart LR
 | Master asuransi dobel setelah impor | Impor kontrak otomatis membuat master dari nama yang salah ketik. Samakan ejaan. |
 | Menu Security tidak muncul | Beri role `security`, lalu `permission:cache-reset`. |
 | Video security gagal diunggah | Naikkan batas upload PHP/Nginx ke ≥ 50 MB. |
-| Tombol **Jual ke Badan Usaha Lain** tidak muncul | Aset harus Tersedia tanpa pemegang (buat BA Pengembalian dulu) dan user harus punya izin create_asset::sale. |
+| Tombol **Jual ke Badan Usaha Lain** tidak muncul | Aset harus Tersedia tanpa pemegang (buat BA Pengembalian dulu) dan user harus punya izin Create:AssetSale. |
 | File ekspor tidak kunjung siap | Horizon harus berjalan. |
-| Dasbor kosong | User belum punya izin widget_* untuk modul itu. |
+| Dasbor kosong | User belum punya izin widget (`View:{NamaWidget}`) untuk modul itu. |
 
 ---
 
@@ -465,7 +465,7 @@ php artisan test
 9. Pastikan `APP_LOCALE=id` di server (semua `.env.*.example` sudah `id`). `.env.production.example` masih `MAIL_MAILER=log`, jadi **login Email belum aktif di production** sampai SMTP diisi.
 10. Panduan Pekerjaan Vendor masih menyebut isian PIC. Alur OB masih memakai istilah Pending/In progress dan "tombol klaim". README masih menyebut "Ruangan OB".
 11. Label menu pengguna di trace bervariasi ("Organisasi > Pengguna", "Organisasi > User", "Users"). Materi ini memakai **Organisasi > Pengguna** sesuai trace modul akses. Mohon dikonfirmasi saat demo.
-12. README baris 131 menyebut hanya super admin yang bisa mengatur akses badan usaha. Faktanya ini berbasis izin `manage_business_entity_access_user` dan bisa diberikan ke role lain.
+12. README baris 131 menyebut hanya super admin yang bisa mengatur akses badan usaha. Faktanya ini berbasis izin `ManageBusinessEntityAccess:User` dan bisa diberikan ke role lain.
 13. Repeater "Alur Persetujuan (Approval Flow)" di form Divisi tidak dipakai workflow. Usulan: sembunyikan atau beri catatan.
 14. Impor ulang Sumo tidak memperbarui baris lama. Lewat CLI, impor sungguhan bisa berjalan tanpa uji coba.
 

@@ -16,7 +16,7 @@ class JobTitlePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_job::title');
+        return $user->can('ViewAny:JobTitle');
     }
 
     /**
@@ -24,7 +24,7 @@ class JobTitlePolicy
      */
     public function view(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('view_job::title') && $this->visible($user, $jobTitle);
+        return $user->can('View:JobTitle') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -32,7 +32,7 @@ class JobTitlePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_job::title');
+        return $user->can('Create:JobTitle');
     }
 
     /**
@@ -40,7 +40,7 @@ class JobTitlePolicy
      */
     public function update(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('update_job::title') && $this->editable($user, $jobTitle);
+        return $user->can('Update:JobTitle') && $this->editable($user, $jobTitle);
     }
 
     /**
@@ -48,7 +48,7 @@ class JobTitlePolicy
      */
     public function delete(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('delete_job::title') && $this->editable($user, $jobTitle);
+        return $user->can('Delete:JobTitle') && $this->editable($user, $jobTitle);
     }
 
     /**
@@ -56,7 +56,7 @@ class JobTitlePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_job::title');
+        return $user->can('DeleteAny:JobTitle');
     }
 
     /**
@@ -64,7 +64,7 @@ class JobTitlePolicy
      */
     public function forceDelete(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('force_delete_job::title') && $this->visible($user, $jobTitle);
+        return $user->can('ForceDelete:JobTitle') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -72,7 +72,7 @@ class JobTitlePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_job::title');
+        return $user->can('ForceDeleteAny:JobTitle');
     }
 
     /**
@@ -80,7 +80,7 @@ class JobTitlePolicy
      */
     public function restore(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('restore_job::title') && $this->visible($user, $jobTitle);
+        return $user->can('Restore:JobTitle') && $this->visible($user, $jobTitle);
     }
 
     /**
@@ -88,7 +88,7 @@ class JobTitlePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_job::title');
+        return $user->can('RestoreAny:JobTitle');
     }
 
     /**
@@ -96,7 +96,7 @@ class JobTitlePolicy
      */
     public function replicate(User $user, JobTitle $jobTitle): bool
     {
-        return $user->can('replicate_job::title') && $this->editable($user, $jobTitle);
+        return $user->can('Replicate:JobTitle') && $this->editable($user, $jobTitle);
     }
 
     /**
@@ -104,6 +104,6 @@ class JobTitlePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_job::title');
+        return $user->can('Reorder:JobTitle');
     }
 }

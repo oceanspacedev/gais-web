@@ -37,7 +37,7 @@ class ProblemReportVisibilityTest extends TestCase
         }
 
         $reporter = User::factory()->create();
-        $viewAll = Permission::findOrCreate('view_all_problem::report', 'web');
+        $viewAll = Permission::findOrCreate('ViewAll:ProblemReport', 'web');
 
         $viewers = [
             'reporter' => $reporter,

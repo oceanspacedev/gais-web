@@ -27,9 +27,9 @@ class BusinessEntityScopingTest extends TestCase
     use DatabaseTransactions;
 
     private const PERMISSIONS = [
-        'view_any_asset', 'view_asset', 'update_asset',
-        'view_any_asset::transfer', 'view_asset::transfer', 'update_asset::transfer',
-        'view_any_asset::request', 'view_asset::request',
+        'ViewAny:Asset', 'View:Asset', 'Update:Asset',
+        'ViewAny:AssetTransfer', 'View:AssetTransfer', 'Update:AssetTransfer',
+        'ViewAny:AssetRequest', 'View:AssetRequest',
     ];
 
     private BusinessEntity $alpha;
