@@ -98,39 +98,14 @@ class AssetServiceResource extends Resource
                         Select::make('asset_id')
                             ->label('Aset yang Diservis')
                             ->visible(fn (callable $get) => $get('asset_source') !== 'external')
-                            ->helperText('Tidak ketemu? Pilih "Tidak, aset di luar daftar" di atas lalu ketik namanya.')
+                            ->helperText('Cari nama, merek, lokasi, serial number, plat nomor, atau atribut lain. Tidak ketemu? Pilih "Tidak, aset di luar daftar" di atas lalu ketik namanya.')
                             ->columnSpan(['default' => 1, 'md' => 2])
-                            ->relationship('asset', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
                             ->searchable()
-                            ->preload()
-                            ->getSearchResultsUsing(function (string $search): array {
-                                return Asset::query()
-                                    ->withIdentity()
-                                    ->with('businessEntity')
-                                    ->where(function ($q) use ($search) {
-                                        $q->where('name', 'like', "%{$search}%")
-                                            ->orWhereAnyAttribute($search);
-                                    })
-                                    ->limit(50)
-                                    ->get()
-                                    ->mapWithKeys(function (Asset $asset) {
-                                        $detail = array_filter([$asset->serial_number, $asset->businessEntity?->name]);
-                                        $suffix = ! empty($detail) ? ' ('.implode(' - ', $detail).')' : '';
-
-                                        return [$asset->id => $asset->name.$suffix];
-                                    })
-                                    ->toArray();
-                            })
-                            ->getOptionLabelUsing(function ($value): ?string {
-                                $asset = Asset::with('businessEntity')->find($value);
-                                if (! $asset) {
-                                    return null;
-                                }
-                                $detail = array_filter([$asset->serial_number, $asset->businessEntity?->name]);
-                                $suffix = ! empty($detail) ? ' ('.implode(' - ', $detail).')' : '';
-
-                                return $asset->name.$suffix;
-                            })
+                            ->options(fn (): array => Asset::searchOptions(Asset::query()))
+                            ->getSearchResultsUsing(fn (string $search): array => Asset::searchOptions(Asset::query(), $search))
+                            ->getOptionLabelUsing(fn ($value): ?string => Asset::query()
+                                ->with(['attributes.customAttribute', 'businessEntity:id,name'])
+                                ->find($value)?->optionLabel())
                             ->required(),
 
                         TextInput::make('external_asset_name')
