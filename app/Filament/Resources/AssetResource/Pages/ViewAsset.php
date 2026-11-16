@@ -75,7 +75,7 @@ class ViewAsset extends ViewRecord
                     ->slideOver()
                     ->modalWidth('md')
                     ->modalHeading(fn (): string => 'Jual ke Badan Usaha Lain: '.$this->record->name)
-                    ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli dan aset masuk stok pembeli (Tersedia, tanpa pemegang). Riwayatnya tercatat di menu Penjualan Aset.')
+                    ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli. Aset stok masuk stok pembeli; aset yang sedang dipegang tetap di pemegangnya. Riwayatnya tercatat di menu Penjualan Aset.')
                     ->modalSubmitActionLabel('Catat Penjualan')
                     ->form(fn (): array => AssetSaleResource::sellFormSchema($this->record))
                     ->action(function (array $data): void {

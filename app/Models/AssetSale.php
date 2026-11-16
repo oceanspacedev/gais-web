@@ -18,8 +18,9 @@ use Illuminate\Support\Facades\DB;
  * Penjualan aset antar badan usaha di dalam grup: satu baris per perpindahan
  * kepemilikan, sehingga riwayat aset yang berpindah lebih dari sekali tetap
  * utuh. record() mencatat barisnya sekaligus memindahkan
- * assets.business_entity_id ke pembeli; aset masuk stok pembeli (Tersedia,
- * tanpa pemegang) dan pemilik lama tidak lagi melihatnya sebagai aset aktif.
+ * assets.business_entity_id ke pembeli. Aset stok masuk stok pembeli
+ * (Tersedia, tanpa pemegang); aset yang sedang dipegang tetap dipegang
+ * pemegangnya (Digunakan) dan hanya kepemilikannya yang berpindah.
  *
  * Berbeda dengan kolom assets.sold_* yang berarti aset keluar dari grup
  * (status Dijual, pembeli teks bebas): penjualan internal tidak menyentuh
@@ -70,9 +71,9 @@ class AssetSale extends Model
 
     /**
      * Catat penjualan dan pindahkan kepemilikan dalam satu transaksi. Aset
-     * harus di stok (Tersedia, tanpa pemegang) seperti syarat BA Serah Terima,
-     * supaya pemegang di badan usaha lama tidak hilang diam-diam dan status
-     * validasi aset tetap cocok dengan BA terakhirnya.
+     * boleh Tersedia (stok) atau Digunakan (ada pemegang). Pemegang, penerima
+     * BA, dan status Digunakan tidak disentuh supaya tetap cocok dengan BA
+     * terakhirnya; aset stok pindah ke stok pembeli.
      *
      * $actor adalah akun yang mencatat; bila diberikan, badan usaha penjual
      * dan pembeli harus termasuk aksesnya. Tanpa aktor (proses latar) aturan
@@ -101,12 +102,16 @@ class AssetSale extends Model
                 'created_by' => $actor?->getKey(),
             ]);
 
-            // Pemilik baru. recipient_business_entity_id menjadi penanda stok
-            // pembeli (tampil "Stok · <badan usaha>"), seperti setelah BA Pengembalian.
+            // Pemilik baru. Aset stok: recipient_business_entity_id menjadi
+            // penanda stok pembeli (tampil "Stok · <badan usaha>"), seperti
+            // setelah BA Pengembalian. Aset yang dipegang tetap di pemegangnya.
             $locked->business_entity_id = $buyer->getKey();
-            $locked->recipient_id = null;
-            $locked->recipient_business_entity_id = $buyer->getKey();
-            $locked->condition_status = AssetCondition::Available;
+
+            if ($locked->recipient_id === null) {
+                $locked->recipient_business_entity_id = $buyer->getKey();
+                $locked->condition_status = AssetCondition::Available;
+            }
+
             $locked->save();
 
             // Instance pemanggil ikut mencerminkan hasilnya tanpa refresh().
@@ -156,19 +161,9 @@ class AssetSale extends Model
             throw new AssetSaleException('Tanggal penjualan wajib diisi.');
         }
 
-        if ($asset->condition_status === AssetCondition::Transferred || $asset->recipient_id) {
-            $asset->loadMissing('recipient');
-
+        if (! $asset->condition_status instanceof AssetCondition || ! $asset->condition_status->isTransferable()) {
             throw new AssetSaleException(sprintf(
-                'Aset "%s" masih dipegang %s. Buat BA Pengembalian lebih dulu agar aset kembali ke stok.',
-                $asset->name,
-                $asset->recipient?->name ?? 'pengguna lain',
-            ));
-        }
-
-        if ($asset->condition_status !== AssetCondition::Available) {
-            throw new AssetSaleException(sprintf(
-                'Aset "%s" berstatus %s; hanya aset Tersedia (stok) yang bisa dijual ke badan usaha lain.',
+                'Aset "%s" berstatus %s; hanya aset Tersedia atau Digunakan yang bisa dijual ke badan usaha lain.',
                 $asset->name,
                 $asset->condition_status_label,
             ));

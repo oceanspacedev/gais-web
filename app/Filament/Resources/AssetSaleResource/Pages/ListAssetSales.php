@@ -45,7 +45,7 @@ class ListAssetSales extends ListRecords
                 ->icon('heroicon-o-plus')
                 ->visible(fn (): bool => auth()->user()?->can('create', AssetSale::class) ?? false)
                 ->modalHeading('Catat Penjualan ke Badan Usaha Lain')
-                ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli dan aset masuk stok pembeli (Tersedia, tanpa pemegang).')
+                ->modalDescription('Kepemilikan aset langsung berpindah ke badan usaha pembeli. Aset stok masuk stok pembeli; aset yang sedang dipegang tetap di pemegangnya.')
                 ->modalSubmitActionLabel('Catat Penjualan')
                 ->slideOver()
                 ->modalWidth('md')
@@ -62,7 +62,7 @@ class ListAssetSales extends ListRecords
                         ->searchable()
                         ->required()
                         ->live()
-                        ->helperText('Hanya aset Tersedia (stok) di badan usaha yang bisa Anda akses. Aset yang masih dipegang harus dikembalikan dulu lewat BA Pengembalian.'),
+                        ->helperText('Aset Tersedia atau Digunakan di badan usaha yang bisa Anda akses. Pemegang aset tidak berubah.'),
                     Placeholder::make('owner')
                         ->label('Pemilik Saat Ini')
                         ->content(fn (Get $get): string => static::sellableAsset($get('asset_id'))?->businessEntity?->name ?? '-'),

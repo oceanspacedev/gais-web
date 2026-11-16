@@ -120,11 +120,7 @@ class AssetSaleImportTest extends TestCase
         // Baris benar memakai aset lain supaya aset $ok tetap milik alpha di setiap kasus.
         $valid = $this->stockAsset($this->alpha);
         $ok = $this->stockAsset($this->alpha);
-        $holder = User::factory()->create(['business_entity_id' => $this->alpha->id, 'name' => '__asi_holder__']);
-        $held = Asset::create([
-            'name' => '__asi_held__', 'business_entity_id' => $this->alpha->id, 'recipient_business_entity_id' => $this->alpha->id,
-            'recipient_id' => $holder->id, 'condition_status' => AssetCondition::Transferred,
-        ]);
+        $damaged = Asset::create(['name' => '__asi_damaged__', 'business_entity_id' => $this->alpha->id, 'condition_status' => AssetCondition::Damaged]);
         $validRow = $this->row(['id_aset' => $valid->id, 'badan_usaha_pembeli' => $this->beta->name, 'tanggal_penjualan' => '2026-01-10']);
 
         $cases = [
@@ -135,7 +131,7 @@ class AssetSaleImportTest extends TestCase
             'tidak ada di master Badan Usaha' => $this->row(['id_aset' => $ok->id, 'badan_usaha_pembeli' => '__asi_tidak_ada__', 'tanggal_penjualan' => '2026-01-10']),
             'badan_usaha_pembeli wajib diisi' => $this->row(['id_aset' => $ok->id, 'tanggal_penjualan' => '2026-01-10']),
             'tanggal_penjualan wajib diisi' => $this->row(['id_aset' => $ok->id, 'badan_usaha_pembeli' => $this->beta->name]),
-            'BA Pengembalian' => $this->row(['id_aset' => $held->id, 'badan_usaha_pembeli' => $this->beta->name, 'tanggal_penjualan' => '2026-01-10']),
+            'hanya aset Tersedia atau Digunakan' => $this->row(['id_aset' => $damaged->id, 'badan_usaha_pembeli' => $this->beta->name, 'tanggal_penjualan' => '2026-01-10']),
             'tidak cocok dengan aset' => $this->row(['id_aset' => $ok->id, 'serial_number' => 'SN-SALAH', 'badan_usaha_pembeli' => $this->beta->name, 'tanggal_penjualan' => '2026-01-10']),
         ];
 
@@ -149,7 +145,7 @@ class AssetSaleImportTest extends TestCase
                 $this->assertStringContainsString($expectedMessage, $exception->getUserMessage());
             }
 
-            $this->assertSame(0, AssetSale::query()->whereIn('asset_id', [$valid->id, $ok->id, $held->id])->count(), $expectedMessage);
+            $this->assertSame(0, AssetSale::query()->whereIn('asset_id', [$valid->id, $ok->id, $damaged->id])->count(), $expectedMessage);
             $this->assertSame($this->alpha->id, $valid->fresh()->business_entity_id, "{$expectedMessage}: baris benar di depan ikut dibatalkan.");
             $this->assertSame($this->alpha->id, $ok->fresh()->business_entity_id, $expectedMessage);
         }

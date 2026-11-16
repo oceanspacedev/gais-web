@@ -200,7 +200,7 @@ class AssetSaleResource extends Resource
 
     /**
      * Aksi jual tampil hanya bila aset memang bisa dijual oleh viewer: punya
-     * izin catat, aset di stok (Tersedia tanpa pemegang), dan badan usaha
+     * izin catat, aset Tersedia atau Digunakan (boleh ada pemegang), dan badan usaha
      * pemiliknya termasuk akses viewer. Aturan yang sama dipaksa lagi di
      * AssetSale::record().
      */
@@ -213,8 +213,8 @@ class AssetSaleResource extends Resource
             && ! $asset->trashed()
             && $asset->business_entity_id !== null
             && $viewer->canAccessBusinessEntity($asset->business_entity_id)
-            && $asset->condition_status === AssetCondition::Available
-            && $asset->recipient_id === null;
+            && $asset->condition_status instanceof AssetCondition
+            && $asset->condition_status->isTransferable();
     }
 
     /**
@@ -244,16 +244,15 @@ class AssetSaleResource extends Resource
     }
 
     /**
-     * Aset yang bisa dijual viewer: stok (Tersedia, tanpa pemegang) di badan
-     * usaha yang termasuk aksesnya. Dipakai pemilih aset di "Catat Penjualan".
+     * Aset yang bisa dijual viewer: Tersedia atau Digunakan (boleh ada
+     * pemegang) di badan usaha yang termasuk aksesnya. Dipakai pemilih aset di "Catat Penjualan".
      */
     public static function sellableAssets(): Builder
     {
         $viewer = Auth::user();
         $query = AssetResource::scopeToViewer(Asset::query(), $viewer)
             ->whereNotNull('business_entity_id')
-            ->where('condition_status', AssetCondition::Available->value)
-            ->whereNull('recipient_id');
+            ->whereIn('condition_status', AssetCondition::transferableValues());
 
         return $viewer instanceof User
             ? $viewer->limitToAccessibleBusinessEntities($query, 'assets.business_entity_id')

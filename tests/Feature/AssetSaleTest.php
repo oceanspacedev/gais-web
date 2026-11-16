@@ -139,14 +139,6 @@ class AssetSaleTest extends TestCase
             'condition_status' => AssetCondition::Transferred,
         ]);
 
-        try {
-            AssetSale::record($held, ['to_business_entity_id' => $this->beta->id, 'sold_at' => '2026-01-10'], $actor);
-            $this->fail('Aset yang masih dipegang tidak boleh dijual.');
-        } catch (AssetSaleException $exception) {
-            $this->assertStringContainsString('BA Pengembalian', $exception->getMessage());
-            $this->assertStringContainsString('__as_holder__', $exception->getMessage());
-        }
-
         $damaged = Asset::create(['name' => '__as_damaged__', 'business_entity_id' => $this->alpha->id, 'condition_status' => AssetCondition::Damaged]);
 
         try {
@@ -166,9 +158,31 @@ class AssetSaleTest extends TestCase
             $this->assertStringContainsString('Sampah', $exception->getMessage());
         }
 
-        $this->assertSame(0, AssetSale::query()->whereIn('asset_id', [$held->id, $damaged->id, $trashed->id])->count());
-        $this->assertSame($this->alpha->id, $held->fresh()->business_entity_id);
-        $this->assertSame($holder->id, $held->fresh()->recipient_id);
+        $this->assertSame(0, AssetSale::query()->whereIn('asset_id', [$damaged->id, $trashed->id])->count());
+    }
+
+    public function test_held_asset_can_be_sold_and_keeps_its_holder(): void
+    {
+        $actor = $this->userWith(self::PERMISSIONS, unrestricted: true);
+        $holder = User::factory()->create(['business_entity_id' => $this->alpha->id, 'name' => '__as_holder__']);
+        $held = Asset::create([
+            'name' => '__as_held__',
+            'business_entity_id' => $this->alpha->id,
+            'recipient_business_entity_id' => $this->alpha->id,
+            'recipient_id' => $holder->id,
+            'condition_status' => AssetCondition::Transferred,
+        ]);
+
+        $sale = AssetSale::record($held, ['to_business_entity_id' => $this->beta->id, 'sold_at' => '2026-01-10'], $actor);
+
+        $this->assertSame($this->alpha->id, $sale->from_business_entity_id);
+        $this->assertSame($this->beta->id, $sale->to_business_entity_id);
+
+        $fresh = $held->fresh();
+        $this->assertSame($this->beta->id, $fresh->business_entity_id);
+        $this->assertSame($holder->id, $fresh->recipient_id);
+        $this->assertSame($this->alpha->id, $fresh->recipient_business_entity_id);
+        $this->assertSame(AssetCondition::Transferred, $fresh->condition_status);
     }
 
     public function test_only_users_with_access_to_seller_and_buyer_entities_can_sell(): void
@@ -285,7 +299,7 @@ class AssetSaleTest extends TestCase
         ]);
 
         $this->actingAs($this->userWith(self::PERMISSIONS, unrestricted: true));
-        Livewire::test(ViewAsset::class, ['record' => $held->getRouteKey()])->assertActionHidden('sellToEntity');
+        Livewire::test(ViewAsset::class, ['record' => $held->getRouteKey()])->assertActionVisible('sellToEntity');
         Livewire::test(ViewAsset::class, ['record' => $asset->getRouteKey()])->assertActionVisible('sellToEntity');
     }
 
