@@ -62,7 +62,7 @@ class GuideCaptureSeeder extends Seeder
 
         $executor = $user('executor', 'Eko Executor', 'executor', ['division_id' => $ga->id]);
         $user('accounting', 'Ani Accounting', 'accounting');
-        $user('pemohon', 'Putri Pemohon', 'requester', ['division_id' => $sales->id, 'approver_user_id' => $executor->id]);
+        $user('pemohon', 'Putri Pemohon', 'requester', ['division_id' => $sales->id, 'approver_user_id' => $executor->id, 'whatsapp_number' => '081234567890', 'whatsapp_login_number' => '081234567890']);
 
         ItemRequestType::firstOrCreate(['name' => 'ATK'], ['pic_division_id' => $ga->id, 'requires_products' => true, 'is_active' => true]);
         ItemRequestType::firstOrCreate(['name' => 'PEMBELIAN INVENTARIS'], ['pic_division_id' => $ga->id, 'requires_products' => true, 'requires_accounting_approval' => true, 'is_active' => true]);

@@ -6,7 +6,7 @@ import ffmpeg from 'ffmpeg-static';
 
 export const ROOT = resolve(import.meta.dirname, '../..');
 export const OUT = join(ROOT, 'public/images/guide');
-export const PORT = 8099;
+export const PORT = Number(process.env.CAPTURE_PORT || 8099);
 export const BASE = `http://127.0.0.1:${PORT}`;
 export const PHP = process.env.PHP_BIN || 'C:/laragon/bin/php/php-8.4.25-Win32-vs17-x64/php.exe';
 
