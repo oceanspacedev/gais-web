@@ -15,7 +15,7 @@ class UserPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_user');
+        return $user->can('ViewAny:User');
     }
 
     /**
@@ -23,7 +23,7 @@ class UserPolicy
      */
     public function view(User $user, ?User $model = null): bool
     {
-        return $user->can('view_user') && $this->visibleUser($user, $model);
+        return $user->can('View:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -31,7 +31,7 @@ class UserPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_user');
+        return $user->can('Create:User');
     }
 
     /**
@@ -39,7 +39,7 @@ class UserPolicy
      */
     public function update(User $user, ?User $model = null): bool
     {
-        return $user->can('update_user') && $this->visibleUser($user, $model);
+        return $user->can('Update:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -47,7 +47,7 @@ class UserPolicy
      */
     public function delete(User $user, ?User $model = null): bool
     {
-        return $user->can('delete_user') && $this->visibleUser($user, $model);
+        return $user->can('Delete:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -55,7 +55,7 @@ class UserPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_user');
+        return $user->can('DeleteAny:User');
     }
 
     /**
@@ -63,7 +63,7 @@ class UserPolicy
      */
     public function forceDelete(User $user, ?User $model = null): bool
     {
-        return $user->can('force_delete_user') && $this->visibleUser($user, $model);
+        return $user->can('ForceDelete:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -71,7 +71,7 @@ class UserPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_user');
+        return $user->can('ForceDeleteAny:User');
     }
 
     /**
@@ -79,7 +79,7 @@ class UserPolicy
      */
     public function restore(User $user, ?User $model = null): bool
     {
-        return $user->can('restore_user') && $this->visibleUser($user, $model);
+        return $user->can('Restore:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -87,7 +87,7 @@ class UserPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_user');
+        return $user->can('RestoreAny:User');
     }
 
     /**
@@ -95,7 +95,7 @@ class UserPolicy
      */
     public function replicate(User $user, ?User $model = null): bool
     {
-        return $user->can('replicate_user') && $this->visibleUser($user, $model);
+        return $user->can('Replicate:User') && $this->visibleUser($user, $model);
     }
 
     /**
@@ -103,7 +103,7 @@ class UserPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_user');
+        return $user->can('Reorder:User');
     }
 
     /**
@@ -111,7 +111,7 @@ class UserPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_user');
+        return $user->can('Import:User');
     }
 
     /**
@@ -119,7 +119,7 @@ class UserPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_user');
+        return $user->can('Export:User');
     }
 
     /**
@@ -127,7 +127,7 @@ class UserPolicy
      */
     public function impersonate(User $user): bool
     {
-        return $user->can('impersonate_user');
+        return $user->can('Impersonate:User');
     }
 
     /**
@@ -135,7 +135,7 @@ class UserPolicy
      */
     public function manageAccess(User $user): bool
     {
-        return $user->can('manage_access_user');
+        return $user->can('ManageAccess:User');
     }
 
     /**
@@ -143,7 +143,7 @@ class UserPolicy
      */
     public function manageBusinessEntityAccess(User $user): bool
     {
-        return $user->can('manage_business_entity_access_user');
+        return $user->can('ManageBusinessEntityAccess:User');
     }
 
     /**

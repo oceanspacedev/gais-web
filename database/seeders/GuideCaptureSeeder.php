@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Enums\AssetCondition;
+use App\Enums\SecurityAnswerType;
 use App\Models\Area;
 use App\Models\Asset;
 use App\Models\AssetAttribute;
@@ -20,6 +21,7 @@ use App\Models\ObRoom;
 use App\Models\ObShift;
 use App\Models\ProblemReportCategory;
 use App\Models\Product;
+use App\Models\SecurityChecklistItem;
 use App\Models\UnitType;
 use App\Models\User;
 use App\Models\Vendor;
@@ -60,7 +62,7 @@ class GuideCaptureSeeder extends Seeder
 
         $executor = $user('executor', 'Eko Executor', 'executor', ['division_id' => $ga->id]);
         $user('accounting', 'Ani Accounting', 'accounting');
-        $user('pemohon', 'Putri Pemohon', 'requester', ['division_id' => $sales->id, 'approver_user_id' => $executor->id]);
+        $user('pemohon', 'Putri Pemohon', 'requester', ['division_id' => $sales->id, 'approver_user_id' => $executor->id, 'whatsapp_number' => '081234567890', 'whatsapp_login_number' => '081234567890']);
 
         ItemRequestType::firstOrCreate(['name' => 'ATK'], ['pic_division_id' => $ga->id, 'requires_products' => true, 'is_active' => true]);
         ItemRequestType::firstOrCreate(['name' => 'PEMBELIAN INVENTARIS'], ['pic_division_id' => $ga->id, 'requires_products' => true, 'requires_accounting_approval' => true, 'is_active' => true]);
@@ -133,5 +135,21 @@ class GuideCaptureSeeder extends Seeder
             ->map(fn (string $name): int => ObRoom::firstOrCreate(['name' => $name], ['is_active' => true])->id);
         $shift = ObShift::firstOrCreate(['name' => 'Shift Pagi'], ['start_time' => '07:00', 'end_time' => '15:00', 'is_active' => true]);
         $shift->rooms()->sync($rooms->mapWithKeys(fn (int $id, int $i): array => [$id => ['sort_order' => $i]])->all());
+
+        // Security: petugas jaga dan pertanyaan checksheet dengan kunci jawaban.
+        $user('satpam', 'Sigit Security', 'security');
+        $questions = [
+            ['Keamanan', 'Pintu gerbang depan', SecurityAnswerType::Choice, ['Terkunci', 'Terbuka', 'Rusak'], 'Terkunci'],
+            ['Keamanan', 'Ada tamu menginap?', SecurityAnswerType::YesNo, null, SecurityAnswerType::NO],
+            ['Kelistrikan', 'Lampu area parkir', SecurityAnswerType::Choice, ['Menyala semua', 'Ada yang mati'], 'Menyala semua'],
+            ['Kelistrikan', 'AC ruangan sudah dimatikan?', SecurityAnswerType::YesNo, null, SecurityAnswerType::YES],
+            ['Kebersihan', 'Halaman parkir', SecurityAnswerType::Choice, ['Bersih', 'Kotor'], 'Bersih'],
+        ];
+        foreach ($questions as $sort => [$section, $question, $type, $options, $key]) {
+            SecurityChecklistItem::withTrashed()->updateOrCreate(
+                ['question' => $question],
+                ['section' => $section, 'answer_type' => $type, 'options' => $options, 'answer_key' => $key, 'sort' => $sort + 1, 'is_active' => true, 'deleted_at' => null],
+            );
+        }
     }
 }

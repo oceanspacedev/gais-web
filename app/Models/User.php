@@ -64,6 +64,7 @@ class User extends Authenticatable implements FilamentUser, HasName
         'division_id',
         'approver_user_id',
         'legacy_sumo_user_id',
+        'login_disabled',
     ];
 
     /**
@@ -86,6 +87,7 @@ class User extends Authenticatable implements FilamentUser, HasName
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
         'access_all_business_entities' => 'boolean',
+        'login_disabled_at' => 'datetime',
     ];
 
     protected static function booted(): void
@@ -149,15 +151,32 @@ class User extends Authenticatable implements FilamentUser, HasName
     /**
      * Semua karyawan boleh masuk, termasuk yang belum diberi role: tanpa role
      * mereka hanya mendapat akses dasar (Lapor Gangguan miliknya dan Panduan);
-     * menu dan widget lain tetap dijaga izin Shield.
+     * menu dan widget lain tetap dijaga izin Shield. Akun yang loginnya
+     * dinonaktifkan (akun toko yang sudah digantikan akun pribadi) ditolak di
+     * semua cara login dan di sesi yang masih terbuka.
      */
     public function canAccessPanel(Panel $panel): bool
     {
-        return true;
+        return ! $this->isLoginDisabled();
+    }
+
+    public function isLoginDisabled(): bool
+    {
+        return $this->login_disabled_at !== null;
     }
 
     /**
-     * Filament Impersonate: controlled by the Shield `impersonate_user` permission.
+     * Saklar di form User; waktu penonaktifan pertama dipertahankan.
+     */
+    public function setLoginDisabledAttribute(mixed $disabled): void
+    {
+        $this->attributes['login_disabled_at'] = $disabled
+            ? ($this->attributes['login_disabled_at'] ?? $this->freshTimestampString())
+            : null;
+    }
+
+    /**
+     * Filament Impersonate: controlled by the Shield `Impersonate:User` permission.
      */
     public function canImpersonate(): bool
     {
@@ -165,15 +184,12 @@ class User extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
-     * Filament Impersonate: only users who can open the panel, only within
-     * the impersonator's business entities, and never a super admin unless
-     * the impersonator is a super admin too.
+     * Filament Impersonate: only users with a role, only within the
+     * impersonator's business entities, and never a super admin.
      */
     public function canBeImpersonated(): bool
     {
-        $superAdmin = config('filament-shield.super_admin.name', 'super_admin');
-
-        if ($this->roles->isEmpty()) {
+        if ($this->roles->isEmpty() || $this->isSuperAdmin()) {
             return false;
         }
 
@@ -183,15 +199,7 @@ class User extends Authenticatable implements FilamentUser, HasName
             return false;
         }
 
-        if (! $impersonator->canAccessBusinessEntity($this->business_entity_id)) {
-            return false;
-        }
-
-        if (! $this->hasRole($superAdmin)) {
-            return true;
-        }
-
-        return $impersonator->hasRole($superAdmin);
+        return $impersonator->canAccessBusinessEntity($this->business_entity_id);
     }
 
     public function isGeneralAffair(): bool

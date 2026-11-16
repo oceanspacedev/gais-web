@@ -75,6 +75,12 @@ class Guide extends Page
                 ['actor' => 'executor', 'title' => 'Mulai kerja', 'text' => 'Unggah foto sebelum. Status Pending menjadi In progress dan waktu mulai tercatat.'],
                 ['actor' => 'executor', 'title' => 'Selesai', 'text' => 'Unggah foto sesudah. Status Completed dan durasi dihitung otomatis.'],
             ],
+            'security' => [
+                ['actor' => 'manager', 'title' => 'Atasan menyiapkan pertanyaan', 'text' => 'Menu Pertanyaan Checksheet: tulis pertanyaan, pilih tipe jawaban, lalu centang Benar pada jawaban yang normal.'],
+                ['actor' => 'security', 'title' => 'Petugas mengisi laporan', 'text' => 'Isi lokasi, pilih jawaban tiap pertanyaan, tulis temuan bila ada, lampirkan foto atau video.'],
+                ['actor' => 'sistem', 'title' => 'Jawaban dicocokkan', 'text' => 'Nama petugas dan waktu tercatat otomatis. Jawaban yang beda dari kunci ditandai Tidak Sesuai.'],
+                ['actor' => 'manager', 'title' => 'Atasan memeriksa', 'text' => 'Filter Ada jawaban tidak sesuai atau Ada temuan kejadian, buka detailnya, atau export ke Excel.'],
+            ],
             'reminder' => [
                 ['actor' => 'sistem', 'title' => 'Scheduler jalan tiap jam', 'text' => 'Command reminder:whatsapp. Hanya mengirim sekali sehari, setelah jam kirim di pengaturan.'],
                 ['actor' => 'sistem', 'title' => 'Cari yang jatuh tempo', 'text' => 'Sewa dan asuransi pada hari H dan H-n (default 30, 14, 7, 1 hari), serta cutoff pengajuan (default 3 dan 1 hari).'],
@@ -93,7 +99,7 @@ class Guide extends Page
                 ['actor' => 'sistem', 'title' => 'Muat ke staging', 'text' => 'Job antrean long-running memuat dump ke tabel berawalan sumo_dump_ di database GAIS. Nama tabel di dump diberi awalan, jadi tabel GAIS tidak tersentuh.'],
                 ['actor' => 'sistem', 'title' => 'Uji coba otomatis', 'text' => 'Semua langkah dijalankan lalu di-rollback. Laporan jumlah, pemetaan badan usaha, dan peringatan user tampil di run.'],
                 ['actor' => 'admin', 'title' => 'Impor sungguhan', 'text' => 'Ketik IMPOR. Satu transaksi dan idempoten: memakai id sumo atau legacy_sumo_user_id, aman diulang.'],
-                ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke pengajuan_admin, accounting, executor, requester. Cache permission direset.'],
+                ['actor' => 'sistem', 'title' => 'Beri role dan izin', 'text' => 'Role sumo dipetakan ke general_affair (ADMIN), accounting, executor, requester. Cache permission direset.'],
             ],
         ];
     }

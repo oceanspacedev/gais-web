@@ -15,7 +15,7 @@ class ExceptionPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_exception');
+        return $user->can('ViewAny:Exception');
     }
 
     /**
@@ -23,7 +23,7 @@ class ExceptionPolicy
      */
     public function view(User $user, Exception $exception): bool
     {
-        return $user->can('view_exception');
+        return $user->can('View:Exception');
     }
 
     /**
@@ -31,7 +31,7 @@ class ExceptionPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_exception');
+        return $user->can('Create:Exception');
     }
 
     /**
@@ -39,7 +39,7 @@ class ExceptionPolicy
      */
     public function update(User $user, Exception $exception): bool
     {
-        return $user->can('update_exception');
+        return $user->can('Update:Exception');
     }
 
     /**
@@ -47,7 +47,7 @@ class ExceptionPolicy
      */
     public function delete(User $user, Exception $exception): bool
     {
-        return $user->can('delete_exception');
+        return $user->can('Delete:Exception');
     }
 
     /**
@@ -55,7 +55,7 @@ class ExceptionPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_exception');
+        return $user->can('DeleteAny:Exception');
     }
 
     /**
@@ -63,7 +63,7 @@ class ExceptionPolicy
      */
     public function forceDelete(User $user, Exception $exception): bool
     {
-        return $user->can('force_delete_exception');
+        return $user->can('ForceDelete:Exception');
     }
 
     /**
@@ -71,7 +71,7 @@ class ExceptionPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_exception');
+        return $user->can('ForceDeleteAny:Exception');
     }
 
     /**
@@ -79,7 +79,7 @@ class ExceptionPolicy
      */
     public function restore(User $user, Exception $exception): bool
     {
-        return $user->can('restore_exception');
+        return $user->can('Restore:Exception');
     }
 
     /**
@@ -87,7 +87,7 @@ class ExceptionPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_exception');
+        return $user->can('RestoreAny:Exception');
     }
 
     /**
@@ -95,7 +95,7 @@ class ExceptionPolicy
      */
     public function replicate(User $user, Exception $exception): bool
     {
-        return $user->can('replicate_exception');
+        return $user->can('Replicate:Exception');
     }
 
     /**
@@ -103,6 +103,6 @@ class ExceptionPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_exception');
+        return $user->can('Reorder:Exception');
     }
 }

@@ -23,7 +23,7 @@ class EnsureAssetExportPermissionsTest extends TestCase
 
     public function test_grants_export_asset_to_admin_and_general_affair_users(): void
     {
-        Permission::findOrCreate('export_asset', 'web');
+        Permission::findOrCreate('Export:Asset', 'web');
         Role::findOrCreate('admin', 'web');
         Role::findOrCreate('general_affair', 'web');
         Role::findOrCreate('Security', 'web');
@@ -37,11 +37,11 @@ class EnsureAssetExportPermissionsTest extends TestCase
 
         EnsureAssetExportPermissions::run();
 
-        $this->assertTrue($admin->fresh()->can('export_asset'));
+        $this->assertTrue($admin->fresh()->can('Export:Asset'));
         $this->assertTrue($admin->fresh()->can('export', Asset::class));
-        $this->assertTrue($generalAffair->fresh()->can('export_asset'));
+        $this->assertTrue($generalAffair->fresh()->can('Export:Asset'));
         $this->assertTrue($generalAffair->fresh()->can('export', Asset::class));
-        $this->assertFalse($security->fresh()->can('export_asset'));
+        $this->assertFalse($security->fresh()->can('Export:Asset'));
     }
 
     public function test_skips_missing_roles_and_is_idempotent(): void
@@ -49,7 +49,7 @@ class EnsureAssetExportPermissionsTest extends TestCase
         EnsureAssetExportPermissions::run(['__missing_asset_export_role__']);
         EnsureAssetExportPermissions::run(['__missing_asset_export_role__']);
 
-        $this->assertTrue(Permission::where('name', 'export_asset')->where('guard_name', 'web')->exists());
+        $this->assertTrue(Permission::where('name', 'Export:Asset')->where('guard_name', 'web')->exists());
         $this->assertFalse(Role::where('name', '__missing_asset_export_role__')->exists());
     }
 }

@@ -47,7 +47,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
- * Dasbor manajemen: setiap widget punya izin widget_* dan bisa dirender,
+ * Dasbor manajemen: setiap widget punya izin View:{NamaKelas} dan bisa dirender,
  * halaman dasbor menyusun seksi per modul sesuai izin pembaca.
  */
 class SumoDashboardWidgetsTest extends TestCase
@@ -104,7 +104,7 @@ class SumoDashboardWidgetsTest extends TestCase
     {
         $this->actingAsSuperAdmin();
 
-        $this->assertTrue(Permission::query()->where('name', 'widget_'.class_basename($widget))->where('guard_name', 'web')->exists(), 'Izin widget_'.class_basename($widget).' belum dibuat migrasi.');
+        $this->assertTrue(Permission::query()->where('name', 'View:'.class_basename($widget))->where('guard_name', 'web')->exists(), 'Izin View:'.class_basename($widget).' belum dibuat migrasi.');
         $this->assertTrue($widget::canView(), "{$widget} should be visible to a super admin.");
 
         $component = Livewire::test($widget)->assertOk();
@@ -114,7 +114,7 @@ class SumoDashboardWidgetsTest extends TestCase
             CustomAssetWidget::class => $component->assertSee('Nilai Aset Aktif')->assertSee('Rusak / Hilang'),
             SumoOverviewStats::class => $component->assertSee('Pengajuan Tahun Ini')->assertSee('Siap Diproses Executor'),
             ProblemReportOverviewStats::class => $component->assertSee('Laporan Terbuka')->assertSee('Rata-rata Penyelesaian'),
-            ContractOverviewStats::class => $component->assertSee('Polis Asuransi Aktif')->assertSee('Sewa Aktif'),
+            ContractOverviewStats::class => $component->assertSee('Polis Asuransi Bangunan Aktif')->assertSee('Sewa Aktif'),
             OperationsOverviewStats::class => $component->assertSee('Kebersihan Hari Ini')->assertSee('Pekerjaan Vendor Berjalan'),
             MasterDataOverview::class => $component->assertSee('Organisasi')->assertSee('Master Aset'),
             default => $component,

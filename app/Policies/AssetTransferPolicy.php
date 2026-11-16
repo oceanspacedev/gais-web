@@ -16,7 +16,7 @@ class AssetTransferPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset::transfer');
+        return $user->can('ViewAny:AssetTransfer');
     }
 
     /**
@@ -24,7 +24,7 @@ class AssetTransferPolicy
      */
     public function view(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('view_asset::transfer') && $this->visible($user, $assetTransfer);
+        return $user->can('View:AssetTransfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -32,7 +32,7 @@ class AssetTransferPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_asset::transfer');
+        return $user->can('Create:AssetTransfer');
     }
 
     /**
@@ -40,7 +40,7 @@ class AssetTransferPolicy
      */
     public function update(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('update_asset::transfer') && $this->editable($user, $assetTransfer);
+        return $user->can('Update:AssetTransfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -48,7 +48,7 @@ class AssetTransferPolicy
      */
     public function delete(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('delete_asset::transfer') && $this->editable($user, $assetTransfer);
+        return $user->can('Delete:AssetTransfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -56,7 +56,7 @@ class AssetTransferPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset::transfer');
+        return $user->can('DeleteAny:AssetTransfer');
     }
 
     /**
@@ -64,7 +64,7 @@ class AssetTransferPolicy
      */
     public function forceDelete(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('force_delete_asset::transfer') && $this->visible($user, $assetTransfer);
+        return $user->can('ForceDelete:AssetTransfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -72,7 +72,7 @@ class AssetTransferPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset::transfer');
+        return $user->can('ForceDeleteAny:AssetTransfer');
     }
 
     /**
@@ -80,7 +80,7 @@ class AssetTransferPolicy
      */
     public function restore(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('restore_asset::transfer') && $this->visible($user, $assetTransfer);
+        return $user->can('Restore:AssetTransfer') && $this->visible($user, $assetTransfer);
     }
 
     /**
@@ -88,7 +88,7 @@ class AssetTransferPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset::transfer');
+        return $user->can('RestoreAny:AssetTransfer');
     }
 
     /**
@@ -96,7 +96,7 @@ class AssetTransferPolicy
      */
     public function replicate(User $user, AssetTransfer $assetTransfer): bool
     {
-        return $user->can('replicate_asset::transfer') && $this->editable($user, $assetTransfer);
+        return $user->can('Replicate:AssetTransfer') && $this->editable($user, $assetTransfer);
     }
 
     /**
@@ -104,7 +104,7 @@ class AssetTransferPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset::transfer');
+        return $user->can('Reorder:AssetTransfer');
     }
 
     /**
@@ -112,7 +112,7 @@ class AssetTransferPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_asset::transfer');
+        return $user->can('Export:AssetTransfer');
     }
 
     /**
@@ -121,7 +121,7 @@ class AssetTransferPolicy
      */
     public function manageStock(User $user): bool
     {
-        return $user->can('manage_stock_asset::transfer');
+        return $user->can('ManageStock:AssetTransfer');
     }
 
     /**
@@ -129,7 +129,7 @@ class AssetTransferPolicy
      */
     public function updateCore(User $user): bool
     {
-        return $user->can('update_core_asset::transfer');
+        return $user->can('UpdateCore:AssetTransfer');
     }
 
     /**
@@ -137,6 +137,6 @@ class AssetTransferPolicy
      */
     public function deleteDetail(User $user): bool
     {
-        return $user->can('delete_detail_asset::transfer');
+        return $user->can('DeleteDetail:AssetTransfer');
     }
 }

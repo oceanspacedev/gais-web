@@ -13,62 +13,62 @@ class ItemRequestPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_item::request');
+        return $user->can('ViewAny:ItemRequest');
     }
 
     public function view(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('view_item::request') && $this->visible($user, $itemRequest);
+        return $user->can('View:ItemRequest') && $this->visible($user, $itemRequest);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_item::request');
+        return $user->can('Create:ItemRequest');
     }
 
     public function update(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('update_item::request') && $this->editable($user, $itemRequest);
+        return $user->can('Update:ItemRequest') && $this->editable($user, $itemRequest);
     }
 
     public function delete(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('delete_item::request') && $this->editable($user, $itemRequest);
+        return $user->can('Delete:ItemRequest') && $this->editable($user, $itemRequest);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_item::request');
+        return $user->can('DeleteAny:ItemRequest');
     }
 
     public function forceDelete(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('force_delete_item::request') && $this->visible($user, $itemRequest);
+        return $user->can('ForceDelete:ItemRequest') && $this->visible($user, $itemRequest);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_item::request');
+        return $user->can('ForceDeleteAny:ItemRequest');
     }
 
     public function restore(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('restore_item::request') && $this->visible($user, $itemRequest);
+        return $user->can('Restore:ItemRequest') && $this->visible($user, $itemRequest);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_item::request');
+        return $user->can('RestoreAny:ItemRequest');
     }
 
     public function replicate(User $user, ItemRequest $itemRequest): bool
     {
-        return $user->can('replicate_item::request') && $this->editable($user, $itemRequest);
+        return $user->can('Replicate:ItemRequest') && $this->editable($user, $itemRequest);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_item::request');
+        return $user->can('Reorder:ItemRequest');
     }
 
     /**
@@ -76,7 +76,7 @@ class ItemRequestPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_item::request');
+        return $user->can('Export:ItemRequest');
     }
 
     /**
@@ -84,7 +84,7 @@ class ItemRequestPolicy
      */
     public function viewAll(User $user): bool
     {
-        return $user->can('view_all_item::request');
+        return $user->can('ViewAll:ItemRequest');
     }
 
     /**
@@ -92,7 +92,7 @@ class ItemRequestPolicy
      */
     public function approveAccounting(User $user): bool
     {
-        return $user->can('approve_accounting_item::request');
+        return $user->can('ApproveAccounting:ItemRequest');
     }
 
     /**
@@ -100,7 +100,7 @@ class ItemRequestPolicy
      */
     public function approveManager(User $user): bool
     {
-        return $user->can('approve_manager_item::request');
+        return $user->can('ApproveManager:ItemRequest');
     }
 
     /**
@@ -108,7 +108,7 @@ class ItemRequestPolicy
      */
     public function process(User $user): bool
     {
-        return $user->can('process_item::request');
+        return $user->can('Process:ItemRequest');
     }
 
     /**
@@ -116,7 +116,7 @@ class ItemRequestPolicy
      */
     public function audit(User $user): bool
     {
-        return $user->can('audit_item::request');
+        return $user->can('Audit:ItemRequest');
     }
 
     /**
@@ -124,6 +124,6 @@ class ItemRequestPolicy
      */
     public function changeApplicant(User $user): bool
     {
-        return $user->can('change_applicant_item::request');
+        return $user->can('ChangeApplicant:ItemRequest');
     }
 }

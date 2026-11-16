@@ -13,62 +13,62 @@ class RentPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_rent');
+        return $user->can('ViewAny:Rent');
     }
 
     public function view(User $user, Rent $rent): bool
     {
-        return $user->can('view_rent') && $this->visible($user, $rent);
+        return $user->can('View:Rent') && $this->visible($user, $rent);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_rent');
+        return $user->can('Create:Rent');
     }
 
     public function update(User $user, Rent $rent): bool
     {
-        return $user->can('update_rent') && $this->editable($user, $rent);
+        return $user->can('Update:Rent') && $this->editable($user, $rent);
     }
 
     public function delete(User $user, Rent $rent): bool
     {
-        return $user->can('delete_rent') && $this->editable($user, $rent);
+        return $user->can('Delete:Rent') && $this->editable($user, $rent);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_rent');
+        return $user->can('DeleteAny:Rent');
     }
 
     public function forceDelete(User $user, Rent $rent): bool
     {
-        return $user->can('force_delete_rent') && $this->visible($user, $rent);
+        return $user->can('ForceDelete:Rent') && $this->visible($user, $rent);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_rent');
+        return $user->can('ForceDeleteAny:Rent');
     }
 
     public function restore(User $user, Rent $rent): bool
     {
-        return $user->can('restore_rent') && $this->visible($user, $rent);
+        return $user->can('Restore:Rent') && $this->visible($user, $rent);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_rent');
+        return $user->can('RestoreAny:Rent');
     }
 
     public function replicate(User $user, Rent $rent): bool
     {
-        return $user->can('replicate_rent') && $this->editable($user, $rent);
+        return $user->can('Replicate:Rent') && $this->editable($user, $rent);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_rent');
+        return $user->can('Reorder:Rent');
     }
 
     /**
@@ -76,7 +76,7 @@ class RentPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_rent');
+        return $user->can('Export:Rent');
     }
 
     /**
@@ -84,6 +84,6 @@ class RentPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_rent');
+        return $user->can('Import:Rent');
     }
 }

@@ -6,6 +6,7 @@ use App\Enums\AssetCondition;
 use App\Models\Asset;
 use App\Models\Category;
 use App\Models\CustomAssetAttribute;
+use App\Models\VehicleInsurance;
 use App\Support\VehiclePlateNormalizer;
 use LogicException;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
@@ -115,7 +116,7 @@ class VehicleAssetAuditWorkbookExporter
             ['Export → isi ACCOUNTING / CEK KEBERADAAN / BPKB / EXPIRED STNK / KIR → Import VEHICLE_AUDIT → Laporan → Apply'],
             ['Jangan ubah kolom NOMOR POLISI kecuali koreksi plat.'],
             ['Tandai TERJUAL pada ACCOUNTING atau NAMA STNK untuk unit yang sudah dijual.'],
-            ['EXPIRED STNK / KIR / PAJAK / ASURANSI mengisi custom attribute Dokumen/Masa Berlaku (pengingat H-30).'],
+            ['EXPIRED STNK / KIR / PAJAK mengisi custom attribute Dokumen/Masa Berlaku (pengingat H-30); kolom asuransi dicatat ke menu Asuransi Kendaraan.'],
             ['BPKB dan Pemegang Inventaris disimpan sebagai attribute teks; lokasi diisi dari CEK KEBERADAAN bila cocok.'],
             ['Sheet KIR (Validity) digabung otomatis saat Import.'],
             ['Apply tidak menghapus aset; duplikat dinonaktifkan (inventory_active=false).'],
@@ -144,9 +145,6 @@ class VehicleAssetAuditWorkbookExporter
         $taxAttributeId = CustomAssetAttribute::query()
             ->where('name', config('vehicle-asset-reconciliation.tax_attribute_name', 'Pajak'))
             ->value('id');
-        $insuranceAttributeId = CustomAssetAttribute::query()
-            ->where('name', config('vehicle-asset-reconciliation.insurance_attribute_name', 'Asuransi'))
-            ->value('id');
         $bpkbAttributeId = CustomAssetAttribute::query()
             ->where('name', config('vehicle-asset-reconciliation.bpkb_attribute_name', 'BPKB'))
             ->value('id');
@@ -168,9 +166,19 @@ class VehicleAssetAuditWorkbookExporter
             ->orderBy('id')
             ->get();
 
+        // Asuransi diambil dari menu Asuransi Kendaraan (polis terbaru per aset, nilai pembaharuan terakhir).
+        $insurances = VehicleInsurance::query()
+            ->whereIn('asset_id', $assets->modelKeys())
+            ->with(['updates.provider', 'provider'])
+            ->orderBy('id')
+            ->get()
+            ->keyBy('asset_id');
+
         $rows = [];
 
         foreach ($assets as $asset) {
+            $insurance = $insurances->get($asset->id);
+
             $plate = null;
             if ($plateAttributeId !== null) {
                 $plate = VehiclePlateNormalizer::display(
@@ -192,10 +200,10 @@ class VehicleAssetAuditWorkbookExporter
                 'stnk_expires_at' => $this->documentExpiry($asset, $stnkAttributeId),
                 'kir_expires_at' => $this->documentExpiry($asset, $kirAttributeId),
                 'tax_expires_at' => $this->documentExpiry($asset, $taxAttributeId),
-                'insurance_expires_at' => $this->documentExpiry($asset, $insuranceAttributeId),
-                'insurance_policy_number' => $this->documentNumber($asset, $insuranceAttributeId),
-                'insurance_name' => null,
-                'insurance_type' => null,
+                'insurance_expires_at' => $insurance?->effectiveExpiredDate()?->toDateString(),
+                'insurance_policy_number' => $insurance?->effective('policy_number'),
+                'insurance_name' => $insurance?->effectiveRow()->provider?->name,
+                'insurance_type' => $insurance?->effective('extension_of_policy'),
                 'bpkb' => $bpkbAttributeId
                     ? $asset->attributes->firstWhere('custom_attribute_id', $bpkbAttributeId)?->attribute_value
                     : null,
@@ -216,13 +224,6 @@ class VehicleAssetAuditWorkbookExporter
         $decoded = $this->documentPayload($asset, $attributeId);
 
         return $decoded['expires_at'] ?? null;
-    }
-
-    private function documentNumber(Asset $asset, ?int $attributeId): ?string
-    {
-        $decoded = $this->documentPayload($asset, $attributeId);
-
-        return $decoded['document_number'] ?? null;
     }
 
     /** @return array<string, mixed> */

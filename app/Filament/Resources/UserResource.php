@@ -10,10 +10,12 @@ use App\Filament\Resources\UserResource\RelationManagers\ItemRequestApprovalsRel
 use App\Filament\Resources\UserResource\RelationManagers\ItemRequestsRelationManager;
 use App\Filament\Resources\UserResource\RelationManagers\ProblemReportsRelationManager;
 use App\Models\BusinessEntity;
+use App\Models\Division;
 use App\Models\JobTitle;
 use App\Models\User;
 use App\Support\PhoneNumber;
 use App\Support\RelationSearch;
+use Filament\Actions\BulkAction;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -30,8 +32,10 @@ use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Spatie\Permission\Models\Role;
@@ -179,6 +183,15 @@ class UserResource extends Resource
                             ->searchable()
                             ->columnSpan(['md' => 2])
                             ->visible($canManageAccess),
+                        // Untuk akun bersama toko/divisi yang sudah digantikan akun pribadi
+                        // karyawannya: riwayatnya tetap, tetapi tidak bisa dipakai login lagi.
+                        Toggle::make('login_disabled')
+                            ->label('Nonaktifkan login')
+                            ->helperText('Akun tidak bisa login dengan cara apa pun; riwayat pengajuan dan laporannya tetap ada.')
+                            ->afterStateHydrated(fn (Toggle $component, ?User $record) => $component->state($record?->isLoginDisabled() ?? false))
+                            ->disabled(fn (?User $record): bool => $record !== null && $record->is(Auth::user()))
+                            ->columnSpanFull()
+                            ->visible($canManageAccess),
                     ])->visible($canManageAccess),
                 // Izin sendiri, terpisah dari "Kelola Akses": pemegangnya belum tentu
                 // boleh mengubah username, password, atau role.
@@ -233,6 +246,7 @@ class UserResource extends Resource
                 TextColumn::make('division.name')
                     ->label('Divisi')
                     ->placeholder('-')
+                    ->description(fn (User $record): ?string => $record->isLoginDisabled() ? 'Login dinonaktifkan' : null)
                     ->toggleable(),
                 TextColumn::make('approver.name')
                     ->label('Atasan')
@@ -266,6 +280,23 @@ class UserResource extends Resource
                     ->label('Job Title')
                     ->searchable()
                     ->preload(),
+                SelectFilter::make('division')
+                    ->relationship('division', 'name', modifyQueryUsing: fn (Builder $query): Builder => $query->withoutTrashed())
+                    ->label('Divisi')
+                    ->searchable(),
+                TernaryFilter::make('has_division')
+                    ->label('Punya divisi')
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereNotNull('division_id'),
+                        false: fn (Builder $query): Builder => $query->whereNull('division_id'),
+                    ),
+                TernaryFilter::make('login_disabled')
+                    ->label('Login dinonaktifkan')
+                    ->queries(
+                        true: fn (Builder $query): Builder => $query->whereNotNull('login_disabled_at'),
+                        false: fn (Builder $query): Builder => $query->whereNull('login_disabled_at'),
+                    )
+                    ->visible($canManageAccess),
                 SelectFilter::make('roles')
                     ->relationship('roles', 'name')
                     ->label('Roles')
@@ -285,6 +316,25 @@ class UserResource extends Resource
             ])
             ->bulkActions([
                 BulkActionGroup::make([
+                    // Talenta hanya tahu organisasi (mis. RETAIL STORE), bukan tokonya:
+                    // karyawan satu toko dipilih lalu ditempatkan sekaligus.
+                    BulkAction::make('setDivision')
+                        ->label('Atur divisi/toko')
+                        ->icon('heroicon-o-building-storefront')
+                        ->schema([
+                            Select::make('division_id')
+                                ->label('Divisi')
+                                ->options(fn (): array => Division::query()->orderBy('name')->pluck('name', 'id')->all())
+                                ->searchable()
+                                ->required(),
+                        ])
+                        ->action(function (Collection $records, array $data): void {
+                            $records
+                                ->filter(fn (User $record): bool => Auth::user()->can('update', $record))
+                                ->each(fn (User $record) => $record->update(['division_id' => $data['division_id']]));
+                        })
+                        ->deselectRecordsAfterCompletion()
+                        ->successNotificationTitle('Divisi diperbarui'),
                     DeleteBulkAction::make(),
                 ]),
             ]);

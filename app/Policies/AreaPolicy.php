@@ -13,61 +13,61 @@ class AreaPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_area');
+        return $user->can('ViewAny:Area');
     }
 
     public function view(User $user, Area $area): bool
     {
-        return $user->can('view_area') && $this->visible($user, $area);
+        return $user->can('View:Area') && $this->visible($user, $area);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_area');
+        return $user->can('Create:Area');
     }
 
     public function update(User $user, Area $area): bool
     {
-        return $user->can('update_area') && $this->editable($user, $area);
+        return $user->can('Update:Area') && $this->editable($user, $area);
     }
 
     public function delete(User $user, Area $area): bool
     {
-        return $user->can('delete_area') && $this->editable($user, $area);
+        return $user->can('Delete:Area') && $this->editable($user, $area);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_area');
+        return $user->can('DeleteAny:Area');
     }
 
     public function forceDelete(User $user, Area $area): bool
     {
-        return $user->can('force_delete_area') && $this->visible($user, $area);
+        return $user->can('ForceDelete:Area') && $this->visible($user, $area);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_area');
+        return $user->can('ForceDeleteAny:Area');
     }
 
     public function restore(User $user, Area $area): bool
     {
-        return $user->can('restore_area') && $this->visible($user, $area);
+        return $user->can('Restore:Area') && $this->visible($user, $area);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_area');
+        return $user->can('RestoreAny:Area');
     }
 
     public function replicate(User $user, Area $area): bool
     {
-        return $user->can('replicate_area') && $this->editable($user, $area);
+        return $user->can('Replicate:Area') && $this->editable($user, $area);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_area');
+        return $user->can('Reorder:Area');
     }
 }

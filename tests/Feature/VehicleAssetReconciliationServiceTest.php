@@ -12,6 +12,7 @@ use App\Models\BusinessEntity;
 use App\Models\Category;
 use App\Models\CustomAssetAttribute;
 use App\Models\User;
+use App\Models\VehicleInsurance;
 use App\Services\VehicleAssetAuditWorkbookParser;
 use App\Services\VehicleAssetReconciliationService;
 use Illuminate\Database\Schema\Blueprint;
@@ -23,6 +24,7 @@ use LogicException;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\Support\AssetIdentitySchema;
+use Tests\Support\VehicleInsuranceSchema;
 use Tests\TestCase;
 
 class VehicleAssetReconciliationServiceTest extends TestCase
@@ -151,6 +153,8 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         });
 
         AssetIdentitySchema::ensure();
+
+        VehicleInsuranceSchema::ensure();
 
         $migration = require database_path('migrations/2026_08_01_000001_create_asset_reconciliation_tables.php');
         $migration->up();
@@ -298,14 +302,14 @@ class VehicleAssetReconciliationServiceTest extends TestCase
         $this->assertSame('2026-09-15', $kir['expires_at'] ?? null);
 
         $pajakId = CustomAssetAttribute::query()->where('name', 'Pajak')->value('id');
-        $asuransiId = CustomAssetAttribute::query()->where('name', 'Asuransi')->value('id');
         $bpkbId = CustomAssetAttribute::query()->where('name', 'BPKB')->value('id');
         $holderId = CustomAssetAttribute::query()->where('name', 'Pemegang Inventaris')->value('id');
         $pajak = json_decode((string) $created->attributes->firstWhere('custom_attribute_id', $pajakId)?->attribute_value, true);
-        $asuransi = json_decode((string) $created->attributes->firstWhere('custom_attribute_id', $asuransiId)?->attribute_value, true);
+        // Asuransi dari audit dicatat ke menu Asuransi Kendaraan, bukan atribut aset.
+        $asuransi = VehicleInsurance::query()->where('asset_id', $created->id)->firstOrFail();
         $this->assertSame('2026-10-01', $pajak['expires_at'] ?? null);
-        $this->assertSame('2026-05-01', $asuransi['expires_at'] ?? null);
-        $this->assertSame('POL5', $asuransi['document_number'] ?? null);
+        $this->assertSame('2026-05-01', $asuransi->expired_date?->toDateString());
+        $this->assertSame('POL5', $asuransi->policy_number);
         $this->assertSame('ADA | No: N-9999', $created->attributes->firstWhere('custom_attribute_id', $bpkbId)?->attribute_value);
         $this->assertSame('TEST HOLDER', $created->attributes->firstWhere('custom_attribute_id', $holderId)?->attribute_value);
 

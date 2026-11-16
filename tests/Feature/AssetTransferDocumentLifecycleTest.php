@@ -254,7 +254,7 @@ class AssetTransferDocumentLifecycleTest extends TestCase
         [$entity, $generalAffair, $secondGeneralAffair, $holder, $nextHolder] = $this->fixtureUsers();
         // Seperti di production, super admin memegang izin "Kelola BA Stok"; rolenya sendiri tidak memberi akses.
         Role::create(['name' => config('filament-shield.super_admin.name', 'super_admin'), 'guard_name' => 'web'])
-            ->givePermissionTo(Permission::create(['name' => 'manage_stock_asset::transfer', 'guard_name' => 'web']));
+            ->givePermissionTo(Permission::create(['name' => 'ManageStock:AssetTransfer', 'guard_name' => 'web']));
         $superAdmin = User::create(['name' => 'Super Admin']);
         $superAdmin->assignRole(config('filament-shield.super_admin.name', 'super_admin'));
 
@@ -283,7 +283,7 @@ class AssetTransferDocumentLifecycleTest extends TestCase
     public function test_stock_manager_permission_allows_stock_transfers_on_behalf_of_general_affair_staff(): void
     {
         [$entity, $generalAffair, $secondGeneralAffair, $holder] = $this->fixtureUsers();
-        $permission = Permission::create(['name' => 'manage_stock_asset::transfer', 'guard_name' => 'web']);
+        $permission = Permission::create(['name' => 'ManageStock:AssetTransfer', 'guard_name' => 'web']);
         Role::create(['name' => 'admin', 'guard_name' => 'web'])->givePermissionTo($permission);
         $admin = User::create(['name' => 'Admin Kantor']);
         $admin->assignRole('admin');

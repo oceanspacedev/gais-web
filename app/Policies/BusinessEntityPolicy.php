@@ -16,7 +16,7 @@ class BusinessEntityPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_business::entity');
+        return $user->can('ViewAny:BusinessEntity');
     }
 
     /**
@@ -24,7 +24,7 @@ class BusinessEntityPolicy
      */
     public function view(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('view_business::entity') && $this->visible($user, $businessEntity);
+        return $user->can('View:BusinessEntity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -32,7 +32,7 @@ class BusinessEntityPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_business::entity');
+        return $user->can('Create:BusinessEntity');
     }
 
     /**
@@ -40,7 +40,7 @@ class BusinessEntityPolicy
      */
     public function update(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('update_business::entity') && $this->editable($user, $businessEntity);
+        return $user->can('Update:BusinessEntity') && $this->editable($user, $businessEntity);
     }
 
     /**
@@ -48,7 +48,7 @@ class BusinessEntityPolicy
      */
     public function delete(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('delete_business::entity') && $this->editable($user, $businessEntity);
+        return $user->can('Delete:BusinessEntity') && $this->editable($user, $businessEntity);
     }
 
     /**
@@ -56,7 +56,7 @@ class BusinessEntityPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_business::entity');
+        return $user->can('DeleteAny:BusinessEntity');
     }
 
     /**
@@ -64,7 +64,7 @@ class BusinessEntityPolicy
      */
     public function forceDelete(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('force_delete_business::entity') && $this->visible($user, $businessEntity);
+        return $user->can('ForceDelete:BusinessEntity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -72,7 +72,7 @@ class BusinessEntityPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_business::entity');
+        return $user->can('ForceDeleteAny:BusinessEntity');
     }
 
     /**
@@ -80,7 +80,7 @@ class BusinessEntityPolicy
      */
     public function restore(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('restore_business::entity') && $this->visible($user, $businessEntity);
+        return $user->can('Restore:BusinessEntity') && $this->visible($user, $businessEntity);
     }
 
     /**
@@ -88,7 +88,7 @@ class BusinessEntityPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_business::entity');
+        return $user->can('RestoreAny:BusinessEntity');
     }
 
     /**
@@ -96,7 +96,7 @@ class BusinessEntityPolicy
      */
     public function replicate(User $user, BusinessEntity $businessEntity): bool
     {
-        return $user->can('replicate_business::entity') && $this->editable($user, $businessEntity);
+        return $user->can('Replicate:BusinessEntity') && $this->editable($user, $businessEntity);
     }
 
     /**
@@ -104,6 +104,6 @@ class BusinessEntityPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_business::entity');
+        return $user->can('Reorder:BusinessEntity');
     }
 }

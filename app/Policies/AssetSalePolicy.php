@@ -18,62 +18,62 @@ class AssetSalePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset::sale');
+        return $user->can('ViewAny:AssetSale');
     }
 
     public function view(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('view_asset::sale') && $this->visible($user, $assetSale);
+        return $user->can('View:AssetSale') && $this->visible($user, $assetSale);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_asset::sale');
+        return $user->can('Create:AssetSale');
     }
 
     public function update(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('update_asset::sale') && $this->editable($user, $assetSale);
+        return $user->can('Update:AssetSale') && $this->editable($user, $assetSale);
     }
 
     public function delete(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('delete_asset::sale') && $this->editable($user, $assetSale);
+        return $user->can('Delete:AssetSale') && $this->editable($user, $assetSale);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset::sale');
+        return $user->can('DeleteAny:AssetSale');
     }
 
     public function forceDelete(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('force_delete_asset::sale') && $this->visible($user, $assetSale);
+        return $user->can('ForceDelete:AssetSale') && $this->visible($user, $assetSale);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset::sale');
+        return $user->can('ForceDeleteAny:AssetSale');
     }
 
     public function restore(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('restore_asset::sale') && $this->visible($user, $assetSale);
+        return $user->can('Restore:AssetSale') && $this->visible($user, $assetSale);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset::sale');
+        return $user->can('RestoreAny:AssetSale');
     }
 
     public function replicate(User $user, AssetSale $assetSale): bool
     {
-        return $user->can('replicate_asset::sale') && $this->editable($user, $assetSale);
+        return $user->can('Replicate:AssetSale') && $this->editable($user, $assetSale);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset::sale');
+        return $user->can('Reorder:AssetSale');
     }
 
     /**
@@ -81,7 +81,7 @@ class AssetSalePolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_asset::sale');
+        return $user->can('Export:AssetSale');
     }
 
     /**
@@ -89,6 +89,6 @@ class AssetSalePolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_asset::sale');
+        return $user->can('Import:AssetSale');
     }
 }

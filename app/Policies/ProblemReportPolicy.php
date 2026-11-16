@@ -13,62 +13,62 @@ class ProblemReportPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_problem::report');
+        return $user->can('ViewAny:ProblemReport');
     }
 
     public function view(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('view_problem::report') && $this->visible($user, $problemReport);
+        return $user->can('View:ProblemReport') && $this->visible($user, $problemReport);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_problem::report');
+        return $user->can('Create:ProblemReport');
     }
 
     public function update(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('update_problem::report') && $this->editable($user, $problemReport);
+        return $user->can('Update:ProblemReport') && $this->editable($user, $problemReport);
     }
 
     public function delete(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('delete_problem::report') && $this->editable($user, $problemReport);
+        return $user->can('Delete:ProblemReport') && $this->editable($user, $problemReport);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_problem::report');
+        return $user->can('DeleteAny:ProblemReport');
     }
 
     public function forceDelete(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('force_delete_problem::report') && $this->visible($user, $problemReport);
+        return $user->can('ForceDelete:ProblemReport') && $this->visible($user, $problemReport);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_problem::report');
+        return $user->can('ForceDeleteAny:ProblemReport');
     }
 
     public function restore(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('restore_problem::report') && $this->visible($user, $problemReport);
+        return $user->can('Restore:ProblemReport') && $this->visible($user, $problemReport);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_problem::report');
+        return $user->can('RestoreAny:ProblemReport');
     }
 
     public function replicate(User $user, ProblemReport $problemReport): bool
     {
-        return $user->can('replicate_problem::report') && $this->editable($user, $problemReport);
+        return $user->can('Replicate:ProblemReport') && $this->editable($user, $problemReport);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_problem::report');
+        return $user->can('Reorder:ProblemReport');
     }
 
     /**
@@ -76,7 +76,7 @@ class ProblemReportPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_problem::report');
+        return $user->can('Export:ProblemReport');
     }
 
     /**
@@ -84,7 +84,7 @@ class ProblemReportPolicy
      */
     public function viewAll(User $user): bool
     {
-        return $user->can('view_all_problem::report');
+        return $user->can('ViewAll:ProblemReport');
     }
 
     /**
@@ -92,6 +92,6 @@ class ProblemReportPolicy
      */
     public function process(User $user): bool
     {
-        return $user->can('process_problem::report');
+        return $user->can('Process:ProblemReport');
     }
 }

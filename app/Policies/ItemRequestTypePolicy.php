@@ -13,61 +13,61 @@ class ItemRequestTypePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_item::request::type');
+        return $user->can('ViewAny:ItemRequestType');
     }
 
     public function view(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('view_item::request::type') && $this->visible($user, $itemRequestType);
+        return $user->can('View:ItemRequestType') && $this->visible($user, $itemRequestType);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_item::request::type');
+        return $user->can('Create:ItemRequestType');
     }
 
     public function update(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('update_item::request::type') && $this->editable($user, $itemRequestType);
+        return $user->can('Update:ItemRequestType') && $this->editable($user, $itemRequestType);
     }
 
     public function delete(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('delete_item::request::type') && $this->editable($user, $itemRequestType);
+        return $user->can('Delete:ItemRequestType') && $this->editable($user, $itemRequestType);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_item::request::type');
+        return $user->can('DeleteAny:ItemRequestType');
     }
 
     public function forceDelete(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('force_delete_item::request::type') && $this->visible($user, $itemRequestType);
+        return $user->can('ForceDelete:ItemRequestType') && $this->visible($user, $itemRequestType);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_item::request::type');
+        return $user->can('ForceDeleteAny:ItemRequestType');
     }
 
     public function restore(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('restore_item::request::type') && $this->visible($user, $itemRequestType);
+        return $user->can('Restore:ItemRequestType') && $this->visible($user, $itemRequestType);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_item::request::type');
+        return $user->can('RestoreAny:ItemRequestType');
     }
 
     public function replicate(User $user, ItemRequestType $itemRequestType): bool
     {
-        return $user->can('replicate_item::request::type') && $this->editable($user, $itemRequestType);
+        return $user->can('Replicate:ItemRequestType') && $this->editable($user, $itemRequestType);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_item::request::type');
+        return $user->can('Reorder:ItemRequestType');
     }
 }

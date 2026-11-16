@@ -8,7 +8,7 @@ use Spatie\Permission\PermissionRegistrar;
 
 final class EnsureAssetExportPermissions
 {
-    public const PERMISSION = 'export_asset';
+    public const PERMISSION = 'Export:Asset';
 
     /** @var list<string> */
     public const ROLE_NAMES = ['admin', 'general_affair'];

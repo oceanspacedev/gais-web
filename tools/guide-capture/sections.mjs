@@ -476,6 +476,78 @@ export default [
     },
   },
 
+  // ---- Security: atasan mengatur pertanyaan, petugas mengisi laporan ----
+  {
+    id: 'security-pertanyaan',
+    async run(page, r) {
+      await openMenu(page, r, 'Pertanyaan Checksheet', 'security-checklist-items');
+      await r.shot('daftar-pertanyaan');
+      await r.action('Tambah');
+      const modal = r.modal();
+      await r.fill('Pertanyaan', 'APAR lobi');
+      await r.click(modal.getByText('Pilih beberapa', { exact: true }));
+      await r.pause(1200);
+      // Footer slide-over menempel di bawah: geser elemen ke tengah dulu supaya klik tidak kena tombol footer.
+      const center = async (loc) => { await loc.evaluate((e) => e.scrollIntoView({ block: 'center' })); await r.pause(300); return loc; };
+      await r.type(await center(modal.getByPlaceholder('Pilihan').nth(0)), 'Tersegel');
+      await r.type(await center(modal.getByPlaceholder('Pilihan').nth(1)), 'Tekanan normal');
+      await r.click(await center(modal.getByRole('button', { name: 'Tambah pilihan' })));
+      await r.pause(1200);
+      await r.type(await center(modal.getByPlaceholder('Pilihan').nth(2)), 'Kedaluwarsa');
+      await r.click(await center(modal.locator('.fi-fo-repeater input[type=checkbox]').nth(0)));
+      await r.click(await center(modal.locator('.fi-fo-repeater input[type=checkbox]').nth(1)));
+      await center(r.field('Kelompok'));
+      await r.fill('Kelompok', 'Kondisi Aset');
+      await r.shot('form-pertanyaan', modal);
+      await r.click(modal.getByRole('button', { name: 'Buat', exact: true }));
+      await modal.waitFor({ state: 'hidden', timeout: 30000 });
+      await r.pause(1500);
+      await r.shot('pertanyaan-tersimpan', page.locator('.fi-ta-row').filter({ hasText: 'APAR lobi' }).first());
+      await r.action('Pratinjau');
+      await r.shot('pratinjau', r.modal());
+      await page.keyboard.press('Escape');
+      await r.pause(800);
+    },
+  },
+  {
+    id: 'security-laporan', // butuh pertanyaan "APAR lobi" dari bagian security-pertanyaan
+    user: 'satpam',
+    async run(page, r) {
+      const photo = await r.sampleImage('pos-jaga.png', '<div style="background:#e0f2fe;height:352px;padding:24px;box-sizing:border-box"><b>FOTO CONTOH</b><br>Lampu parkir sisi timur mati</div>');
+      await openMenu(page, r, 'Security Checksheet', 'security-checksheets');
+      await r.shot('daftar-laporan');
+      await r.click(page.locator('.fi-header').getByRole('link', { name: /Buat|Baru|Tambah/ }).first());
+      await waitPage(page, /create$/);
+      await r.pause(1000);
+      await r.fill('Lokasi Kerja', 'Kantor Pusat');
+      const answer = async (question, option) => r.click(r.field(question).getByText(option, { exact: true }).first());
+      await answer('Pintu gerbang depan', 'Terkunci');
+      await answer('Ada tamu menginap?', 'Tidak');
+      await answer('Lampu area parkir', 'Ada yang mati');
+      await answer('AC ruangan sudah dimatikan?', 'Ya');
+      await answer('Halaman parkir', 'Bersih');
+      await answer('APAR lobi', 'Tersegel');
+      await answer('APAR lobi', 'Tekanan normal');
+      await r.shot('checklist-dicentang');
+      await r.type(page.locator('textarea:visible').first(), 'Lampu parkir sisi timur mati 1, sudah dilaporkan ke GA.');
+      const upload = page.locator('.fi-section').filter({ hasText: 'Lampiran Foto / Video' }).first();
+      await upload.scrollIntoViewIfNeeded();
+      await upload.locator('input[type=file]').setInputFiles(photo);
+      await upload.locator('.filepond--item[data-filepond-item-state*="complete"]').waitFor({ timeout: 30000 });
+      await r.pause(1500);
+      await r.shot('temuan-dan-lampiran');
+      await r.click(page.getByRole('button', { name: 'Kirim Laporan' }));
+      await waitPage(page, /security-checksheets$/);
+      await r.pause(1500);
+      await r.shot('laporan-terkirim', page.locator('.fi-ta-record').first());
+      await r.click(page.locator('.fi-ta-record').first());
+      await waitPage(page, /security-checksheets\/[0-9]+$/);
+      await r.pause(1500);
+      await r.shot('detail-tidak-sesuai', page.locator('.fi-section').filter({ hasText: 'Checklist' }).first());
+      await r.pause(800);
+    },
+  },
+
   // ---- Kendaraan: checksheet berangkat lalu kembali ----
   {
     id: 'kendaraan',

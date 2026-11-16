@@ -18,6 +18,7 @@ class Division extends Model
     protected $fillable = [
         'name',
         'area_id',
+        'talenta_organization',
     ];
 
     public function approvers(): HasMany

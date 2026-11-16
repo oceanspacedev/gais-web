@@ -20,6 +20,7 @@ use App\Filament\Resources\SecurityChecksheetResource;
 use App\Filament\Resources\SumoImportRunResource;
 use App\Filament\Resources\UserResource;
 use App\Filament\Resources\VehicleChecksheetResource;
+use App\Filament\Resources\VehicleInsuranceResource;
 use App\Models\SumoImportRun;
 use App\Support\ObservabilityAccess;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
@@ -175,6 +176,9 @@ return [
                 'export',
                 'import',
             ],
+            VehicleInsuranceResource::class => [
+                'export',
+            ],
             RentResource::class => [
                 'export',
                 'import',
@@ -190,6 +194,7 @@ return [
                 'forceDeleteAny',
             ],
             UserResource::class => [
+                'export',
                 'import',
                 'impersonate',
                 // Username, email, password, role, dan login WhatsApp.

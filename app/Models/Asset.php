@@ -240,6 +240,94 @@ class Asset extends Model
     }
 
     /**
+     * Pencarian untuk pilihan aset (Select), setara kotak cari tabel Aset: tiap kata
+     * dicocokkan ke nama, merek, lokasi, kode item CSA, semua atribut kustom teks,
+     * atau ID ("#12"). Kata dipecah di spasi dan semuanya harus cocok, jadi
+     * "avanza B1234" menemukan Avanza berplat B 1234 XYZ.
+     */
+    public function scopeWhereSearch(Builder $query, string $search): Builder
+    {
+        $relationMatch = function (Builder $match, string $relation, string $column, string $term): void {
+            $belongsTo = $match->getModel()->{$relation}();
+            $match->orWhereIn($belongsTo->getQualifiedForeignKeyName(), $belongsTo->getRelated()->newQuery()
+                ->select($belongsTo->getQualifiedOwnerKeyName())
+                ->where($belongsTo->getRelated()->qualifyColumn($column), 'like', '%'.$term.'%'));
+        };
+
+        foreach (preg_split('/\s+/', trim($search), -1, PREG_SPLIT_NO_EMPTY) ?: [] as $term) {
+            $query->where(function (Builder $match) use ($term, $relationMatch): void {
+                $match->where($match->qualifyColumn('name'), 'like', '%'.$term.'%');
+                $relationMatch($match, 'brand', 'name', $term);
+                $relationMatch($match, 'assetLocation', 'name', $term);
+                $relationMatch($match, 'catalogItem', 'external_code', $term);
+                $match->orWhereAnyAttribute($term);
+
+                if (preg_match('/^#?(\d+)$/', $term, $id)) {
+                    $match->orWhere($match->qualifyColumn('id'), (int) $id[1]);
+                }
+            });
+        }
+
+        return $query;
+    }
+
+    /**
+     * Label pilihan aset: "#ID · Nama · atribut · Badan Usaha". Atribut yang
+     * ditampilkan adalah yang paling cocok dengan pencarian (memuat kata cari
+     * terbanyak, mis. plat nomor untuk "b 4321", bukan atribut lain yang
+     * kebetulan memuat huruf "b"), supaya jelas kenapa aset itu muncul; tanpa
+     * pencarian, serial number.
+     * Muat `attributes.customAttribute` dan `businessEntity` supaya tidak N+1.
+     */
+    public function optionLabel(?string $search = null): string
+    {
+        $attributes = $this->getRelationValue('attributes') ?? collect();
+        $terms = array_filter(array_map(self::normalizeIdentifier(...), preg_split('/\s+/', (string) $search) ?: []));
+        $searchable = CustomAssetAttribute::searchableIds();
+
+        $matchedTerms = function (AssetAttribute $attribute) use ($terms, $searchable): int {
+            if (! in_array((int) $attribute->custom_attribute_id, $searchable, true)) {
+                return 0;
+            }
+
+            $value = self::normalizeIdentifier((string) $attribute->attribute_value);
+
+            return count(array_filter($terms, fn (string $term): bool => str_contains($value, $term)));
+        };
+
+        // sortByDesc stabil: bila sama banyak, atribut pertama yang menang.
+        $matched = $terms === [] ? null : $attributes
+            ->filter(fn (AssetAttribute $attribute): bool => $matchedTerms($attribute) > 0)
+            ->sortByDesc($matchedTerms)
+            ->first();
+
+        $detail = match (true) {
+            $matched !== null => ($matched->customAttribute?->name ?? 'Atribut').': '.$matched->attribute_value,
+            filled($this->serial_number) => CustomAssetAttribute::labelForKey(CustomAssetAttribute::KEY_SERIAL_NUMBER).': '.$this->serial_number,
+            default => null,
+        };
+
+        return implode(' · ', array_filter(['#'.$this->getKey(), $this->name, $detail, $this->businessEntity?->name]));
+    }
+
+    /**
+     * Opsi Select dari query aset: [id => label], dengan relasi label dimuat sekali.
+     *
+     * @return array<int, string>
+     */
+    public static function searchOptions(Builder $query, ?string $search = null, int $limit = 50): array
+    {
+        return $query
+            ->with(['attributes.customAttribute', 'businessEntity:id,name'])
+            ->when(filled($search), fn (Builder $q): Builder => $q->whereSearch((string) $search))
+            ->orderBy($query->qualifyColumn('name'))
+            ->limit($limit)
+            ->get()
+            ->mapWithKeys(fn (Asset $asset): array => [$asset->getKey() => $asset->optionLabel($search)])
+            ->all();
+    }
+
+    /**
      * Huruf kecil tanpa spasi, tanda hubung, titik, dan garis miring; sama dengan
      * ekspresi kolom asset_attributes.search_value.
      */

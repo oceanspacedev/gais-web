@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Insurance;
 use App\Models\Rent;
+use App\Models\VehicleInsurance;
 use App\Models\WaNotificationSetting;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -17,16 +18,16 @@ class ReminderPhoneReplacer
     /**
      * Semua nomor yang tersimpan di data sewa/asuransi beserta jumlah pemakaiannya.
      *
-     * @return array<string, array{phone: string, rent: int, insurance: int}>
+     * @return array<string, array{phone: string, rent: int, insurance: int, vehicle_insurance: int}>
      */
     public function groups(): array
     {
         $groups = [];
 
-        foreach (['rent' => Rent::query(), 'insurance' => Insurance::query()] as $kind => $query) {
+        foreach (['rent' => Rent::query(), 'insurance' => Insurance::query(), 'vehicle_insurance' => VehicleInsurance::query()] as $kind => $query) {
             foreach ($query->whereNotNull('reminder_phones')->where('reminder_phones', '<>', '')->pluck('reminder_phones') as $raw) {
                 foreach (WaNotificationSetting::parsePhoneList($raw) as $phone) {
-                    $groups[$phone] ??= ['phone' => $phone, 'rent' => 0, 'insurance' => 0];
+                    $groups[$phone] ??= ['phone' => $phone, 'rent' => 0, 'insurance' => 0, 'vehicle_insurance' => 0];
                     $groups[$phone][$kind]++;
                 }
             }
@@ -38,18 +39,19 @@ class ReminderPhoneReplacer
     }
 
     /**
-     * @return array{rent: int, insurance: int}
+     * @return array{rent: int, insurance: int, vehicle_insurance: int}
      */
     public function replace(string $oldPhone, ?string $newPhone): array
     {
         return [
             'rent' => $this->rewrite(Rent::query(), $oldPhone, $newPhone),
             'insurance' => $this->rewrite(Insurance::query(), $oldPhone, $newPhone),
+            'vehicle_insurance' => $this->rewrite(VehicleInsurance::query(), $oldPhone, $newPhone),
         ];
     }
 
     /**
-     * @param  Builder<Rent|Insurance>  $query
+     * @param  Builder<Rent|Insurance|VehicleInsurance>  $query
      */
     private function rewrite(Builder $query, string $oldPhone, ?string $newPhone): int
     {

@@ -13,11 +13,11 @@ use Illuminate\Database\Eloquent\Model;
 /**
  * Executor, manager, dan auditor melihat pengajuan dalam cakupan divisinya
  * (item_request_scopes, diatur di menu Divisi): tipe tertentu dan/atau area
- * pemohon tertentu; baris tanpa tipe dan area = semua pengajuan.
+ * divisi pengajuan tertentu; baris tanpa tipe dan area = semua pengajuan.
  */
 final class DivisionScopeGrant implements Grant
 {
-    private const PERMISSIONS = ['process_item::request', 'approve_manager_item::request', 'audit_item::request'];
+    private const PERMISSIONS = ['Process:ItemRequest', 'ApproveManager:ItemRequest', 'Audit:ItemRequest'];
 
     public function appliesTo(User $user): bool
     {
@@ -38,32 +38,26 @@ final class DivisionScopeGrant implements Grant
                 }
 
                 if ($scope->area_id !== null) {
-                    $scoped->whereIn($scoped->qualifyColumn('user_id'), User::query()->select('users.id')->whereIn(
-                        'division_id',
+                    $scoped->whereIn(
+                        $scoped->qualifyColumn('division_id'),
                         Division::withTrashed()->select('divisions.id')->where('area_id', $scope->area_id),
-                    ));
+                    );
                 }
             });
         }
     }
 
     /**
-     * Butuh pemohon beserta divisinya (tabel memuat user.division); pengajuan
-     * tanpa pemohon hanya masuk cakupan yang tidak membatasi area.
+     * Butuh divisi pengajuan (tabel memuat relasi division); pengajuan tanpa
+     * divisi hanya masuk cakupan yang tidak membatasi area.
      */
     public function allows(User $user, Model $record): ?bool
     {
-        if (! $record->relationLoaded('user')) {
+        if ($record->getAttribute('division_id') !== null && ! $record->relationLoaded('division')) {
             return null;
         }
 
-        $requester = $record->getRelation('user');
-
-        if ($requester instanceof User && ! $requester->relationLoaded('division')) {
-            return null;
-        }
-
-        $areaId = $requester?->division?->area_id;
+        $areaId = $record->getAttribute('division_id') !== null ? $record->getRelation('division')?->area_id : null;
 
         foreach ($this->scopes($user) as $scope) {
             if ($scope->matches($record->getAttribute('item_request_type_id'), $areaId)) {

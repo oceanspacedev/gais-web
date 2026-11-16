@@ -37,7 +37,7 @@ class ContractResourcesTest extends TestCase
         $this->manager = User::factory()->create(['access_all_business_entities' => true]);
         $this->manager->givePermissionTo(array_map(
             fn (string $name) => Permission::findOrCreate($name, 'web'),
-            ['view_any_insurance', 'view_insurance', 'create_insurance', 'update_insurance', 'view_any_rent', 'view_rent', 'create_rent', 'update_rent'],
+            ['ViewAny:Insurance', 'View:Insurance', 'Create:Insurance', 'Update:Insurance', 'ViewAny:Rent', 'View:Rent', 'Create:Rent', 'Update:Rent'],
         ));
 
         $this->actingAs($this->manager);

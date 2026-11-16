@@ -24,7 +24,7 @@ class InsuranceCostChart extends ChartWidget
 {
     use GuardsWidgetWithPermission;
 
-    protected ?string $heading = 'Premi Asuransi per Bulan Jatuh Tempo';
+    protected ?string $heading = 'Premi Asuransi Bangunan per Bulan Jatuh Tempo';
 
     protected ?string $description = 'Premi stok + bangunan dari periode polis yang berakhir di bulan itu.';
 

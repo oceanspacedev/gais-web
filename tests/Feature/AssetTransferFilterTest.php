@@ -18,8 +18,8 @@ class AssetTransferFilterTest extends TestCase
     use DatabaseTransactions;
 
     private const TRANSFER_PERMISSIONS = [
-        'view_any_asset::transfer',
-        'view_asset::transfer',
+        'ViewAny:AssetTransfer',
+        'View:AssetTransfer',
     ];
 
     private BusinessEntity $entityA;

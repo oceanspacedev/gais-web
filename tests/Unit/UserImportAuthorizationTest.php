@@ -17,8 +17,8 @@ class UserImportAuthorizationTest extends TestCase
     {
         $policy = new UserPolicy;
 
-        $this->assertTrue($policy->import($this->userThatCan(['import_user'])));
-        $this->assertFalse($policy->import($this->userThatCan(['create_user'])));
+        $this->assertTrue($policy->import($this->userThatCan(['Import:User'])));
+        $this->assertFalse($policy->import($this->userThatCan(['Create:User'])));
         $this->assertFalse($policy->import($this->userWithRole('super_admin')));
         $this->assertFalse($policy->import($this->userWithRole('admin')));
         $this->assertFalse($policy->import($this->userThatCan([])));

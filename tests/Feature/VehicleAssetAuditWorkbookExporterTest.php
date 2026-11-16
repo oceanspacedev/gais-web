@@ -16,6 +16,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Tests\Support\AssetIdentitySchema;
+use Tests\Support\VehicleInsuranceSchema;
 use Tests\TestCase;
 
 class VehicleAssetAuditWorkbookExporterTest extends TestCase
@@ -97,6 +98,8 @@ class VehicleAssetAuditWorkbookExporterTest extends TestCase
         });
 
         AssetIdentitySchema::ensure();
+
+        VehicleInsuranceSchema::ensure();
 
         $entity = BusinessEntity::create(['name' => 'PT MEDIA SELULAR INDONESIA']);
         $category = Category::create(['name' => 'MOBIL']);

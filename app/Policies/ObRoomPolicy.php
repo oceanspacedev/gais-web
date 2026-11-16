@@ -13,61 +13,61 @@ class ObRoomPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_ob::room');
+        return $user->can('ViewAny:ObRoom');
     }
 
     public function view(User $user, ObRoom $room): bool
     {
-        return $user->can('view_ob::room') && $this->visible($user, $room);
+        return $user->can('View:ObRoom') && $this->visible($user, $room);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_ob::room');
+        return $user->can('Create:ObRoom');
     }
 
     public function update(User $user, ObRoom $room): bool
     {
-        return $user->can('update_ob::room') && $this->editable($user, $room);
+        return $user->can('Update:ObRoom') && $this->editable($user, $room);
     }
 
     public function delete(User $user, ObRoom $room): bool
     {
-        return $user->can('delete_ob::room') && $this->editable($user, $room);
+        return $user->can('Delete:ObRoom') && $this->editable($user, $room);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_ob::room');
+        return $user->can('DeleteAny:ObRoom');
     }
 
     public function forceDelete(User $user, ObRoom $room): bool
     {
-        return $user->can('force_delete_ob::room') && $this->visible($user, $room);
+        return $user->can('ForceDelete:ObRoom') && $this->visible($user, $room);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_ob::room');
+        return $user->can('ForceDeleteAny:ObRoom');
     }
 
     public function restore(User $user, ObRoom $room): bool
     {
-        return $user->can('restore_ob::room') && $this->visible($user, $room);
+        return $user->can('Restore:ObRoom') && $this->visible($user, $room);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_ob::room');
+        return $user->can('RestoreAny:ObRoom');
     }
 
     public function replicate(User $user, ObRoom $room): bool
     {
-        return $user->can('replicate_ob::room') && $this->editable($user, $room);
+        return $user->can('Replicate:ObRoom') && $this->editable($user, $room);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_ob::room');
+        return $user->can('Reorder:ObRoom');
     }
 }

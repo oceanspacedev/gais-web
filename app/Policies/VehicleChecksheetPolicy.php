@@ -16,7 +16,7 @@ class VehicleChecksheetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_vehicle::checksheet');
+        return $user->can('ViewAny:VehicleChecksheet');
     }
 
     /**
@@ -24,7 +24,7 @@ class VehicleChecksheetPolicy
      */
     public function view(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('view_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
+        return $user->can('View:VehicleChecksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -32,7 +32,7 @@ class VehicleChecksheetPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_vehicle::checksheet');
+        return $user->can('Create:VehicleChecksheet');
     }
 
     /**
@@ -40,7 +40,7 @@ class VehicleChecksheetPolicy
      */
     public function update(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('update_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
+        return $user->can('Update:VehicleChecksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**
@@ -48,7 +48,7 @@ class VehicleChecksheetPolicy
      */
     public function delete(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('delete_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
+        return $user->can('Delete:VehicleChecksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**
@@ -56,7 +56,7 @@ class VehicleChecksheetPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_vehicle::checksheet');
+        return $user->can('DeleteAny:VehicleChecksheet');
     }
 
     /**
@@ -64,7 +64,7 @@ class VehicleChecksheetPolicy
      */
     public function forceDelete(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('force_delete_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
+        return $user->can('ForceDelete:VehicleChecksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -72,7 +72,7 @@ class VehicleChecksheetPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_vehicle::checksheet');
+        return $user->can('ForceDeleteAny:VehicleChecksheet');
     }
 
     /**
@@ -80,7 +80,7 @@ class VehicleChecksheetPolicy
      */
     public function restore(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('restore_vehicle::checksheet') && $this->visible($user, $vehicleChecksheet);
+        return $user->can('Restore:VehicleChecksheet') && $this->visible($user, $vehicleChecksheet);
     }
 
     /**
@@ -88,7 +88,7 @@ class VehicleChecksheetPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_vehicle::checksheet');
+        return $user->can('RestoreAny:VehicleChecksheet');
     }
 
     /**
@@ -96,7 +96,7 @@ class VehicleChecksheetPolicy
      */
     public function replicate(User $user, VehicleChecksheet $vehicleChecksheet): bool
     {
-        return $user->can('replicate_vehicle::checksheet') && $this->editable($user, $vehicleChecksheet);
+        return $user->can('Replicate:VehicleChecksheet') && $this->editable($user, $vehicleChecksheet);
     }
 
     /**
@@ -104,7 +104,7 @@ class VehicleChecksheetPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_vehicle::checksheet');
+        return $user->can('Reorder:VehicleChecksheet');
     }
 
     /**
@@ -112,7 +112,7 @@ class VehicleChecksheetPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_vehicle::checksheet');
+        return $user->can('Export:VehicleChecksheet');
     }
 
     /**
@@ -120,6 +120,6 @@ class VehicleChecksheetPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_vehicle::checksheet');
+        return $user->can('Import:VehicleChecksheet');
     }
 }

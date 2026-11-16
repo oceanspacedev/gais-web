@@ -69,7 +69,7 @@ class ContractOverviewStats extends StatsOverviewWidget
             + (int) DB::table('insurance_updates')->whereIn('insurance_id', $ids)->whereNull('deleted_at')->whereNotIn('status', $excluded)->whereBetween('expired_date', $window)->count();
 
         return [
-            Stat::make('Polis Asuransi Aktif', Rupiah::number($active->count()))
+            Stat::make('Polis Asuransi Bangunan Aktif', Rupiah::number($active->count()))
                 ->description(Rupiah::number($dueSoon->count()).' jatuh tempo ≤ 30 hari')
                 ->descriptionIcon(Heroicon::OutlinedShieldCheck)
                 ->color('success')

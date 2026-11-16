@@ -265,21 +265,12 @@ class AssetSaleResource extends Resource
      */
     public static function sellableAssetOptions(?string $search = null): array
     {
-        return static::sellableAssets()
-            ->with('businessEntity:id,name')
-            ->when(filled($search), fn (Builder $query): Builder => $query->where(fn (Builder $match): Builder => $match
-                ->where('name', 'like', "%{$search}%")
-                ->orWhereAnyAttribute((string) $search)))
-            ->orderBy('name')
-            ->limit(static::OPTIONS_LIMIT)
-            ->get()
-            ->mapWithKeys(fn (Asset $asset): array => [$asset->id => static::assetOptionLabel($asset)])
-            ->all();
+        return Asset::searchOptions(static::sellableAssets(), $search, static::OPTIONS_LIMIT);
     }
 
     public static function assetOptionLabel(Asset $asset): string
     {
-        return sprintf('#%d · %s · %s', $asset->id, $asset->name, $asset->businessEntity?->name ?? '-');
+        return $asset->optionLabel();
     }
 
     /**

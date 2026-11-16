@@ -13,61 +13,61 @@ class AssetQrLabelHistoryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset::qr::label::history');
+        return $user->can('ViewAny:AssetQrLabelHistory');
     }
 
     public function view(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('view_asset::qr::label::history') && $this->visible($user, $assetQrLabelHistory);
+        return $user->can('View:AssetQrLabelHistory') && $this->visible($user, $assetQrLabelHistory);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_asset::qr::label::history');
+        return $user->can('Create:AssetQrLabelHistory');
     }
 
     public function update(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('update_asset::qr::label::history') && $this->editable($user, $assetQrLabelHistory);
+        return $user->can('Update:AssetQrLabelHistory') && $this->editable($user, $assetQrLabelHistory);
     }
 
     public function delete(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('delete_asset::qr::label::history') && $this->editable($user, $assetQrLabelHistory);
+        return $user->can('Delete:AssetQrLabelHistory') && $this->editable($user, $assetQrLabelHistory);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset::qr::label::history');
+        return $user->can('DeleteAny:AssetQrLabelHistory');
     }
 
     public function replicate(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('replicate_asset::qr::label::history') && $this->editable($user, $assetQrLabelHistory);
+        return $user->can('Replicate:AssetQrLabelHistory') && $this->editable($user, $assetQrLabelHistory);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset::qr::label::history');
+        return $user->can('Reorder:AssetQrLabelHistory');
     }
 
     public function forceDelete(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('force_delete_asset::qr::label::history') && $this->visible($user, $assetQrLabelHistory);
+        return $user->can('ForceDelete:AssetQrLabelHistory') && $this->visible($user, $assetQrLabelHistory);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset::qr::label::history');
+        return $user->can('ForceDeleteAny:AssetQrLabelHistory');
     }
 
     public function restore(User $user, AssetQrLabelHistory $assetQrLabelHistory): bool
     {
-        return $user->can('restore_asset::qr::label::history') && $this->visible($user, $assetQrLabelHistory);
+        return $user->can('Restore:AssetQrLabelHistory') && $this->visible($user, $assetQrLabelHistory);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset::qr::label::history');
+        return $user->can('RestoreAny:AssetQrLabelHistory');
     }
 }

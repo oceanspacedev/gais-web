@@ -16,7 +16,7 @@ final class AccountingTypeGrant implements Grant
 {
     public function appliesTo(User $user): bool
     {
-        return $user->can('approve_accounting_item::request');
+        return $user->can('ApproveAccounting:ItemRequest');
     }
 
     public function grantsEverything(User $user): bool

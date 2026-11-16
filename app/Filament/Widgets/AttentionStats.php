@@ -15,6 +15,7 @@ use App\Filament\Resources\ProblemReportResource;
 use App\Filament\Resources\RentResource;
 use App\Filament\Resources\TaskResource;
 use App\Filament\Resources\VehicleChecksheetResource;
+use App\Filament\Resources\VehicleInsuranceResource;
 use App\Filament\Widgets\Concerns\GuardsWidgetWithPermission;
 use App\Models\ObChecksheet;
 use App\Services\ItemRequestWorkflow;
@@ -53,7 +54,7 @@ class AttentionStats extends StatsOverviewWidget
     {
         return [
             ItemRequestResource::class, ProblemReportResource::class, AssetResource::class, AssetServiceResource::class,
-            TaskResource::class, ObChecksheetResource::class, VehicleChecksheetResource::class, InsuranceResource::class, RentResource::class,
+            TaskResource::class, ObChecksheetResource::class, VehicleChecksheetResource::class, InsuranceResource::class, VehicleInsuranceResource::class, RentResource::class,
         ];
     }
 
@@ -118,8 +119,15 @@ class AttentionStats extends StatsOverviewWidget
         if (InsuranceResource::canViewAny()) {
             $due = (int) InsuranceResource::getEloquentQuery()->activeContracts()->dueWithin(30)->count();
 
-            $stats[] = self::stat('Polis Jatuh Tempo ≤ 30 Hari', $due, 'termasuk yang sudah lewat', Heroicon::OutlinedShieldCheck, 'danger',
+            $stats[] = self::stat('Asuransi Bangunan ≤ 30 Hari', $due, 'termasuk yang sudah lewat', Heroicon::OutlinedShieldCheck, 'danger',
                 InsuranceResource::getUrl(parameters: ['tableFilters' => ['due_soon' => ['isActive' => true]]]));
+        }
+
+        if (VehicleInsuranceResource::canViewAny()) {
+            $due = (int) VehicleInsuranceResource::getEloquentQuery()->activeContracts()->dueWithin(30)->count();
+
+            $stats[] = self::stat('Asuransi Kendaraan ≤ 30 Hari', $due, 'termasuk yang sudah lewat', Heroicon::OutlinedTruck, 'danger',
+                VehicleInsuranceResource::getUrl(parameters: ['tableFilters' => ['due_soon' => ['isActive' => true]]]));
         }
 
         if (RentResource::canViewAny()) {

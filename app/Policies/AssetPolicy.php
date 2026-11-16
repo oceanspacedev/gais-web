@@ -16,7 +16,7 @@ class AssetPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset');
+        return $user->can('ViewAny:Asset');
     }
 
     /**
@@ -24,7 +24,7 @@ class AssetPolicy
      */
     public function view(User $user, Asset $asset): bool
     {
-        return $user->can('view_asset') && $this->visible($user, $asset);
+        return $user->can('View:Asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -32,7 +32,7 @@ class AssetPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_asset');
+        return $user->can('Create:Asset');
     }
 
     /**
@@ -40,7 +40,7 @@ class AssetPolicy
      */
     public function update(User $user, Asset $asset): bool
     {
-        return $user->can('update_asset') && $this->editable($user, $asset);
+        return $user->can('Update:Asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -48,7 +48,7 @@ class AssetPolicy
      */
     public function delete(User $user, Asset $asset): bool
     {
-        return $user->can('delete_asset') && $this->editable($user, $asset);
+        return $user->can('Delete:Asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -56,7 +56,7 @@ class AssetPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset');
+        return $user->can('DeleteAny:Asset');
     }
 
     /**
@@ -64,7 +64,7 @@ class AssetPolicy
      */
     public function forceDelete(User $user, Asset $asset): bool
     {
-        return $user->can('force_delete_asset') && $this->visible($user, $asset);
+        return $user->can('ForceDelete:Asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -72,7 +72,7 @@ class AssetPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset');
+        return $user->can('ForceDeleteAny:Asset');
     }
 
     /**
@@ -80,7 +80,7 @@ class AssetPolicy
      */
     public function restore(User $user, Asset $asset): bool
     {
-        return $user->can('restore_asset') && $this->visible($user, $asset);
+        return $user->can('Restore:Asset') && $this->visible($user, $asset);
     }
 
     /**
@@ -88,7 +88,7 @@ class AssetPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset');
+        return $user->can('RestoreAny:Asset');
     }
 
     /**
@@ -96,7 +96,7 @@ class AssetPolicy
      */
     public function replicate(User $user, Asset $asset): bool
     {
-        return $user->can('replicate_asset') && $this->editable($user, $asset);
+        return $user->can('Replicate:Asset') && $this->editable($user, $asset);
     }
 
     /**
@@ -104,7 +104,7 @@ class AssetPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset');
+        return $user->can('Reorder:Asset');
     }
 
     /**
@@ -112,7 +112,7 @@ class AssetPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_asset');
+        return $user->can('Export:Asset');
     }
 
     /**
@@ -120,7 +120,7 @@ class AssetPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_asset');
+        return $user->can('Import:Asset');
     }
 
     /**
@@ -128,17 +128,17 @@ class AssetPolicy
      */
     public function manageCondition(User $user): bool
     {
-        return $user->can('manage_condition_asset');
+        return $user->can('ManageCondition:Asset');
     }
 
     public function repairValidation(User $user): bool
     {
-        return $user->can('repair_validation_asset');
+        return $user->can('RepairValidation:Asset');
     }
 
     public function regenerateQr(User $user): bool
     {
-        return $user->can('regenerate_qr_asset');
+        return $user->can('RegenerateQr:Asset');
     }
 
     /**
@@ -146,11 +146,11 @@ class AssetPolicy
      */
     public function updateRecipient(User $user): bool
     {
-        return $user->can('update_recipient_asset');
+        return $user->can('UpdateRecipient:Asset');
     }
 
     public function merge(User $user): bool
     {
-        return $user->can('merge_asset');
+        return $user->can('Merge:Asset');
     }
 }

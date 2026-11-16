@@ -47,8 +47,8 @@ class SumoImportTest extends TestCase
             'sumo-import.business_entities' => [self::B + 1 => null, self::B + 2 => $this->entity->id],
             'sumo-import.scopes' => [self::B + 6 => [[null, null]], self::B + 9 => [[self::B + 2, self::B + 4, true]]],
             'sumo-import.problem_report_scopes' => [self::B + 6 => [[self::B + 7, false]], self::B + 15 => [[self::B + 7, true]]],
-            'sumo-import.division_permissions' => ['HCM-UJI' => ['view_any_insurance', 'view_insurance', 'import_insurance']],
-            'sumo-import.legacy_user_permissions' => [self::B + 4 => ['export_item::request']],
+            'sumo-import.division_permissions' => ['HCM-UJI' => ['ViewAny:Insurance', 'View:Insurance', 'Import:Insurance']],
+            'sumo-import.legacy_user_permissions' => [self::B + 4 => ['Export:ItemRequest']],
         ]);
 
         $this->seedLegacy();
@@ -64,21 +64,21 @@ class SumoImportTest extends TestCase
         $warehouse = User::where('legacy_sumo_user_id', self::B + 4)->firstOrFail();
         $gone = User::where('legacy_sumo_user_id', self::B + 5)->firstOrFail();
 
-        $this->assertTrue($admin->hasRole('pengajuan_admin'));
+        $this->assertTrue($admin->hasRole('general_affair'));
         $this->assertTrue($admin->access_all_business_entities);
         $this->assertTrue($hcm->hasRole('executor'));
-        $this->assertTrue($hcm->can('import_insurance'));
+        $this->assertTrue($hcm->can('Import:Insurance'));
         $this->assertSame(self::B + 6, $hcm->division_id);
         // Aturan divisi sumo hanya untuk executor: staf biasa di HCM tidak ikut mengelola asuransi.
         $hcmStaff = User::where('legacy_sumo_user_id', self::B + 6)->firstOrFail();
         $this->assertTrue($hcmStaff->hasRole('requester'));
-        $this->assertFalse($hcmStaff->can('view_insurance'));
+        $this->assertFalse($hcmStaff->can('View:Insurance'));
         $this->assertTrue($requester->hasRole('requester'));
         $this->assertFalse($requester->access_all_business_entities);
         $this->assertSame($this->entity->id, $requester->business_entity_id);
         $this->assertSame($hcm->id, $requester->approver_user_id);
         $this->assertTrue(Hash::check('rahasia', $requester->password));
-        $this->assertTrue($warehouse->can('export_item::request'));
+        $this->assertTrue($warehouse->can('Export:ItemRequest'));
         $this->assertSame('gone-uji-nonaktif-sumo'.(self::B + 5), $gone->username);
         $this->assertCount(0, $gone->roles);
         // Akun terhapus tanpa riwayat apa pun tidak perlu dibuat.
@@ -113,6 +113,8 @@ class SumoImportTest extends TestCase
         $this->assertSame('Pengajuan ATK Uji', DB::table('item_request_settings')->where('id', self::B + 1)->value('request_detail'));
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 1)->value('requires_accounting_approval'));
         $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('requires_products'));
+        $this->assertEquals(1, DB::table('item_request_types')->where('id', self::B + 2)->value('is_active'));
+        $this->assertEquals(0, DB::table('item_request_types')->where('id', self::B + 3)->value('is_active'), 'Tipe NOTA sudah tidak boleh diajukan.');
         $this->assertSame(2, ItemRequestScope::query()->where('division_id', '>=', self::B)->count());
         $this->assertTrue(ItemRequestScope::query()->where('division_id', self::B + 9)->firstOrFail()->approves_quantity, 'WHM menyetujui jumlah ATK area TOP.');
         $this->assertFalse(ItemRequestScope::query()->where('division_id', self::B + 6)->firstOrFail()->approves_quantity);
@@ -200,7 +202,7 @@ class SumoImportTest extends TestCase
         $this->assertSame($b + 51, $gaisAdmin->legacy_sumo_user_id);
         $this->assertFalse(Hash::check('rahasia-sumo', $gaisAdmin->password));
         $this->assertFalse($gaisAdmin->access_all_business_entities, 'Akses akun GAIS yang sudah dipakai tidak diperluas diam-diam.');
-        $this->assertTrue($gaisAdmin->hasRole('pengajuan_admin'));
+        $this->assertTrue($gaisAdmin->hasRole('general_affair'));
 
         foreach ([52, 53, 54] as $id) {
             $this->assertSame(1, User::where('legacy_sumo_user_id', $b + $id)->whereNotNull('username')->count());

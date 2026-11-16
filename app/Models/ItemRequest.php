@@ -7,6 +7,7 @@ use App\Access\ItemRequests\AccountingTypeGrant;
 use App\Access\ItemRequests\DivisionScopeGrant;
 use App\Access\Rules\ApproverOfOwnerGrant;
 use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\DivisionMemberGrant;
 use App\Access\Rules\OwnerGrant;
 use App\Access\Rules\PermissionGrant;
 use App\Access\Visibility;
@@ -31,6 +32,7 @@ class ItemRequest extends Model
     protected $fillable = [
         'request_code',
         'user_id',
+        'division_id',
         'item_request_type_id',
         'business_entity_id',
         'requested_at',
@@ -64,6 +66,13 @@ class ItemRequest extends Model
 
     protected static function booted(): void
     {
+        // Divisi/toko pemohon saat pengajuan dibuat; tidak ikut berubah bila pemohon pindah divisi.
+        static::creating(function (self $request): void {
+            if ($request->division_id === null && $request->user_id !== null) {
+                $request->division_id = User::query()->whereKey($request->user_id)->value('division_id');
+            }
+        });
+
         static::created(function (self $request): void {
             if (blank($request->request_code)) {
                 $request->forceFill(['request_code' => config('item-request.code_prefix', 'REQ').$request->id])->saveQuietly();
@@ -77,6 +86,7 @@ class ItemRequest extends Model
      * Siapa melihat pengajuan apa, pengganti aturan role/divisi hard-coded di sumo:
      *  - "Lihat Data Semua User" melihat semuanya;
      *  - pemohon melihat miliknya, atasan melihat milik bawahannya (users.approver_user_id);
+     *  - anggota divisi/toko melihat pengajuan divisinya (item_requests.division_id);
      *  - pemegang izin Accounting melihat tipe yang lewat tahap Accounting;
      *  - executor/manager/audit melihat cakupan divisinya (item_request_scopes).
      * Semuanya dibatasi badan usaha pengajuan (kosong = semua).
@@ -86,9 +96,10 @@ class ItemRequest extends Model
         return Visibility::make()
             ->require(new BusinessEntityRule)
             ->grant(
-                new PermissionGrant('view_all_item::request'),
+                new PermissionGrant('ViewAll:ItemRequest'),
                 new OwnerGrant,
                 new ApproverOfOwnerGrant,
+                new DivisionMemberGrant,
                 new AccountingTypeGrant,
                 new DivisionScopeGrant,
             );
@@ -97,6 +108,14 @@ class ItemRequest extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Divisi/toko pemohon saat pengajuan dibuat.
+     */
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class)->withTrashed();
     }
 
     public function type(): BelongsTo

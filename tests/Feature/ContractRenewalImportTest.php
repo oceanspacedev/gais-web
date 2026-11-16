@@ -53,8 +53,8 @@ class ContractRenewalImportTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $this->manager = $this->userWith([
-            'view_any_insurance', 'view_insurance', 'update_insurance', 'import_insurance', 'export_insurance',
-            'view_any_rent', 'view_rent', 'update_rent', 'import_rent', 'export_rent',
+            'ViewAny:Insurance', 'View:Insurance', 'Update:Insurance', 'Import:Insurance', 'Export:Insurance',
+            'ViewAny:Rent', 'View:Rent', 'Update:Rent', 'Import:Rent', 'Export:Rent',
         ]);
 
         $this->actingAs($this->manager);
@@ -258,7 +258,7 @@ class ContractRenewalImportTest extends TestCase
         $this->assertSame('POL-IZIN-1', InsuranceUpdateImport::sampleRow($insurance)['no_polis_induk']);
         $this->assertSame('RENT-IZIN-1', RentUpdateImport::sampleRow($rent)['kode_sewa_induk']);
 
-        $this->actingAs($this->userWith(['view_any_insurance', 'view_insurance', 'update_insurance', 'view_any_rent', 'view_rent', 'update_rent']));
+        $this->actingAs($this->userWith(['ViewAny:Insurance', 'View:Insurance', 'Update:Insurance', 'ViewAny:Rent', 'View:Rent', 'Update:Rent']));
 
         Livewire::test(InsuranceUpdatesRelationManager::class, ['ownerRecord' => $insurance, 'pageClass' => ViewInsurance::class])
             ->assertTableActionVisible('create')

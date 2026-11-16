@@ -13,61 +13,61 @@ class AssetServicePolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_asset::service');
+        return $user->can('ViewAny:AssetService');
     }
 
     public function view(User $user, AssetService $assetService): bool
     {
-        return $user->can('view_asset::service') && $this->visible($user, $assetService);
+        return $user->can('View:AssetService') && $this->visible($user, $assetService);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_asset::service');
+        return $user->can('Create:AssetService');
     }
 
     public function update(User $user, AssetService $assetService): bool
     {
-        return $user->can('update_asset::service')
+        return $user->can('Update:AssetService')
             && $this->editable($user, $assetService)
             && (! $assetService->exists || $this->updateAll($user) || $this->isInvolved($user, $assetService));
     }
 
     public function delete(User $user, AssetService $assetService): bool
     {
-        return $user->can('delete_asset::service')
+        return $user->can('Delete:AssetService')
             && $this->editable($user, $assetService)
             && (! $assetService->exists || $this->deleteAll($user) || $assetService->created_by === $user->id);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_asset::service');
+        return $user->can('DeleteAny:AssetService');
     }
 
     public function forceDelete(User $user, AssetService $assetService): bool
     {
-        return $user->can('force_delete_asset::service') && $this->visible($user, $assetService);
+        return $user->can('ForceDelete:AssetService') && $this->visible($user, $assetService);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_asset::service');
+        return $user->can('ForceDeleteAny:AssetService');
     }
 
     public function restore(User $user, AssetService $assetService): bool
     {
-        return $user->can('restore_asset::service') && $this->visible($user, $assetService);
+        return $user->can('Restore:AssetService') && $this->visible($user, $assetService);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_asset::service');
+        return $user->can('RestoreAny:AssetService');
     }
 
     public function export(User $user): bool
     {
-        return $user->can('export_asset::service');
+        return $user->can('Export:AssetService');
     }
 
     /**
@@ -76,17 +76,17 @@ class AssetServicePolicy
      */
     public function viewAll(User $user): bool
     {
-        return $user->can('view_all_asset::service');
+        return $user->can('ViewAll:AssetService');
     }
 
     public function updateAll(User $user): bool
     {
-        return $user->can('update_all_asset::service');
+        return $user->can('UpdateAll:AssetService');
     }
 
     public function deleteAll(User $user): bool
     {
-        return $user->can('delete_all_asset::service');
+        return $user->can('DeleteAll:AssetService');
     }
 
     private function isInvolved(User $user, AssetService $assetService): bool
@@ -96,11 +96,11 @@ class AssetServicePolicy
 
     public function replicate(User $user, AssetService $assetService): bool
     {
-        return $user->can('replicate_asset::service') && $this->editable($user, $assetService);
+        return $user->can('Replicate:AssetService') && $this->editable($user, $assetService);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_asset::service');
+        return $user->can('Reorder:AssetService');
     }
 }

@@ -32,33 +32,33 @@ class ObChecksheetAssignmentTest extends TestCase
     use DatabaseTransactions;
 
     private const OFFICE_BOY_PERMISSIONS = [
-        'view_any_ob::checksheet',
-        'view_ob::checksheet',
-        'create_ob::checksheet',
+        'ViewAny:ObChecksheet',
+        'View:ObChecksheet',
+        'Create:ObChecksheet',
     ];
 
     private const SUPERVISOR_PERMISSIONS = [
-        'view_any_ob::checksheet',
-        'view_ob::checksheet',
-        'create_ob::checksheet',
-        'update_ob::checksheet',
-        'delete_ob::checksheet',
-        'view_all_ob::checksheet',
-        'update_all_ob::checksheet',
-        'assign_ob::checksheet',
-        'export_ob::checksheet',
-        'view_any_ob::room',
-        'view_ob::room',
-        'create_ob::room',
-        'update_ob::room',
-        'delete_ob::room',
-        'delete_any_ob::room',
-        'view_any_ob::shift',
-        'view_ob::shift',
-        'create_ob::shift',
-        'update_ob::shift',
-        'delete_ob::shift',
-        'delete_any_ob::shift',
+        'ViewAny:ObChecksheet',
+        'View:ObChecksheet',
+        'Create:ObChecksheet',
+        'Update:ObChecksheet',
+        'Delete:ObChecksheet',
+        'ViewAll:ObChecksheet',
+        'UpdateAll:ObChecksheet',
+        'Assign:ObChecksheet',
+        'Export:ObChecksheet',
+        'ViewAny:ObRoom',
+        'View:ObRoom',
+        'Create:ObRoom',
+        'Update:ObRoom',
+        'Delete:ObRoom',
+        'DeleteAny:ObRoom',
+        'ViewAny:ObShift',
+        'View:ObShift',
+        'Create:ObShift',
+        'Update:ObShift',
+        'Delete:ObShift',
+        'DeleteAny:ObShift',
     ];
 
     public function test_assigned_task_starts_pending_without_start_time_or_photo(): void
@@ -199,7 +199,7 @@ class ObChecksheetAssignmentTest extends TestCase
     {
         $this->assertTrue($this->supervisor()->can('assign', ObChecksheet::class));
         $this->assertFalse($this->officeBoy()->can('assign', ObChecksheet::class));
-        $this->assertFalse($this->userWithPermissions(['view_all_ob::checksheet'])->can('assign', ObChecksheet::class));
+        $this->assertFalse($this->userWithPermissions(['ViewAll:ObChecksheet'])->can('assign', ObChecksheet::class));
     }
 
     public function test_supervisor_assigns_from_shift_through_the_list_page(): void
@@ -741,7 +741,7 @@ class ObChecksheetAssignmentTest extends TestCase
     {
         $officeBoy = $this->officeBoy();
         $task = $this->pendingTask($officeBoy, 'Ruang Audit');
-        $editor = $this->userWithPermissions(['view_any_ob::checksheet', 'view_ob::checksheet', 'update_ob::checksheet', 'update_all_ob::checksheet', 'view_all_ob::checksheet']);
+        $editor = $this->userWithPermissions(['ViewAny:ObChecksheet', 'View:ObChecksheet', 'Update:ObChecksheet', 'UpdateAll:ObChecksheet', 'ViewAll:ObChecksheet']);
 
         $this->actAs($editor);
 

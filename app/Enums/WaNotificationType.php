@@ -8,6 +8,7 @@ enum WaNotificationType: string implements HasLabel
 {
     case Rent = 'RENT';
     case Insurance = 'INSURANCE';
+    case VehicleInsurance = 'VEHICLE_INSURANCE';
     case RequestCutoff = 'REQUEST_SETTING';
     case Test = 'TEST';
 
@@ -15,7 +16,8 @@ enum WaNotificationType: string implements HasLabel
     {
         return match ($this) {
             self::Rent => 'Sewa',
-            self::Insurance => 'Asuransi',
+            self::Insurance => 'Asuransi Bangunan',
+            self::VehicleInsurance => 'Asuransi Kendaraan',
             self::RequestCutoff => 'Cutoff Pengajuan',
             self::Test => 'Uji Kirim',
         };

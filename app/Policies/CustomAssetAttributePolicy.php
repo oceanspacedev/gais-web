@@ -16,7 +16,7 @@ class CustomAssetAttributePolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_custom::asset::attribute');
+        return $user->can('ViewAny:CustomAssetAttribute');
     }
 
     /**
@@ -24,7 +24,7 @@ class CustomAssetAttributePolicy
      */
     public function view(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('view_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
+        return $user->can('View:CustomAssetAttribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -32,7 +32,7 @@ class CustomAssetAttributePolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_custom::asset::attribute');
+        return $user->can('Create:CustomAssetAttribute');
     }
 
     /**
@@ -40,7 +40,7 @@ class CustomAssetAttributePolicy
      */
     public function update(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('update_custom::asset::attribute') && $this->editable($user, $customAssetAttribute);
+        return $user->can('Update:CustomAssetAttribute') && $this->editable($user, $customAssetAttribute);
     }
 
     /**
@@ -48,7 +48,7 @@ class CustomAssetAttributePolicy
      */
     public function delete(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('delete_custom::asset::attribute') && $this->editable($user, $customAssetAttribute) && ! $customAssetAttribute->isIdentity();
+        return $user->can('Delete:CustomAssetAttribute') && $this->editable($user, $customAssetAttribute) && ! $customAssetAttribute->isIdentity();
     }
 
     /**
@@ -56,7 +56,7 @@ class CustomAssetAttributePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_custom::asset::attribute');
+        return $user->can('DeleteAny:CustomAssetAttribute');
     }
 
     /**
@@ -64,7 +64,7 @@ class CustomAssetAttributePolicy
      */
     public function forceDelete(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('force_delete_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
+        return $user->can('ForceDelete:CustomAssetAttribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -72,7 +72,7 @@ class CustomAssetAttributePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_custom::asset::attribute');
+        return $user->can('ForceDeleteAny:CustomAssetAttribute');
     }
 
     /**
@@ -80,7 +80,7 @@ class CustomAssetAttributePolicy
      */
     public function restore(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('restore_custom::asset::attribute') && $this->visible($user, $customAssetAttribute);
+        return $user->can('Restore:CustomAssetAttribute') && $this->visible($user, $customAssetAttribute);
     }
 
     /**
@@ -88,7 +88,7 @@ class CustomAssetAttributePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_custom::asset::attribute');
+        return $user->can('RestoreAny:CustomAssetAttribute');
     }
 
     /**
@@ -96,7 +96,7 @@ class CustomAssetAttributePolicy
      */
     public function replicate(User $user, CustomAssetAttribute $customAssetAttribute): bool
     {
-        return $user->can('replicate_custom::asset::attribute') && $this->editable($user, $customAssetAttribute);
+        return $user->can('Replicate:CustomAssetAttribute') && $this->editable($user, $customAssetAttribute);
     }
 
     /**
@@ -104,6 +104,6 @@ class CustomAssetAttributePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_custom::asset::attribute');
+        return $user->can('Reorder:CustomAssetAttribute');
     }
 }

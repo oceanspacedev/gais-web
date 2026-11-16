@@ -9,6 +9,7 @@
         'executor' => 'Executor',
         'ga' => 'General Affair',
         'admin' => 'Admin / Developer',
+        'security' => 'Security',
         'sistem' => 'Sistem',
         'user' => 'User',
     ];

@@ -213,10 +213,10 @@ class ObChecksheetTest extends TestCase
         $role = Role::where('name', 'office_boy')->first();
         $this->assertNotNull($role);
 
-        $this->assertTrue($role->hasPermissionTo('view_any_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('view_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('create_ob::checksheet'));
-        $this->assertFalse($role->hasPermissionTo('delete_ob::checksheet'));
+        $this->assertTrue($role->hasPermissionTo('ViewAny:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('View:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('Create:ObChecksheet'));
+        $this->assertFalse($role->hasPermissionTo('Delete:ObChecksheet'));
     }
 
     public function test_super_admin_has_all_ob_checksheet_permissions(): void
@@ -224,11 +224,11 @@ class ObChecksheetTest extends TestCase
         $role = Role::where('name', 'super_admin')->first();
         $this->assertNotNull($role);
 
-        $this->assertTrue($role->hasPermissionTo('view_any_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('create_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('update_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('delete_ob::checksheet'));
-        $this->assertTrue($role->hasPermissionTo('delete_any_ob::checksheet'));
+        $this->assertTrue($role->hasPermissionTo('ViewAny:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('Create:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('Update:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('Delete:ObChecksheet'));
+        $this->assertTrue($role->hasPermissionTo('DeleteAny:ObChecksheet'));
     }
 
     public function test_policy_authorizes_user_based_on_permissions(): void
@@ -468,9 +468,9 @@ class ObChecksheetTest extends TestCase
     public function test_ob_checksheet_export_permission_granted(): void
     {
         $superAdmin = Role::where('name', 'super_admin')->first();
-        $this->assertTrue($superAdmin->hasPermissionTo('export_ob::checksheet'));
+        $this->assertTrue($superAdmin->hasPermissionTo('Export:ObChecksheet'));
 
         $officeBoy = Role::where('name', 'office_boy')->first();
-        $this->assertTrue($officeBoy->hasPermissionTo('export_ob::checksheet'));
+        $this->assertTrue($officeBoy->hasPermissionTo('Export:ObChecksheet'));
     }
 }

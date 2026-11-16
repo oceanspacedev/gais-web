@@ -13,62 +13,62 @@ class ProductPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_product');
+        return $user->can('ViewAny:Product');
     }
 
     public function view(User $user, Product $product): bool
     {
-        return $user->can('view_product') && $this->visible($user, $product);
+        return $user->can('View:Product') && $this->visible($user, $product);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_product');
+        return $user->can('Create:Product');
     }
 
     public function update(User $user, Product $product): bool
     {
-        return $user->can('update_product') && $this->editable($user, $product);
+        return $user->can('Update:Product') && $this->editable($user, $product);
     }
 
     public function delete(User $user, Product $product): bool
     {
-        return $user->can('delete_product') && $this->editable($user, $product);
+        return $user->can('Delete:Product') && $this->editable($user, $product);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_product');
+        return $user->can('DeleteAny:Product');
     }
 
     public function forceDelete(User $user, Product $product): bool
     {
-        return $user->can('force_delete_product') && $this->visible($user, $product);
+        return $user->can('ForceDelete:Product') && $this->visible($user, $product);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_product');
+        return $user->can('ForceDeleteAny:Product');
     }
 
     public function restore(User $user, Product $product): bool
     {
-        return $user->can('restore_product') && $this->visible($user, $product);
+        return $user->can('Restore:Product') && $this->visible($user, $product);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_product');
+        return $user->can('RestoreAny:Product');
     }
 
     public function replicate(User $user, Product $product): bool
     {
-        return $user->can('replicate_product') && $this->editable($user, $product);
+        return $user->can('Replicate:Product') && $this->editable($user, $product);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_product');
+        return $user->can('Reorder:Product');
     }
 
     /**
@@ -76,7 +76,7 @@ class ProductPolicy
      */
     public function export(User $user): bool
     {
-        return $user->can('export_product');
+        return $user->can('Export:Product');
     }
 
     /**
@@ -84,6 +84,6 @@ class ProductPolicy
      */
     public function import(User $user): bool
     {
-        return $user->can('import_product');
+        return $user->can('Import:Product');
     }
 }

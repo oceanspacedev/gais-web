@@ -211,26 +211,12 @@ class ViewAsset extends ViewRecord
                         Forms\Components\Select::make('source_asset_id')
                             ->label('Aset Sumber (Duplikat)')
                             ->searchable()
-                            ->getSearchResultsUsing(function (string $search): array {
-                                return $this->mergeableAssets()
-                                    ->where(function ($query) use ($search) {
-                                        $query->where('name', 'like', "%{$search}%")
-                                            ->orWhere('id', 'like', "%{$search}%");
-                                    })
-                                    ->limit(20)
-                                    ->get()
-                                    ->mapWithKeys(fn (Asset $asset) => [
-                                        $asset->id => "#{$asset->id} — {$asset->name}",
-                                    ])
-                                    ->toArray();
-                            })
-                            ->getOptionLabelUsing(function ($value): ?string {
-                                $asset = $this->mergeableAssets()->find($value);
-
-                                return $asset ? "#{$asset->id} — {$asset->name}" : null;
-                            })
+                            ->getSearchResultsUsing(fn (string $search): array => Asset::searchOptions($this->mergeableAssets(), $search, 20))
+                            ->getOptionLabelUsing(fn ($value): ?string => $this->mergeableAssets()
+                                ->with(['attributes.customAttribute', 'businessEntity:id,name'])
+                                ->find($value)?->optionLabel())
                             ->required()
-                            ->helperText('Cari berdasarkan ID atau nama aset.')
+                            ->helperText('Cari berdasarkan ID, nama, merek, lokasi, serial number, atau atribut lain.')
                             ->live()
                             ->afterStateUpdated(function (callable $set, $state) {
                                 if ($state) {

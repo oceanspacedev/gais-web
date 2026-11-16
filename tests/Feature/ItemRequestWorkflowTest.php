@@ -75,6 +75,30 @@ class ItemRequestWorkflowTest extends TestCase
         $this->assertSame(ItemRequestClientStatus::Waiting, $request->client_status);
     }
 
+    public function test_nota_type_is_retired_but_old_nota_requests_can_still_finish(): void
+    {
+        $nota = ItemRequestType::create(['name' => 'NOTA', 'requires_attachment' => true]);
+        $old = $this->workflow->create($this->requester, ['item_request_type_id' => $nota->id, 'request_file' => 'item-requests/nota-lama.jpg']);
+
+        (require database_path('migrations/2026_11_16_000002_deactivate_nota_item_request_type.php'))->up();
+
+        $this->assertFalse($nota->fresh()->is_active);
+        $this->assertTrue($this->atk->fresh()->is_active);
+        $this->assertNotContains($nota->id, $this->workflow->availableTypes($this->requester)->pluck('id')->all());
+
+        try {
+            $this->workflow->create($this->requester, ['item_request_type_id' => $nota->id, 'request_file' => 'item-requests/nota-baru.jpg']);
+            $this->fail('Pengajuan NOTA baru seharusnya ditolak.');
+        } catch (ItemRequestException $exception) {
+            $this->assertStringContainsString('tidak aktif', $exception->getMessage());
+        }
+
+        $this->workflow->process($old, $this->staff, ItemRequestExecutorDecision::Closed, 'selesai');
+        $this->workflow->confirm($old, $this->requester, true, 'terima kasih');
+
+        $this->assertSame(0, $this->workflow->openCountByType($this->requester, $nota->id));
+    }
+
     public function test_at_most_two_open_requests_per_type(): void
     {
         $first = $this->createAtk();

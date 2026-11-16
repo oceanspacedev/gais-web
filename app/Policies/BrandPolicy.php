@@ -16,7 +16,7 @@ class BrandPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_brand');
+        return $user->can('ViewAny:Brand');
     }
 
     /**
@@ -24,7 +24,7 @@ class BrandPolicy
      */
     public function view(User $user, Brand $brand): bool
     {
-        return $user->can('view_brand') && $this->visible($user, $brand);
+        return $user->can('View:Brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -32,7 +32,7 @@ class BrandPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_brand');
+        return $user->can('Create:Brand');
     }
 
     /**
@@ -40,7 +40,7 @@ class BrandPolicy
      */
     public function update(User $user, Brand $brand): bool
     {
-        return $user->can('update_brand') && $this->editable($user, $brand);
+        return $user->can('Update:Brand') && $this->editable($user, $brand);
     }
 
     /**
@@ -48,7 +48,7 @@ class BrandPolicy
      */
     public function delete(User $user, Brand $brand): bool
     {
-        return $user->can('delete_brand') && $this->editable($user, $brand);
+        return $user->can('Delete:Brand') && $this->editable($user, $brand);
     }
 
     /**
@@ -56,7 +56,7 @@ class BrandPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_brand');
+        return $user->can('DeleteAny:Brand');
     }
 
     /**
@@ -64,7 +64,7 @@ class BrandPolicy
      */
     public function forceDelete(User $user, Brand $brand): bool
     {
-        return $user->can('force_delete_brand') && $this->visible($user, $brand);
+        return $user->can('ForceDelete:Brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -72,7 +72,7 @@ class BrandPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_brand');
+        return $user->can('ForceDeleteAny:Brand');
     }
 
     /**
@@ -80,7 +80,7 @@ class BrandPolicy
      */
     public function restore(User $user, Brand $brand): bool
     {
-        return $user->can('restore_brand') && $this->visible($user, $brand);
+        return $user->can('Restore:Brand') && $this->visible($user, $brand);
     }
 
     /**
@@ -88,7 +88,7 @@ class BrandPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_brand');
+        return $user->can('RestoreAny:Brand');
     }
 
     /**
@@ -96,7 +96,7 @@ class BrandPolicy
      */
     public function replicate(User $user, Brand $brand): bool
     {
-        return $user->can('replicate_brand') && $this->editable($user, $brand);
+        return $user->can('Replicate:Brand') && $this->editable($user, $brand);
     }
 
     /**
@@ -104,6 +104,6 @@ class BrandPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_brand');
+        return $user->can('Reorder:Brand');
     }
 }

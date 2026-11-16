@@ -13,61 +13,61 @@ class InsuranceCategoryPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_insurance::category');
+        return $user->can('ViewAny:InsuranceCategory');
     }
 
     public function view(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('view_insurance::category') && $this->visible($user, $insuranceCategory);
+        return $user->can('View:InsuranceCategory') && $this->visible($user, $insuranceCategory);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_insurance::category');
+        return $user->can('Create:InsuranceCategory');
     }
 
     public function update(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('update_insurance::category') && $this->editable($user, $insuranceCategory);
+        return $user->can('Update:InsuranceCategory') && $this->editable($user, $insuranceCategory);
     }
 
     public function delete(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('delete_insurance::category') && $this->editable($user, $insuranceCategory);
+        return $user->can('Delete:InsuranceCategory') && $this->editable($user, $insuranceCategory);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_insurance::category');
+        return $user->can('DeleteAny:InsuranceCategory');
     }
 
     public function forceDelete(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('force_delete_insurance::category') && $this->visible($user, $insuranceCategory);
+        return $user->can('ForceDelete:InsuranceCategory') && $this->visible($user, $insuranceCategory);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_insurance::category');
+        return $user->can('ForceDeleteAny:InsuranceCategory');
     }
 
     public function restore(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('restore_insurance::category') && $this->visible($user, $insuranceCategory);
+        return $user->can('Restore:InsuranceCategory') && $this->visible($user, $insuranceCategory);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_insurance::category');
+        return $user->can('RestoreAny:InsuranceCategory');
     }
 
     public function replicate(User $user, InsuranceCategory $insuranceCategory): bool
     {
-        return $user->can('replicate_insurance::category') && $this->editable($user, $insuranceCategory);
+        return $user->can('Replicate:InsuranceCategory') && $this->editable($user, $insuranceCategory);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_insurance::category');
+        return $user->can('Reorder:InsuranceCategory');
     }
 }

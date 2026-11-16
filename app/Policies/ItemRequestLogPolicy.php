@@ -13,61 +13,61 @@ class ItemRequestLogPolicy
 
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_item::request::log');
+        return $user->can('ViewAny:ItemRequestLog');
     }
 
     public function view(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('view_item::request::log') && $this->visible($user, $itemRequestLog);
+        return $user->can('View:ItemRequestLog') && $this->visible($user, $itemRequestLog);
     }
 
     public function create(User $user): bool
     {
-        return $user->can('create_item::request::log');
+        return $user->can('Create:ItemRequestLog');
     }
 
     public function update(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('update_item::request::log') && $this->editable($user, $itemRequestLog);
+        return $user->can('Update:ItemRequestLog') && $this->editable($user, $itemRequestLog);
     }
 
     public function delete(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('delete_item::request::log') && $this->editable($user, $itemRequestLog);
+        return $user->can('Delete:ItemRequestLog') && $this->editable($user, $itemRequestLog);
     }
 
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_item::request::log');
+        return $user->can('DeleteAny:ItemRequestLog');
     }
 
     public function forceDelete(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('force_delete_item::request::log') && $this->visible($user, $itemRequestLog);
+        return $user->can('ForceDelete:ItemRequestLog') && $this->visible($user, $itemRequestLog);
     }
 
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_item::request::log');
+        return $user->can('ForceDeleteAny:ItemRequestLog');
     }
 
     public function restore(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('restore_item::request::log') && $this->visible($user, $itemRequestLog);
+        return $user->can('Restore:ItemRequestLog') && $this->visible($user, $itemRequestLog);
     }
 
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_item::request::log');
+        return $user->can('RestoreAny:ItemRequestLog');
     }
 
     public function replicate(User $user, ItemRequestLog $itemRequestLog): bool
     {
-        return $user->can('replicate_item::request::log') && $this->editable($user, $itemRequestLog);
+        return $user->can('Replicate:ItemRequestLog') && $this->editable($user, $itemRequestLog);
     }
 
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_item::request::log');
+        return $user->can('Reorder:ItemRequestLog');
     }
 }

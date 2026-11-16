@@ -19,7 +19,7 @@
                                 $page = str(\Illuminate\Support\Facades\Route::getRoutes()->getRoutesByName()[$item->route]->action['controller'])->afterLast('\\');
                             }
                         @endphp
-                        @if($page && \Filament\Facades\Filament::auth()->user()->can('page_'.$page))
+                        @if($page && \Filament\Facades\Filament::auth()->user()->can('View:'.$page))
                             <a href="{{ $tenant ? route($item->route, $tenant) : route($item->route) }}" class="fi-ta-ctn flex flex-col justify-center items-center gap-2 p-4 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:divide-white/10 dark:bg-gray-900 dark:ring-white/10">
                                 <div class="p-2">
                                     @if(isset($item->icon))
@@ -57,7 +57,7 @@
                     @endif
                 @elseif($item->page)
                     @if(filament('filament-settings-hub')->isShieldAllowed())
-                        @if(\Filament\Facades\Filament::auth()->user()->can('page_'.str($item->page)->afterLast('\\')))
+                        @if(\Filament\Facades\Filament::auth()->user()->can('View:'.str($item->page)->afterLast('\\')))
                             <a href="{{ app($item->page)::getUrl() }}" class="fi-ta-ctn flex flex-col justify-center items-center gap-2 p-4 overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5 dark:divide-white/10 dark:bg-gray-900 dark:ring-white/10">
                                 <div class="p-2">
                                     @if(isset($item->icon))

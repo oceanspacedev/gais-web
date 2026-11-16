@@ -8,8 +8,8 @@
 
 // Role yang boleh menghapus juga boleh memulihkan dari Sampah (restore mengikuti delete).
 $crud = fn (string $subject, string ...$extra): array => array_map(
-    fn (string $action): string => "{$action}_{$subject}",
-    ['view_any', 'view', 'create', 'update', 'delete', 'delete_any', 'restore', 'restore_any', ...$extra],
+    fn (string $action): string => "{$action}:{$subject}",
+    ['ViewAny', 'View', 'Create', 'Update', 'Delete', 'DeleteAny', 'Restore', 'RestoreAny', ...$extra],
 );
 
 return [
@@ -54,7 +54,7 @@ return [
 
     // roles.id (sumo) => nama role Shield.
     'roles' => [
-        1 => 'pengajuan_admin', // ADMIN
+        1 => 'general_affair',  // ADMIN (staf GA)
         2 => 'accounting',      // ACCOUNTING
         3 => 'executor',        // EXECUTOR
         4 => 'requester',       // USER
@@ -64,10 +64,11 @@ return [
     'access_all_business_entities_roles' => [1, 2, 3],
 
     // Flag alur per nama tipe pengajuan sumo (request_type.request_type).
+    // is_active false: tipe diimpor sebagai nonaktif (NOTA sudah tidak boleh diajukan).
     'type_flags' => [
         'ASSET/NONASSET' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => true],
         'ATK' => ['requires_attachment' => false, 'requires_products' => true, 'requires_accounting_approval' => false],
-        'NOTA' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => false],
+        'NOTA' => ['requires_attachment' => true, 'requires_products' => false, 'requires_accounting_approval' => false, 'is_active' => false],
     ],
 
     /*
@@ -78,29 +79,29 @@ return [
      */
     'division_permissions' => [
         'HCM' => [
-            'view_any_user', 'view_user', 'create_user', 'update_user', 'export_user',
-            'view_any_division', 'view_division', 'create_division', 'update_division',
-            'view_any_business::entity', 'view_business::entity',
-            'widget_InsuranceCostChart', 'widget_ExpiringInsurancesTable', 'widget_ExpiringRentsTable',
-            'widget_ContractOverviewStats', 'widget_RentExpiryChart',
-            ...$crud('insurance', 'export', 'import'),
-            ...$crud('insurance::provider'),
-            ...$crud('insurance::category'),
-            ...$crud('insurance::scope'),
-            ...$crud('rent', 'export', 'import'),
-            ...$crud('product', 'export', 'import'),
-            ...$crud('product::category'),
-            ...$crud('unit::type'),
-            ...$crud('item::request::type'),
-            ...$crud('item::request::setting'),
-            ...$crud('problem::report::category'),
-            ...$crud('area'),
-            'view_any_item::request::log',
-            'view_item::request::log',
+            'ViewAny:User', 'View:User', 'Create:User', 'Update:User', 'Export:User',
+            'ViewAny:Division', 'View:Division', 'Create:Division', 'Update:Division',
+            'ViewAny:BusinessEntity', 'View:BusinessEntity',
+            'View:InsuranceCostChart', 'View:ExpiringInsurancesTable', 'View:ExpiringRentsTable',
+            'View:ContractOverviewStats', 'View:RentExpiryChart',
+            ...$crud('Insurance', 'Export', 'Import'),
+            ...$crud('InsuranceProvider'),
+            ...$crud('InsuranceCategory'),
+            ...$crud('InsuranceScope'),
+            ...$crud('Rent', 'Export', 'Import'),
+            ...$crud('Product', 'Export', 'Import'),
+            ...$crud('ProductCategory'),
+            ...$crud('UnitType'),
+            ...$crud('ItemRequestType'),
+            ...$crud('ItemRequestSetting'),
+            ...$crud('ProblemReportCategory'),
+            ...$crud('Area'),
+            'ViewAny:ItemRequestLog',
+            'View:ItemRequestLog',
             'View:WaNotificationSettings',
         ],
-        'AUDIT' => ['audit_item::request'],
-        'MIS-IT' => ['view_all_item::request'],
+        'AUDIT' => ['Audit:ItemRequest'],
+        'MIS-IT' => ['ViewAll:ItemRequest'],
     ],
 
     // roles.id (sumo) yang menerima division_permissions; di sumo aturan divisi hanya untuk EXECUTOR.
@@ -108,7 +109,7 @@ return [
 
     // users.id (sumo) => izin khusus (sumo: user 75 boleh membuka menu asuransi).
     'legacy_user_permissions' => [
-        75 => ['view_any_insurance', 'view_insurance'],
+        75 => ['ViewAny:Insurance', 'View:Insurance'],
     ],
 
     /*

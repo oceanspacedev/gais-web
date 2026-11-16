@@ -332,7 +332,7 @@ class ObChecksheet extends Model
     public static function visibility(): Visibility
     {
         return Visibility::make()->grant(
-            new PermissionGrant('view_all_ob::checksheet'),
+            new PermissionGrant('ViewAll:ObChecksheet'),
             new OwnerGrant,
             new UnclaimedPoolGrant,
         );

@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Access\HasVisibility;
 use App\Access\ProblemReports\DivisionCategoryGrant;
 use App\Access\Rules\BusinessEntityRule;
+use App\Access\Rules\DivisionMemberGrant;
 use App\Access\Rules\OwnerGrant;
 use App\Access\Visibility;
 use App\Enums\ProblemReportStatus;
@@ -29,6 +30,7 @@ class ProblemReport extends Model
     protected $fillable = [
         'code',
         'user_id',
+        'division_id',
         'problem_report_category_id',
         'business_entity_id',
         'reported_at',
@@ -60,6 +62,13 @@ class ProblemReport extends Model
 
     protected static function booted(): void
     {
+        // Divisi/toko pelapor saat laporan dibuat; tidak ikut berubah bila pelapor pindah divisi.
+        static::creating(function (self $report): void {
+            if ($report->division_id === null && $report->user_id !== null) {
+                $report->division_id = User::query()->whereKey($report->user_id)->value('division_id');
+            }
+        });
+
         static::created(function (self $report): void {
             if (blank($report->code)) {
                 $report->forceFill(['code' => config('item-request.problem_report_code_prefix', 'PR').$report->id])->saveQuietly();
@@ -68,7 +77,8 @@ class ProblemReport extends Model
     }
 
     /**
-     * Pelapor melihat laporannya sendiri; pemegang "Lihat Data Semua User"
+     * Pelapor melihat laporannya sendiri dan laporan divisi/tokonya
+     * (problem_reports.division_id); pemegang "Lihat Data Semua User"
      * melihat semua laporan, dibatasi cakupan jenis gangguan divisinya
      * (problem_report_scopes) bila ada. Semuanya dibatasi badan usaha laporan
      * (kosong = semua).
@@ -79,13 +89,22 @@ class ProblemReport extends Model
             ->require(new BusinessEntityRule)
             ->grant(
                 new OwnerGrant,
-                new DivisionCategoryGrant('view_all_problem::report'),
+                new DivisionMemberGrant,
+                new DivisionCategoryGrant('ViewAll:ProblemReport'),
             );
     }
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Divisi/toko pelapor saat laporan dibuat.
+     */
+    public function division(): BelongsTo
+    {
+        return $this->belongsTo(Division::class)->withTrashed();
     }
 
     public function category(): BelongsTo

@@ -95,10 +95,10 @@
         .pg-badge { align-self: flex-start; font-size: .7rem; font-weight: 600; letter-spacing: .03em; padding: .1rem .5rem; border-radius: 999px; background: color-mix(in srgb, var(--h, #64748b) 16%, transparent); color: var(--h, #64748b); border: 1px solid color-mix(in srgb, var(--h, #64748b) 40%, transparent); }
         .pg-a-pemohon { --h: #2563eb; } .pg-a-accounting { --h: #b45309; } .pg-a-manager { --h: #7c3aed; }
         .pg-a-executor { --h: #047857; } .pg-a-ga { --h: #be185d; } .pg-a-admin { --h: #0e7490; }
-        .pg-a-sistem { --h: #64748b; } .pg-a-user { --h: #4f46e5; }
+        .pg-a-sistem { --h: #64748b; } .pg-a-user { --h: #4f46e5; } .pg-a-security { --h: #b91c1c; }
         .dark .pg-a-pemohon { --h: #60a5fa; } .dark .pg-a-accounting { --h: #fbbf24; } .dark .pg-a-manager { --h: #a78bfa; }
         .dark .pg-a-executor { --h: #34d399; } .dark .pg-a-ga { --h: #f472b6; } .dark .pg-a-admin { --h: #22d3ee; }
-        .dark .pg-a-sistem { --h: #94a3b8; } .dark .pg-a-user { --h: #818cf8; }
+        .dark .pg-a-sistem { --h: #94a3b8; } .dark .pg-a-user { --h: #818cf8; } .dark .pg-a-security { --h: #f87171; }
 
         .pg-paused .pg-dot-on, .pg-paused .pg-card-on, .pg-paused .pg-fill { animation-play-state: paused; }
 
@@ -154,12 +154,12 @@
                             ['Aset', 'Data aset, BA transfer (serah terima, pengalihan, pengembalian), servis, rekonsiliasi audit, riwayat label QR.'],
                             ['Master Aset', 'Merek, kategori, atribut kustom (STNK, KIR, dan sejenisnya), vendor.'],
                             ['OB / Kebersihan', 'Checksheet kebersihan, pekerjaan, shift.'],
-                            ['Security', 'Laporan jaga security: checklist keamanan, kelistrikan, aset, kebersihan, temuan, foto/video.'],
+                            ['Security', 'Laporan jaga security: checklist centang ala Google Form dengan kunci jawaban, temuan, foto/video.'],
                             ['Kendaraan', 'Catatan penggunaan kendaraan: KM, tujuan, kerusakan.'],
                             ['Pekerjaan Vendor', 'Tugas yang dikerjakan vendor beserta biaya dan dokumen.'],
                             ['Pengajuan Barang', 'Pengajuan, scan QR, log, tipe pengajuan, cutoff bulanan, barang, kategori, satuan.'],
                             ['Lapor Gangguan', 'Laporan gangguan dan kategorinya.'],
-                            ['Asuransi & Sewa', 'Polis asuransi dan kontrak sewa beserta penyedia, kategori, cakupan.'],
+                            ['Asuransi & Sewa', 'Asuransi bangunan (stok dan bangunan gudang), asuransi kendaraan, dan kontrak sewa beserta penyedia, kategori, cakupan.'],
                             ['Organisasi', 'Area, lokasi, badan usaha, divisi, jabatan, pengguna.'],
                             ['Pengaturan', 'Pengaturan notifikasi WhatsApp, Impor Data Sumo, dan peralatan admin lain.'],
                         ] as $k => [$name, $desc])
@@ -205,6 +205,7 @@
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-14').scrollIntoView({ behavior: 'smooth' })">14. Pekerjaan Vendor</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-15').scrollIntoView({ behavior: 'smooth' })">15. Import &amp; Laporan Audit stok (CSA)</a></li>
                         <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-16').scrollIntoView({ behavior: 'smooth' })">16. Penjualan aset antar badan usaha</a></li>
+                        <li><a href="#" class="pg-link" x-on:click.prevent="document.getElementById('bab-17').scrollIntoView({ behavior: 'smooth' })">17. Security Checksheet: pertanyaan dan laporan jaga</a></li>
                     </ol>
                 </div>
 
@@ -302,7 +303,7 @@
                     ]" />
                     <ul class="pg-list">
                         <li>Menu <strong>Pengajuan Barang</strong>, tombol <strong>Buat Pengajuan</strong>.</li>
-                        <li>Pilih <strong>Tipe Pengajuan</strong>. Tipe yang kuotanya sudah penuh (2 pengajuan terbuka) tidak muncul.</li>
+                        <li>Pilih <strong>Tipe Pengajuan</strong>. Tipe yang kuotanya sudah penuh (2 pengajuan terbuka) atau sudah nonaktif tidak muncul. Tipe NOTA sudah tidak bisa diajukan lagi; pengajuan NOTA lama tetap bisa dilihat dan diselesaikan.</li>
                         <li>Isi <strong>Barang</strong> dan <strong>Jumlah</strong>. Tekan <strong>Tambah barang</strong> untuk baris berikutnya. Bila tipenya mewajibkan, unggah <strong>File Persetujuan Atasan</strong>.</li>
                         <li>Setelah <strong>Buat</strong>, pengajuan mendapat kode <code>REQ…</code> dan empat tahap approval yang masih <em>Belum</em>.</li>
                     </ul>
@@ -525,7 +526,7 @@
 
                 <div class="pg-block" id="bab-13">
                     <h2>13. Asuransi, Sewa, dan pengingat WhatsApp</h2>
-                    <h3>13.1 Mencatat polis asuransi</h3>
+                    <h3>13.1 Mencatat polis asuransi bangunan</h3>
                     <x-guide.demo name="asuransi" caption="Animasi: membuat polis asuransi stok dengan periode, status, dan nomor WA pengingat." :shots="[
                         'asuransi-01-daftar-asuransi.png' => 'Daftar asuransi',
                         'asuransi-02-polis-dan-nilai.png' => 'Polis dan nilai',
@@ -533,9 +534,16 @@
                         'asuransi-04-asuransi-tersimpan.png' => 'Asuransi tersimpan',
                     ]" />
                     <ul class="pg-list">
-                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi</strong>, tombol <strong>Buat Asuransi</strong>. Wajib: Nomor Polis, Nama Tertanggung, Tanggal Mulai, Tanggal Berakhir.</li>
+                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi Bangunan</strong>, tombol <strong>Buat Asuransi Bangunan</strong>. Untuk polis gudang: nilai dan premi stok serta bangunan. Wajib: Nomor Polis, Nama Tertanggung, Tanggal Mulai, Tanggal Berakhir.</li>
                         <li><strong>Nomor WA Pengingat</strong>: pisahkan dengan koma. Bila kosong, pengingat dikirim ke nomor global di Notifikasi WA.</li>
                         <li>Saat polis diperpanjang, buka detailnya lalu <strong>Tambah Pembaharuan</strong>. Data lama bisa diimpor sekaligus lewat <strong>Impor Excel</strong>.</li>
+                    </ul>
+
+                    <h3>Asuransi kendaraan</h3>
+                    <ul class="pg-list">
+                        <li>Menu <strong>Asuransi &amp; Sewa</strong>, <strong>Asuransi Kendaraan</strong>, tombol <strong>Buat Asuransi Kendaraan</strong>. Pilih kendaraan (cari dengan plat nomor), lalu isi nomor polis, tertanggung, provider, jenis pertanggungan (mis. ALL RISK), nilai pertanggungan, premi, dan periode.</li>
+                        <li>Perpanjangan dicatat lewat <strong>Tambah Pembaharuan</strong> di detail polis, sama seperti asuransi bangunan. Pengingat WA memakai pengaturan asuransi yang sama.</li>
+                        <li>Asuransi kendaraan tidak lagi dicatat di atribut aset "Asuransi"; data lama sudah dipindah ke menu ini, dan kolom asuransi di workbook audit kendaraan ikut masuk ke sini.</li>
                     </ul>
 
                     <h3>13.2 Mencatat perjanjian sewa</h3>
@@ -548,7 +556,7 @@
                     <ul class="pg-list">
                         <li>Menu <strong>Perjanjian Sewa</strong>, tombol <strong>Buat Perjanjian Sewa</strong>. Wajib: Kode Sewa, Objek Sewa, Pihak Pertama, Pihak Kedua, dan kedua tanggal.</li>
                         <li>Bagian <strong>Dokumen</strong> mencatat ada tidaknya bukti potong dan dokumen perjanjian, plus file scan-nya.</li>
-                        <li>Dasbor menampilkan tabel <strong>Asuransi/Sewa Terdekat Jatuh Tempo</strong>. Perpanjangan dicatat lewat <strong>Tambah Perpanjangan</strong> di detail sewa.</li>
+                        <li>Dasbor menampilkan tabel <strong>Asuransi Bangunan/Sewa Terdekat Jatuh Tempo</strong>. Perpanjangan dicatat lewat <strong>Tambah Perpanjangan</strong> di detail sewa.</li>
                     </ul>
 
                     <h3>13.3 Mengatur pengingat WhatsApp</h3>
@@ -558,7 +566,7 @@
                     ]" />
                     <ul class="pg-list">
                         <li>Menu <strong>Pengaturan</strong>, <strong>Notifikasi WA</strong>. <strong>Jam kirim</strong>: pengingat dikirim sekali sehari setelah jam ini.</li>
-                        <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi, dan cutoff pengajuan barang.</li>
+                        <li><strong>Hari sebelum</strong>: daftar H-n dipisah koma (default 30,14,7,1), terpisah untuk sewa, asuransi (bangunan dan kendaraan), dan cutoff pengajuan barang.</li>
                         <li><strong>Kirim Uji Coba</strong> mengetes koneksi WhatsApp. <strong>Ganti Nomor</strong> mengganti satu nomor di semua kontrak sekaligus.</li>
                     </ul>
                 </div>
@@ -623,6 +631,52 @@
                         <li>Baris penjualan bisa diperbaiki (tanggal, harga, dokumen BAST/invoice, catatan) dan dihapus ke Sampah; menghapus tidak membalik kepemilikan. Riwayatnya bisa diekspor ke Excel lewat <em>Ekspor Semua Penjualan</em>.</li>
                     </ul>
                 </div>
+
+                <div class="pg-block" id="bab-17">
+                    <h2>17. Security Checksheet: pertanyaan dan laporan jaga</h2>
+                    <p>Cara kerjanya seperti Google Form: atasan menyiapkan pertanyaan dan kunci jawabannya, petugas security tinggal memilih jawaban.</p>
+
+                    <h3>17.1 Atasan menyiapkan pertanyaan</h3>
+                    <x-guide.demo name="security-pertanyaan" caption="Animasi: menambah pertanyaan APAR lobi bertipe Pilih beberapa, mencentang dua jawaban yang benar, lalu membuka Pratinjau." :shots="[
+                        'security-pertanyaan-01-daftar-pertanyaan.png' => 'Daftar pertanyaan',
+                        'security-pertanyaan-02-form-pertanyaan.png' => 'Form pertanyaan',
+                        'security-pertanyaan-03-pertanyaan-tersimpan.png' => 'Pertanyaan tersimpan',
+                        'security-pertanyaan-04-pratinjau.png' => 'Pratinjau',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Security</strong>, <strong>Pertanyaan Checksheet</strong>, tombol <strong>Tambah</strong>. Hanya role yang punya izin Pertanyaan Checksheet (bawaan: super_admin, admin, general_affair) yang melihat menu ini.</li>
+                        <li><strong>Tipe jawaban</strong>: <em>Pilih satu</em>, <em>Ya / Tidak</em>, <em>Pilih beberapa</em>, atau <em>Isian teks</em>.</li>
+                        <li>Isi <strong>Pilihan jawaban</strong>, lalu centang <strong>Benar</strong> pada jawaban yang normal. Di <em>Pilih satu</em> hanya satu yang bisa dicentang. Tanpa centang, pertanyaan tidak dinilai. <em>Isian teks</em> tidak pernah dinilai.</li>
+                        <li><strong>Kelompok</strong> menentukan kotak tempat pertanyaan tampil (mis. Keamanan). Seret baris di daftar untuk mengubah urutan. Matikan <strong>Aktif</strong> untuk menyembunyikan pertanyaan dari laporan baru.</li>
+                        <li>Di daftar, jawaban benar tampil <strong>hijau dengan tanda centang</strong>. Tombol <strong>Pratinjau</strong> menampilkan form seperti di HP petugas.</li>
+                        <li>Mengubah atau menghapus pertanyaan tidak mengubah laporan yang sudah terkirim: tiap laporan menyimpan pertanyaannya sendiri.</li>
+                    </ul>
+
+                    <h3>17.2 Petugas security mengisi laporan</h3>
+                    <x-guide.demo name="security-laporan" caption="Animasi: petugas memilih jawaban, satu jawaban berbeda dari kunci, menulis temuan dan melampirkan foto, lalu laporan ditandai 1 tidak sesuai." :shots="[
+                        'security-laporan-01-daftar-laporan.png' => 'Daftar laporan',
+                        'security-laporan-02-checklist-dicentang.png' => 'Checklist dicentang',
+                        'security-laporan-03-temuan-dan-lampiran.png' => 'Temuan dan lampiran',
+                        'security-laporan-04-laporan-terkirim.png' => 'Laporan terkirim',
+                        'security-laporan-05-detail-tidak-sesuai.png' => 'Detail tidak sesuai',
+                    ]" />
+                    <ul class="pg-list">
+                        <li>Menu <strong>Security Checksheet</strong>, tombol <strong>Buat</strong>. Lokasi kerja terisi otomatis dari laporan terakhir petugas.</li>
+                        <li>Semua pertanyaan wajib dijawab. Di layar lebar kotak pertanyaan tampil dua kolom; di HP satu kolom.</li>
+                        <li><strong>Kondisi Darurat / Temuan Kejadian</strong> dikosongkan bila aman. <strong>Lampiran</strong> boleh foto atau video, maksimal 10 file, 50 MB per file.</li>
+                        <li>Tekan <strong>Kirim Laporan</strong>. Nama petugas, tanggal, jam, dan nomor referensi (SEC-tanggal-urutan) tercatat otomatis.</li>
+                        <li>Bila isian belum terkirim lalu halaman termuat ulang (mis. saat kamera dibuka), checklist dipulihkan. Lampiran perlu dipilih ulang.</li>
+                    </ul>
+
+                    <h3>17.3 Atasan memeriksa laporan</h3>
+                    <ul class="pg-list">
+                        <li>Kartu laporan menunjukkan <strong>Aman</strong>, <strong>Ada Temuan</strong>, atau <strong>N tidak sesuai</strong>.</li>
+                        <li>Filter <strong>Ada jawaban tidak sesuai</strong>, <strong>Ada temuan kejadian</strong>, tanggal, dan petugas.</li>
+                        <li>Di detail, jawaban yang tidak sesuai tampil merah beserta kuncinya.</li>
+                        <li>Pilih laporan lalu <strong>Export Dipilih</strong>: satu kolom per pertanyaan, ditambah Jumlah Tidak Sesuai dan Butir Tidak Sesuai.</li>
+                        <li>Petugas hanya melihat laporannya sendiri. Izin <strong>Lihat Data Semua User</strong> membuka semua laporan; <strong>Edit Data Semua User</strong> bisa mengganti petugas.</li>
+                    </ul>
+                </div>
             </section>
 
             {{-- ============ LOGIN ============ --}}
@@ -638,7 +692,7 @@
                 <div class="pg-block">
                     <h3>2. Kode OTP lewat WhatsApp</h3>
                     <x-guide.flow :steps="$flows['login']" />
-                    <div class="pg-note"><p>Admin mengisi <strong>Nomor WhatsApp login</strong> di form user (perlu izin <code>manage_access_user</code>). Nomor harus unik. Nomor kontak biasa tidak bisa dipakai untuk login.</p></div>
+                    <div class="pg-note"><p>Admin mengisi <strong>Nomor WhatsApp login</strong> di form user (perlu izin <code>ManageAccess:User</code>). Nomor harus unik. Nomor kontak biasa tidak bisa dipakai untuk login.</p></div>
                 </div>
             </section>
 
@@ -684,7 +738,7 @@
                         <li>Atasan (kolom "approver" di user) melihat pengajuan bawahannya.</li>
                         <li>Accounting melihat semua pengajuan dari tipe yang butuh Accounting.</li>
                         <li>Executor, manager, dan auditor melihat sesuai cakupan divisi, tipe, dan area (tabel <code>item_request_scopes</code>). Cakupan kosong berarti semua.</li>
-                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA menunggu AUDIT.</li>
+                        <li>Cakupan bertanda "Menyetujui jumlah" (menu Divisi) membuat tahap Manager wajib: hanya divisi itu yang menyetujui jumlah, dan executor baru bisa memproses setelahnya. Dari sumo: ATK area TOP/MKLI menunggu WHM/MKLI-HO, NOTA (sisa pengajuan lama) menunggu AUDIT.</li>
                         <li>Izin <code>view_all</code> melihat semuanya.</li>
                     </ul>
                 </div>
@@ -771,8 +825,9 @@
                 </div>
                 <div class="pg-block">
                     <h3>Security</h3>
-                    <p class="pg-lead">Petugas security mengirim laporan jaga: lokasi kerja, checklist keamanan, kelistrikan, kondisi aset, dan kebersihan, lalu temuan kejadian bila ada.</p>
-                    <p>Lampiran bisa foto atau video (maksimal 10 file, 50 MB per file). Petugas hanya melihat laporannya sendiri; atasan dengan izin Lihat Data Semua User melihat semuanya. Data bisa diexport.</p>
+                    <p class="pg-lead">Laporan jaga ala Google Form: atasan menyiapkan pertanyaan dan kunci jawaban, petugas security tinggal memilih jawaban.</p>
+                    <x-guide.flow :steps="$flows['security']" />
+                    <p>Tipe jawaban: Pilih satu, Ya / Tidak, Pilih beberapa, atau Isian teks. Jawaban yang beda dari kunci ditandai Tidak Sesuai dan bisa difilter. Laporan menyimpan pertanyaannya sendiri, jadi mengubah pertanyaan tidak mengubah laporan lama. Lampiran foto atau video maksimal 10 file, 50 MB per file. Langkahnya ada di bab 17.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Kendaraan</h3>
@@ -788,7 +843,7 @@
             <section x-show="tab === 'kontrak'" x-cloak class="pg-body" style="padding-top: 0">
                 <div class="pg-block">
                     <h2>Asuransi, Sewa, dan Pengingat WhatsApp</h2>
-                    <p class="pg-lead">Polis asuransi dan kontrak sewa punya tanggal berakhir. GAIS mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
+                    <p class="pg-lead">Polis asuransi bangunan, asuransi kendaraan, dan kontrak sewa punya tanggal berakhir. GAIS mengingatkan lewat WhatsApp sebelum jatuh tempo.</p>
                 </div>
                 <div class="pg-block">
                     <h3>Data kontrak</h3>
@@ -825,13 +880,13 @@
                         <thead><tr><th>Role</th><th>Untuk siapa</th><th>Bisa apa</th></tr></thead>
                         <tbody>
                             <tr><td><code>super_admin</code></td><td>Pemegang sistem</td><td>Semua, termasuk semua badan usaha dan mengelola akses user.</td></tr>
-                            <tr><td><code>pengajuan_admin</code></td><td>Admin pengajuan</td><td>Semua izin pengajuan, laporan gangguan, dan master terkait.</td></tr>
+                            <tr><td><code>general_affair</code></td><td>Staf GA (sama dengan ADMIN di sumo lama)</td><td>Hak penuh modul sumo: pengajuan, laporan gangguan, asuransi, sewa, master barang, user dan divisi, Notifikasi WA. Ditambah hak aset di baris paling bawah.</td></tr>
                             <tr><td><code>accounting</code></td><td>Tim Accounting</td><td>Melihat dan menyetujui tahap Accounting, export, melihat master.</td></tr>
                             <tr><td><code>executor</code></td><td>Pelaksana</td><td>Memproses pengajuan dan laporan gangguan, setujui sebagai manager, ganti pemohon, export, scan QR.</td></tr>
                             <tr><td><code>requester</code></td><td>Karyawan biasa</td><td>Membuat dan melihat pengajuan serta laporan miliknya, melihat barang.</td></tr>
                             <tr><td><code>office_boy</code></td><td>OB</td><td>Melihat dan membuat OB checksheet.</td></tr>
-                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya.</td></tr>
-                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. Role ini dibuat manual, tidak otomatis ada.</td></tr>
+                            <tr><td><code>security</code></td><td>Security</td><td>Melihat dan membuat security checksheet miliknya. Tidak bisa mengubah pertanyaan.</td></tr>
+                            <tr><td><code>general_affair</code>, <code>admin</code>, <code>audit</code></td><td>Operasional lama GAIS</td><td>Aset, BA, servis, export. <code>admin</code> dan <code>general_affair</code> juga mengatur Pertanyaan Checksheet dan melihat semua laporan security. Role ini dibuat manual, tidak otomatis ada.</td></tr>
                         </tbody>
                     </table>
                 </div>

@@ -50,6 +50,7 @@ class PhoneOtpLoginTest extends TestCase
             $table->string('email')->nullable();
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password')->nullable();
+            $table->timestamp('login_disabled_at')->nullable();
             $table->string('whatsapp_number')->nullable();
             $table->string('employee_id')->nullable()->unique();
             $table->unsignedBigInteger('business_entity_id')->nullable();
@@ -246,6 +247,17 @@ class PhoneOtpLoginTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertAuthenticatedAs($user);
+    }
+
+    public function test_account_with_disabled_login_is_rejected_after_otp(): void
+    {
+        $user = $this->registeredUser();
+        $user->forceFill(['login_disabled_at' => now()])->save();
+
+        $this->sendOtp()->set('data.otp', $this->code())->call('verify')
+            ->assertHasFormErrors(['phone']);
+
+        $this->assertGuest();
     }
 
     public function test_invalid_otp_does_not_login_or_consume_challenge(): void

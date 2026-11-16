@@ -16,7 +16,7 @@ class TaskPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_task');
+        return $user->can('ViewAny:Task');
     }
 
     /**
@@ -24,7 +24,7 @@ class TaskPolicy
      */
     public function view(User $user, Task $task): bool
     {
-        return $user->can('view_task') && $this->visible($user, $task);
+        return $user->can('View:Task') && $this->visible($user, $task);
     }
 
     /**
@@ -32,7 +32,7 @@ class TaskPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_task');
+        return $user->can('Create:Task');
     }
 
     /**
@@ -40,7 +40,7 @@ class TaskPolicy
      */
     public function update(User $user, Task $task): bool
     {
-        return $user->can('update_task') && $this->editable($user, $task);
+        return $user->can('Update:Task') && $this->editable($user, $task);
     }
 
     /**
@@ -48,7 +48,7 @@ class TaskPolicy
      */
     public function delete(User $user, Task $task): bool
     {
-        return $user->can('delete_task') && $this->editable($user, $task);
+        return $user->can('Delete:Task') && $this->editable($user, $task);
     }
 
     /**
@@ -56,7 +56,7 @@ class TaskPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_task');
+        return $user->can('DeleteAny:Task');
     }
 
     /**
@@ -64,7 +64,7 @@ class TaskPolicy
      */
     public function forceDelete(User $user, Task $task): bool
     {
-        return $user->can('force_delete_task') && $this->visible($user, $task);
+        return $user->can('ForceDelete:Task') && $this->visible($user, $task);
     }
 
     /**
@@ -72,7 +72,7 @@ class TaskPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_task');
+        return $user->can('ForceDeleteAny:Task');
     }
 
     /**
@@ -80,7 +80,7 @@ class TaskPolicy
      */
     public function restore(User $user, Task $task): bool
     {
-        return $user->can('restore_task') && $this->visible($user, $task);
+        return $user->can('Restore:Task') && $this->visible($user, $task);
     }
 
     /**
@@ -88,7 +88,7 @@ class TaskPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_task');
+        return $user->can('RestoreAny:Task');
     }
 
     /**
@@ -96,7 +96,7 @@ class TaskPolicy
      */
     public function replicate(User $user, Task $task): bool
     {
-        return $user->can('replicate_task') && $this->editable($user, $task);
+        return $user->can('Replicate:Task') && $this->editable($user, $task);
     }
 
     /**
@@ -104,6 +104,6 @@ class TaskPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_task');
+        return $user->can('Reorder:Task');
     }
 }

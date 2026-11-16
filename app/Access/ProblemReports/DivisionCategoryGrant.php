@@ -18,7 +18,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 final class DivisionCategoryGrant implements Grant
 {
-    public function __construct(private readonly string $permission = 'view_all_problem::report') {}
+    public function __construct(private readonly string $permission = 'ViewAll:ProblemReport') {}
 
     public function appliesTo(User $user): bool
     {

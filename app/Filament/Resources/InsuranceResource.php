@@ -37,7 +37,8 @@ use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 /**
- * Polis asuransi (sumo: ASURANSI > Data Asuransi). Riwayat pembaharuan ada di
+ * Asuransi Bangunan: polis gudang untuk stok dan bangunan (sumo: ASURANSI > Data
+ * Asuransi). Asuransi kendaraan ada di VehicleInsuranceResource. Riwayat pembaharuan ada di
  * relation manager; daftar menampilkan nilai pembaharuan terakhir (nomor polis,
  * provider, nilai, status, catatan) dan jatuh tempo efektif, seperti sumo.
  */
@@ -47,7 +48,7 @@ class InsuranceResource extends Resource
 
     protected static ?string $model = Insurance::class;
 
-    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-shield-check';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-building-office-2';
 
     protected static string|\UnitEnum|null $navigationGroup = 'Asuransi & Sewa';
 
@@ -57,12 +58,12 @@ class InsuranceResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('Asuransi');
+        return __('Asuransi Bangunan');
     }
 
     public static function getPluralModelLabel(): string
     {
-        return __('Asuransi');
+        return __('Asuransi Bangunan');
     }
 
     public static function form(Schema $form): Schema

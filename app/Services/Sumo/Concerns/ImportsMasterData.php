@@ -108,7 +108,7 @@ trait ImportsMasterData
                 'requires_attachment' => (bool) ($flag['requires_attachment'] ?? false),
                 'requires_products' => (bool) ($flag['requires_products'] ?? false),
                 'requires_accounting_approval' => (bool) ($flag['requires_accounting_approval'] ?? false),
-                'is_active' => true,
+                'is_active' => (bool) ($flag['is_active'] ?? true),
             ] + $this->timestamps($type);
         }
 

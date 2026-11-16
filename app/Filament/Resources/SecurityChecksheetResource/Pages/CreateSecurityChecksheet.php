@@ -4,6 +4,7 @@ namespace App\Filament\Resources\SecurityChecksheetResource\Pages;
 
 use App\Filament\Resources\SecurityChecksheetResource;
 use App\Support\ObPhotoDraft;
+use App\Support\SecurityChecklist;
 use Filament\Actions\Action;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
@@ -88,6 +89,9 @@ class CreateSecurityChecksheet extends CreateRecord
     {
         // Laporan baru selalu atas nama pembuatnya, apa pun isi request.
         $data['user_id'] = auth()->id();
+
+        // Jawaban disimpan bersama salinan pertanyaan aktif dan hasil cocok kuncinya.
+        $data = [...$data, ...SecurityChecklist::build(SecurityChecklist::activeDefinitions(), (array) ($data['checklist'] ?? []))];
 
         $record = parent::handleRecordCreation($data);
 

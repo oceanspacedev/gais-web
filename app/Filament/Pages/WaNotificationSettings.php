@@ -75,7 +75,7 @@ class WaNotificationSettings extends Page implements HasForms
                     ->schema([
                         Toggle::make('remind_rent')->label('Jatuh tempo sewa'),
                         TextInput::make('rent_days_before')->label('Hari sebelum (sewa)')->helperText('Contoh: 30,14,7,1')->regex('/^\d+(,\s*\d+)*$/'),
-                        Toggle::make('remind_insurance')->label('Jatuh tempo asuransi'),
+                        Toggle::make('remind_insurance')->label('Jatuh tempo asuransi')->helperText('Asuransi bangunan dan kendaraan.'),
                         TextInput::make('insurance_days_before')->label('Hari sebelum (asuransi)')->regex('/^\d+(,\s*\d+)*$/'),
                         Toggle::make('remind_request_cutoff')->label('Cutoff pengajuan barang'),
                         TextInput::make('request_cutoff_days_before')->label('Hari sebelum (cutoff)')->regex('/^\d+(,\s*\d+)*$/'),
@@ -123,7 +123,7 @@ class WaNotificationSettings extends Page implements HasForms
                     Select::make('old_phone')
                         ->label('Nomor lama')
                         ->options(fn (): array => collect(app(ReminderPhoneReplacer::class)->groups())
-                            ->mapWithKeys(fn (array $group): array => [$group['phone'] => "{$group['phone']} (sewa {$group['rent']}, asuransi {$group['insurance']})"])
+                            ->mapWithKeys(fn (array $group): array => [$group['phone'] => "{$group['phone']} (sewa {$group['rent']}, asuransi bangunan {$group['insurance']}, asuransi kendaraan {$group['vehicle_insurance']})"])
                             ->all())
                         ->required()
                         ->searchable(),
@@ -133,7 +133,7 @@ class WaNotificationSettings extends Page implements HasForms
                     $result = app(ReminderPhoneReplacer::class)->replace((string) $data['old_phone'], filled($data['new_phone'] ?? null) ? (string) $data['new_phone'] : null);
 
                     Notification::make()
-                        ->title("Nomor diperbarui pada {$result['rent']} sewa dan {$result['insurance']} asuransi.")
+                        ->title("Nomor diperbarui pada {$result['rent']} sewa, {$result['insurance']} asuransi bangunan, dan {$result['vehicle_insurance']} asuransi kendaraan.")
                         ->success()
                         ->send();
                 }),

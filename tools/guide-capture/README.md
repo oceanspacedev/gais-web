@@ -23,12 +23,13 @@ Akun contoh dari `GuideCaptureSeeder` (semua kata sandi `password`). Bagian memi
 
 | Akun | Role | Dipakai di |
 |---|---|---|
-| `admin` | super_admin | aset, BA, servis, OB (menugaskan), kendaraan, pengguna, audit kendaraan dan CSA, asuransi, sewa, Notifikasi WA, Pekerjaan Vendor |
+| `admin` | super_admin | aset, BA, servis, OB (menugaskan), pertanyaan Security Checksheet, kendaraan, pengguna, audit kendaraan dan CSA, asuransi, sewa, Notifikasi WA, Pekerjaan Vendor |
 | `pemohon` | requester | membuat pengajuan dan laporan gangguan, konfirmasi |
 | `accounting` | accounting | status PO |
 | `executor` | executor | setujui jumlah, proses pengajuan dan gangguan |
 | `ob` | office_boy | foto sebelum dan sesudah |
 | `ga`, `budi` | general_affair, requester | pihak BA (serah terima, pengalihan, pengembalian) |
+| `satpam` | security | mengisi Security Checksheet |
 
 Reset (`resetData`) menghapus pengajuan, laporan, BA, servis, checksheet, dan data buatan bagian `setup`/`isi-aset`/`user-baru`, lalu menjalankan ulang seeder sehingga aset stok kembali Tersedia.
 
@@ -66,3 +67,18 @@ Lalu tampilkan di panduan: `<x-guide.demo name="nama-bagian" caption="..." :shot
 - Jika langkah gagal, screenshot kegagalan disimpan di `fail.png` (di-ignore git).
 - Di macOS: `setup-db` belum bisa dipakai (memanggil `mysql.exe`/`mysqldump.exe`), jadi perbarui DB capture dengan `DB_DATABASE=db_gais_capture php artisan migrate --force` lalu `permission:cache-reset`; jalankan capture dengan `PHP_BIN="$(which php)" node capture.mjs ...` karena default `PHP_BIN` adalah path Laragon Windows.
 - `migrate:fresh` pada DB kosong gagal karena dua migrasi tabel `settings`, itu sebabnya `setup-db` menyalin struktur dari DB utama.
+
+## Video demo (MP4)
+
+`demo-video.mjs` merekam video demo utuh dari sudut pandang **pemohon/karyawan**: login lewat **WhatsApp OTP** dan **Email**, Pengajuan Barang → Konfirmasi Penerimaan, Lapor Gangguan → Konfirmasi Selesai. Ada kartu judul, teks keterangan, dan **musik latar instrumental orisinal** dari `music.mjs` (dibuat dari nol, bebas hak cipta). Langkah executor dikerjakan di luar kamera. Hasil: `video-out/demo-pemohon.mp4` (di-ignore git).
+
+- Login WA/Email memakai server tiruan lokal (WA di port 8097, SMTP di port 2526) yang menangkap kode OTP, jadi tidak ada pesan yang benar-benar terkirim. Nomor login akun `pemohon` diisi oleh `GuideCaptureSeeder`.
+- `DEMO=ga` membuat video sisi **Tim GA** (akun `executor`): Dasbor Perlu Tindakan, Proses pengajuan (Diproses → Selesai), Lapor Gangguan (Jadwal Pengerjaan → Selesai + Foto Hasil), pemantauan setelah pemohon konfirmasi. Hasil: `video-out/demo-ga.mp4`.
+- `MUSIC_FILE=lagu.mp3` untuk lagu sendiri (diulang kalau kurang panjang), `MUSIC_VOLUME` (default 0.6).
+- `NARRATION=1` mengganti musik dengan narasi suara `say -v Damayanti` (opsional, kaku).
+
+```bash
+CAPTURE_PORT=8098 PHP_BIN="$(which php)" node demo-video.mjs
+```
+
+`CAPTURE_PORT` dipakai kalau port 8099 sedang dipakai server lain (mis. preview `gais-test`). Foto unggahan butuh `php artisan storage:link`.

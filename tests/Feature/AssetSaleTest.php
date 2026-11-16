@@ -34,8 +34,8 @@ class AssetSaleTest extends TestCase
     use AssertsVisibilityContract, DatabaseTransactions;
 
     private const PERMISSIONS = [
-        'view_any_asset', 'view_asset',
-        'view_any_asset::sale', 'view_asset::sale', 'create_asset::sale', 'update_asset::sale', 'delete_asset::sale', 'restore_asset::sale',
+        'ViewAny:Asset', 'View:Asset',
+        'ViewAny:AssetSale', 'View:AssetSale', 'Create:AssetSale', 'Update:AssetSale', 'Delete:AssetSale', 'Restore:AssetSale',
     ];
 
     private BusinessEntity $alpha;
@@ -272,7 +272,7 @@ class AssetSaleTest extends TestCase
     {
         $asset = $this->stockAsset($this->alpha);
 
-        $this->actingAs($this->userWith(['view_any_asset', 'view_asset'], unrestricted: true));
+        $this->actingAs($this->userWith(['ViewAny:Asset', 'View:Asset'], unrestricted: true));
         Livewire::test(ViewAsset::class, ['record' => $asset->getRouteKey()])->assertActionHidden('sellToEntity');
 
         $holder = User::factory()->create(['business_entity_id' => $this->alpha->id]);

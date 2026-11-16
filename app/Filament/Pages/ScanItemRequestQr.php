@@ -50,7 +50,7 @@ class ScanItemRequestQr extends Page
             return;
         }
 
-        $detail = ItemRequestDetail::query()->with(['product.unitType', 'request.user.division', 'request.type', 'request.approvals.approver'])->find($id);
+        $detail = ItemRequestDetail::query()->with(['product.unitType', 'request.user', 'request.division', 'request.type', 'request.approvals.approver'])->find($id);
         $request = $detail?->request;
         $viewer = auth()->user();
 
@@ -67,7 +67,7 @@ class ScanItemRequestQr extends Page
             'request_code' => $request->request_code,
             'type' => $request->type?->name ?? '-',
             'requester' => $request->user?->name ?? '-',
-            'division' => $request->user?->division?->name ?? '-',
+            'division' => $request->division?->name ?? '-',
             'requested_at' => $request->requested_at?->format('d/m/Y H:i') ?? '-',
             'product' => $detail->product?->label() ?? '(barang dihapus)',
             'qty_request' => (float) $detail->qty_request,

@@ -246,7 +246,7 @@ class AssetTransferResource extends Resource
                             ))
                             ->getOptionLabelUsing(fn ($value, Get $get): ?string => static::assetNames(
                                 collect($get('../../details'))->pluck('asset_id')->filter()->values()->all(),
-                            )[$value] ?? Asset::find($value)?->name),
+                            )[$value] ?? Asset::find($value)?->optionLabel()),
                         TextInput::make('equipment')
                             ->translateLabel()
                             ->disabled($lockedOnEdit),
@@ -631,19 +631,24 @@ class AssetTransferResource extends Resource
     }
 
     /**
-     * Nama aset yang sudah dipilih di repeater, sekali query untuk semua baris.
+     * Label aset yang sudah dipilih di repeater, sekali query untuk semua baris.
      *
      * @param  list<int|string>  $assetIds
      * @return array<int, string>
      */
     protected static function assetNames(array $assetIds): array
     {
-        return once(fn (): array => Asset::query()->whereKey($assetIds)->pluck('name', 'id')->all());
+        return once(fn (): array => Asset::query()
+            ->with(['attributes.customAttribute', 'businessEntity:id,name'])
+            ->whereKey($assetIds)
+            ->get()
+            ->mapWithKeys(fn (Asset $asset): array => [$asset->getKey() => $asset->optionLabel()])
+            ->all());
     }
 
     /**
      * Dibatasi supaya stok yang besar tidak dikirim utuh ke browser; aset lain
-     * dicari lewat nama atau serial number.
+     * dicari lewat nama, merek, lokasi, atau atribut kustom (Asset::scopeWhereSearch).
      *
      * @param  list<int|string>  $selectedAssetIds
      * @return array<int, string>
@@ -654,14 +659,11 @@ class AssetTransferResource extends Resource
             return [];
         }
 
-        return static::assetQuery($type, $fromUserId)
-            ->when($selectedAssetIds !== [], fn (Builder $query) => $query->whereNotIn('id', $selectedAssetIds))
-            ->when(filled($search), fn (Builder $query) => $query->where(fn (Builder $match) => $match
-                ->where('name', 'like', "%{$search}%")
-                ->orWhereAnyAttribute($search)))
-            ->orderBy('name')
-            ->limit(static::OPTIONS_LIMIT)
-            ->pluck('name', 'id')
-            ->all();
+        return Asset::searchOptions(
+            static::assetQuery($type, $fromUserId)
+                ->when($selectedAssetIds !== [], fn (Builder $query) => $query->whereNotIn('assets.id', $selectedAssetIds)),
+            $search,
+            static::OPTIONS_LIMIT,
+        );
     }
 }
