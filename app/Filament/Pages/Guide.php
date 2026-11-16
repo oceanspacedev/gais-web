@@ -64,7 +64,7 @@ class Guide extends Page
                 ['actor' => 'ga', 'title' => 'BAPEB pengembalian', 'text' => 'Pemegang mengembalikan aset ke staf GA. Aset kembali ke stok tanpa pemegang (Tersedia).'],
             ],
             'sale' => [
-                ['actor' => 'sistem', 'title' => 'Aset di stok penjual', 'text' => 'Tersedia dan tanpa pemegang. Aset yang masih dipegang dikembalikan dulu lewat BA Pengembalian.'],
+                ['actor' => 'sistem', 'title' => 'Aset milik penjual', 'text' => 'Tersedia (stok) atau Digunakan. Aset yang sedang dipegang boleh dijual; pemegangnya tetap.'],
                 ['actor' => 'ga', 'title' => 'Catat penjualan', 'text' => 'Dari detail aset (Jual ke Badan Usaha Lain), menu Penjualan Aset, atau Impor Excel untuk banyak aset. Pembeli harus badan usaha lain; pencatat punya akses ke badan usaha penjual dan pembeli.'],
                 ['actor' => 'sistem', 'title' => 'Kepemilikan pindah', 'text' => 'Dalam satu transaksi aset menjadi milik pembeli dan masuk stoknya sebagai Tersedia tanpa pemegang. Badan usaha lama tidak lagi melihatnya di daftar aset.'],
                 ['actor' => 'sistem', 'title' => 'Riwayat tersimpan', 'text' => 'Satu baris per perpindahan: penjual, pembeli, tanggal, harga, dokumen, pencatat. Tampil di detail aset dan menu Penjualan Aset untuk kedua pihak.'],
