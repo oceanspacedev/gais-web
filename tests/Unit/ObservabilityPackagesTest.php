@@ -25,8 +25,10 @@ class ObservabilityPackagesTest extends TestCase
         $this->assertFileExists($root.'/config/horizon.php');
         $this->assertFileExists($root.'/config/log-viewer.php');
         $this->assertStringContainsString('HorizonServiceProvider::class', $providers);
-        $this->assertStringContainsString('filament.mekaya-sidebar-footer', (string) file_get_contents($root.'/resources/views/vendor/mekaya/livewire/mekaya-sidebar.blade.php'));
-        $this->assertStringContainsString('filament.observability-sidebar-footer', (string) file_get_contents($root.'/resources/views/filament/mekaya-sidebar-footer.blade.php'));
+        // Tautan observability masuk lewat render hook footer sidebar, bukan salinan view tema.
+        $this->assertStringContainsString('PanelsRenderHook::SIDEBAR_FOOTER', (string) file_get_contents($root.'/app/Providers/Filament/AdminPanelProvider.php'));
+        $this->assertStringContainsString("view('filament.observability-sidebar-footer')", (string) file_get_contents($root.'/app/Providers/Filament/AdminPanelProvider.php'));
+        $this->assertDirectoryDoesNotExist($root.'/resources/views/vendor/mekaya');
         $this->assertStringContainsString('ObservabilityAccess::filamentNavigationItems()', (string) file_get_contents($root.'/resources/views/filament/observability-sidebar-footer.blade.php'));
         $this->assertStringContainsString('mky-sidebar-group', (string) file_get_contents($root.'/resources/views/filament/observability-sidebar-footer.blade.php'));
         $this->assertStringNotContainsString('mky-si-nav', (string) file_get_contents($root.'/resources/views/filament/observability-sidebar-footer.blade.php'));
