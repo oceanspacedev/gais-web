@@ -3,25 +3,20 @@
 return [
 
     'admin' => [
-        // Panel path + asset URL prefix. Should match the panel's ->path().
+        // Panel path. Should match the panel's ->path().
         'path' => 'admin',
 
-        // Version label surfaced in the appshell.
+        // Optional panel version metadata exposed through mekaya()->version().
         'version' => 'v2',
 
-        // Optional brand image path (relative to /public). Null falls back to the bundled mekaya icon.
+        // Brand image from /public. A logo set on the Filament panel takes precedence.
         'brand' => 'images/icon.svg',
 
-        // Brand logo height in the panel header.
+        // Brand logo height in the sidebar header.
         'brand_logo_height' => '2rem',
 
         // Favicon path (relative to /public).
         'favicon' => 'images/icon.svg',
-    ],
-
-    'settings' => [
-        'name' => env('APP_NAME', 'Mekaya'),
-        'email' => env('MAIL_FROM_ADDRESS', 'admin@admin.com'),
     ],
 
 ];

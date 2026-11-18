@@ -52,6 +52,11 @@ class AdminPanelProvider extends PanelProvider
                 PanelsRenderHook::AUTH_LOGIN_FORM_AFTER,
                 fn () => view('auth.login-extra'),
             )
+            // Tautan Horizon dan Log Viewer di footer sidebar Mekaya (hanya untuk yang berhak, lihat ObservabilityAccess).
+            ->renderHook(
+                PanelsRenderHook::SIDEBAR_FOOTER,
+                fn () => view('filament.observability-sidebar-footer'),
+            )
             // Foto OB Checksheet dan lampiran Security Checksheet bisa diklik untuk diperbesar.
             ->renderHook(
                 PanelsRenderHook::BODY_END,

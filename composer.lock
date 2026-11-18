@@ -3564,19 +3564,19 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/kungfufafa/mekaya-theme.git",
-                "reference": "821925613853bb6d538a6478fd6314e757f27ccb"
+                "reference": "465d09f2c93e68aa933f03e066015f671c282651"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/kungfufafa/mekaya-theme/zipball/821925613853bb6d538a6478fd6314e757f27ccb",
-                "reference": "821925613853bb6d538a6478fd6314e757f27ccb",
+                "url": "https://api.github.com/repos/kungfufafa/mekaya-theme/zipball/465d09f2c93e68aa933f03e066015f671c282651",
+                "reference": "465d09f2c93e68aa933f03e066015f671c282651",
                 "shasum": ""
             },
             "require": {
-                "filament/filament": "^4.0",
-                "livewire/livewire": "^3.0",
+                "filament/filament": "^4.0 || ^5.0",
+                "livewire/livewire": "^3.5 || ^4.0",
                 "mckenziearts/blade-untitledui-icons": "^1.5",
-                "php": "^8.3"
+                "php": "^8.2"
             },
             "default-branch": true,
             "type": "library",
@@ -3603,8 +3603,8 @@
                     "name": "apriansyahrs"
                 }
             ],
-            "description": "Mekaya — a custom Filament v4 admin panel appshell (sidebar, topbar, theme, Blade components).",
-            "time": "2026-07-11T06:59:23+00:00"
+            "description": "Mekaya — a custom Filament v4/v5 admin panel appshell (sidebar, topbar, theme, Blade components).",
+            "time": "2026-11-18T12:29:31+00:00"
         },
         {
             "name": "laravel/framework",
@@ -14725,5 +14725,5 @@
         "php": "^8.2"
     },
     "platform-dev": {},
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.11.0"
 }
