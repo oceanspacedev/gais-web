@@ -133,8 +133,15 @@ class ItemRequestResource extends Resource
 
                         FileUpload::make('request_file_2')
                             ->label('File Tambahan (opsional)')
+                            ->helperText('Foto, PDF, atau Excel (JPG, PNG, PDF, XLSX, XLS, maks. 5 MB).')
                             ->directory(LegacyUpload::REQUEST_DIR)
-                            ->acceptedFileTypes(['image/jpeg', 'image/png', 'application/pdf'])
+                            ->acceptedFileTypes([
+                                'image/jpeg',
+                                'image/png',
+                                'application/pdf',
+                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                'application/vnd.ms-excel',
+                            ])
                             ->maxSize(5120)
                             ->openable()
                             ->visible(fn (Get $get): bool => static::typeRequires($get('item_request_type_id'), 'requires_attachment')),
