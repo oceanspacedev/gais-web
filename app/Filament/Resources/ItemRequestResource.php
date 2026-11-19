@@ -123,15 +123,16 @@ class ItemRequestResource extends Resource
 
                         FileUpload::make('request_file')
                             ->label('File Persetujuan Atasan')
-                            ->helperText('Foto, PDF, atau Excel persetujuan (JPG, PNG, PDF, XLSX, XLS, maks. 5 MB).')
+                            ->helperText('1) Unduh template DOCX, 2) isi dan minta tanda tangan atasan, 3) unggah hasilnya dalam bentuk PDF (maks. 5 MB).')
+                            ->hintAction(
+                                Action::make('downloadApprovalTemplate')
+                                    ->label('Unduh Template (DOCX)')
+                                    ->icon('heroicon-m-arrow-down-tray')
+                                    ->url(asset('templates/form-persetujuan-atasan.docx'))
+                                    ->extraAttributes(['download' => 'Form Persetujuan Atasan.docx']),
+                            )
                             ->directory(LegacyUpload::REQUEST_DIR)
-                            ->acceptedFileTypes([
-                                'image/jpeg',
-                                'image/png',
-                                'application/pdf',
-                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                'application/vnd.ms-excel',
-                            ])
+                            ->acceptedFileTypes(['application/pdf'])
                             ->maxSize(5120)
                             ->openable()
                             ->required(fn (Get $get): bool => static::typeRequires($get('item_request_type_id'), 'requires_attachment'))
