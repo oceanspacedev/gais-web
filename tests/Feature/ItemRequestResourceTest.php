@@ -71,6 +71,20 @@ class ItemRequestResourceTest extends TestCase
         $this->assertSame([$created->id], ItemRequestResource::getEloquentQuery()->pluck('id')->all());
     }
 
+    public function test_approval_file_offers_the_docx_template_and_accepts_only_signed_pdf(): void
+    {
+        $withAttachment = ItemRequestType::create(['name' => 'Infra-ui', 'requires_attachment' => true]);
+        $this->actingAs($this->userWithRole('requester'));
+
+        Livewire::test(CreateItemRequest::class)
+            ->fillForm(['item_request_type_id' => $withAttachment->id])
+            ->assertSee('Unduh Template (DOCX)')
+            ->assertSee(asset('templates/form-persetujuan-atasan.docx'), false)
+            ->assertFormFieldExists('request_file', fn ($field): bool => $field->getAcceptedFileTypes() === ['application/pdf']);
+
+        $this->assertFileExists(public_path('templates/form-persetujuan-atasan.docx'));
+    }
+
     public function test_executor_in_scope_can_process_and_requester_can_then_confirm(): void
     {
         $division = Division::create(['name' => 'HCM-ui']);
