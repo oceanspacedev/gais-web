@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Filament\Resources\ItemRequestResource;
+use App\Filament\Resources\ItemRequestResource\Pages\ListItemRequests;
 use App\Filament\Resources\ProblemReportResource;
 use App\Models\Division;
 use App\Models\ItemRequest;
@@ -11,6 +12,7 @@ use App\Models\Product;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
+use Livewire\Livewire;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
@@ -53,7 +55,8 @@ class BaselineAccessTest extends TestCase
         $this->assertTrue($member->can('viewAny', ItemRequest::class));
         $this->assertTrue($member->can('create', ItemRequest::class));
         $this->assertTrue($member->can('viewAny', Product::class));
-        $this->assertFalse($unplaced->can('viewAny', ItemRequest::class));
+        // Tanpa divisi: daftar terbuka (untuk memilih divisi), membuat belum boleh.
+        $this->assertTrue($unplaced->can('viewAny', ItemRequest::class));
         $this->assertFalse($unplaced->can('create', ItemRequest::class));
 
         // Hanya izin pemohon: memproses, menyetujui, melihat semua, dan ekspor tetap butuh izin Shield.
@@ -65,6 +68,40 @@ class BaselineAccessTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $this->get(ItemRequestResource::getUrl('index'))->assertOk();
+        $this->get(ItemRequestResource::getUrl('create'))->assertOk();
+    }
+
+    public function test_employee_without_division_chooses_it_once_then_can_request_items(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $division = Division::create(['name' => 'CS-uji-pilih-divisi']);
+        $employee = User::factory()->create();
+
+        $this->actingAs($employee);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $this->get(ItemRequestResource::getUrl('index'))->assertOk();
+        $this->get(ItemRequestResource::getUrl('create'))->assertRedirect(ItemRequestResource::getUrl('index'));
+
+        Livewire::test(ListItemRequests::class)
+            ->assertSet('defaultAction', 'chooseDivision')
+            ->assertActionVisible('chooseDivision')
+            ->assertActionHidden('create')
+            ->callAction('chooseDivision', ['division_id' => $division->id])
+            ->assertHasNoActionErrors();
+
+        $employee->refresh();
+        $this->assertSame($division->id, $employee->division_id);
+        $this->assertTrue($employee->can('create', ItemRequest::class));
+
+        // Sekali saja: aksi hilang, dan pemanggilan ulang tidak mengubah divisi.
+        $this->actingAs($employee);
+        Livewire::test(ListItemRequests::class)
+            ->assertSet('defaultAction', null)
+            ->assertActionHidden('chooseDivision')
+            ->assertActionVisible('create');
+
         $this->get(ItemRequestResource::getUrl('create'))->assertOk();
     }
 
