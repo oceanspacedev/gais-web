@@ -6,6 +6,7 @@ use App\Enums\AssetTransferDocumentType;
 use App\Models\AssetTransfer;
 use App\Models\BusinessEntity;
 use App\Models\User;
+use App\Support\Letterhead;
 use Illuminate\Foundation\Testing\DatabaseTransactions;
 use Tests\TestCase;
 
@@ -55,7 +56,7 @@ class AssetTransferPdfTest extends TestCase
     {
         return view('pdf.asset-transfer', [
             'assetTransfer' => $transfer->load('fromUser.jobTitle', 'toUser.jobTitle', 'details'),
-            'headerImage' => '',
+            'letterhead' => Letterhead::for($transfer->businessEntity),
         ])->render();
     }
 }

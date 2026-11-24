@@ -17,16 +17,6 @@
             padding: 0;
         }
 
-        .header {
-            text-align: center;
-            margin: 0;
-            padding: 0;
-        }
-
-        .header img {
-            width: 100%;
-            height: auto;
-        }
 
         .content {
             margin: 32px;
@@ -139,10 +129,7 @@
         // Akun GA bersama (config/asset-transfer.php): nama & jabatan diisi tangan.
         $isGa = fn ($user): bool => $user instanceof \App\Models\User && $user->isSharedAccount();
     @endphp
-    <!-- Kop Surat -->
-    <div class="header">
-        <img src="{{ $headerImage }}" alt="Kop Surat">
-    </div>
+    @include('pdf.partials.letterhead')
 
     <div class="content">
         <!-- Judul dan Nomor Surat -->
