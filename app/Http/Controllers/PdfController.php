@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Models\AssetTransfer;
+use App\Models\BusinessEntity;
 use App\Models\Task;
+use App\Support\Letterhead;
 use App\Support\StoredFile;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -14,13 +16,11 @@ class PdfController extends Controller
         $assetTransfer = AssetTransfer::findOrFail($id);
         $this->authorize('view', $assetTransfer);
 
-        $assetTransfer->load('fromUser.jobTitle', 'toUser.jobTitle', 'businessEntity', 'details.asset.category', 'details.asset.brand', 'details.asset.attributes');
+        $assetTransfer->load('fromUser.jobTitle', 'toUser.jobTitle', 'businessEntity.legalEntity', 'details.asset.category', 'details.asset.brand', 'details.asset.attributes');
 
         $status = $assetTransfer->documentCode();
 
-        $headerImage = $assetTransfer->businessEntity->letterhead
-            ? StoredFile::imageDataUri('public', $assetTransfer->businessEntity->letterhead)
-            : public_path('images/cvcs_kop.png');
+        $letterhead = Letterhead::for($assetTransfer->businessEntity);
 
         $letterNumber = $assetTransfer->letter_number;
         $toUserName = strtolower(str_replace(' ', '_', $assetTransfer->toUser->name));
@@ -28,7 +28,7 @@ class PdfController extends Controller
 
         $fileName = $this->safeDownloadFilename("{$status}_{$letterNumber}_{$toUserName}_{$toUserJobTitle}.pdf");
 
-        $pdf = Pdf::loadView('pdf.asset-transfer', compact('assetTransfer', 'headerImage'));
+        $pdf = Pdf::loadView('pdf.asset-transfer', compact('assetTransfer', 'letterhead'));
 
         return $pdf->download($fileName);
     }
@@ -38,15 +38,13 @@ class PdfController extends Controller
         $task = Task::findOrFail($id);
         $this->authorize('view', $task);
 
-        $task->load('businessEntity');
+        $task->load('businessEntity.legalEntity');
 
-        $headerImage = $task->businessEntity->letterhead
-            ? StoredFile::imageDataUri('public', $task->businessEntity->letterhead)
-            : public_path('images/cvcs_kop.png');
+        $letterhead = Letterhead::for($task->businessEntity);
 
         $fileName = strtolower(str_replace(' ', '_', $task->name));
         $attachments = $this->taskAttachmentsHtml($task);
-        $pdf = Pdf::loadView('pdf.task-completion', compact('task', 'headerImage', 'attachments'));
+        $pdf = Pdf::loadView('pdf.task-completion', compact('task', 'letterhead', 'attachments'));
 
         return $pdf->download($this->safeDownloadFilename('berita_acara_pengerjaan_'.$fileName.'.pdf'));
     }
@@ -56,17 +54,26 @@ class PdfController extends Controller
         $task = Task::findOrFail($id);
         $this->authorize('view', $task);
 
-        $task->load('businessEntity');
+        $task->load('businessEntity.legalEntity');
 
-        $headerImage = $task->businessEntity->letterhead
-            ? StoredFile::imageDataUri('public', $task->businessEntity->letterhead)
-            : public_path('images/cvcs_kop.png');
+        $letterhead = Letterhead::for($task->businessEntity);
 
         $fileName = strtolower(str_replace(' ', '_', $task->name));
         $attachments = $this->taskAttachmentsHtml($task);
-        $pdf = Pdf::loadView('pdf.task-completion', compact('task', 'headerImage', 'attachments'));
+        $pdf = Pdf::loadView('pdf.task-completion', compact('task', 'letterhead', 'attachments'));
 
         return $pdf->stream($this->safeDownloadFilename('berita_acara_pengerjaan_'.$fileName.'.pdf'));
+    }
+
+    public function previewLetterhead(BusinessEntity $businessEntity)
+    {
+        $this->authorize('view', $businessEntity);
+
+        $businessEntity->load('legalEntity');
+        $letterhead = Letterhead::for($businessEntity);
+
+        return Pdf::loadView('pdf.letterhead-preview', compact('businessEntity', 'letterhead'))
+            ->stream($this->safeDownloadFilename('kop_surat_'.strtolower($businessEntity->name).'.pdf'));
     }
 
     /**

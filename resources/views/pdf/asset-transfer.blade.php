@@ -16,16 +16,6 @@
             padding: 0;
         }
 
-        .header {
-            text-align: center;
-            margin: 0;
-            padding: 0;
-        }
-
-        .header img {
-            width: 100%;
-            height: auto;
-        }
 
         .content {
             margin: 32px;
@@ -122,9 +112,7 @@
         $partyTitle = fn ($user): string => $user && ! $user->isSharedAccount() ? (string) optional($user->jobTitle)->title : '';
     @endphp
 
-    <div class="header">
-        <img src="{{ $headerImage }}" alt="Kop Surat">
-    </div>
+    @include('pdf.partials.letterhead')
     <div class="content">
         <h1>{{ $assetTransfer->status }}</h1>
         <h2>Nomor: {{ $assetTransfer->letter_number }}</h2>

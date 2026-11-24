@@ -18,7 +18,7 @@ class ManageBusinessEntities extends ManageRecords
         return [
             Actions\CreateAction::make()
                 ->slideOver()
-                ->modalWidth('md'),
+                ->modalWidth('3xl'),
         ];
     }
 }
