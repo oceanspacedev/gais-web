@@ -6,6 +6,7 @@ use App\Access\HasVisibility;
 use App\Access\Rules\EveryoneGrant;
 use App\Access\Visibility;
 use App\Enums\LegalForm;
+use App\Enums\LetterheadLayout;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -32,13 +33,14 @@ class BusinessEntity extends Model
         'name', 'format', 'color', 'letterhead',
         'legal_name', 'legal_form', 'short_name', 'legal_entity_id',
         'address', 'city', 'phone', 'email',
-        'npwp', 'nib', 'legal_registration_number', 'logo',
+        'npwp', 'nib', 'legal_registration_number', 'logo', 'letterhead_layout',
     ];
 
     protected function casts(): array
     {
         return [
             'legal_form' => LegalForm::class,
+            'letterhead_layout' => LetterheadLayout::class,
         ];
     }
 
