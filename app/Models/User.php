@@ -225,6 +225,27 @@ class User extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
+     * Karyawan biasa (pemohon) yang belum punya divisi: wajib memilih divisinya
+     * dulu sebelum membuat pengajuan barang, supaya pengajuan masuk ke area dan
+     * kuota divisi yang benar. Pemroses (GA, executor, manager, accounting,
+     * audit, super admin) tidak diminta, walau tanpa divisi.
+     */
+    public function needsToChooseDivision(): bool
+    {
+        if ($this->division_id !== null || $this->isSuperAdmin()) {
+            return false;
+        }
+
+        foreach (['ViewAll:ItemRequest', 'Process:ItemRequest', 'ApproveManager:ItemRequest', 'ApproveAccounting:ItemRequest', 'Audit:ItemRequest', 'ChangeApplicant:ItemRequest'] as $permission) {
+            if ($this->can($permission)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    /**
      * Boleh membuat BA stok (Serah Terima, Pengembalian) atas nama staf GA mana
      * pun: pemegang izin Shield "Kelola BA Stok".
      */

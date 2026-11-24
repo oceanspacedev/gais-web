@@ -43,8 +43,9 @@ class ItemRequestResourceTest extends TestCase
 
     public function test_requester_creates_a_request_from_the_panel_and_sees_only_their_own(): void
     {
-        $requester = $this->userWithRole('requester');
-        $stranger = $this->userWithRole('requester');
+        // Pemohon tanpa divisi diminta memilih divisi dulu; beri divisi berbeda.
+        $requester = $this->userWithRole('requester', ['division_id' => Division::create(['name' => 'TOKO-ui-a'])->id]);
+        $stranger = $this->userWithRole('requester', ['division_id' => Division::create(['name' => 'TOKO-ui-b'])->id]);
         $foreign = $this->request($stranger);
 
         $this->actingAs($requester);
@@ -74,7 +75,7 @@ class ItemRequestResourceTest extends TestCase
     public function test_approval_file_offers_the_docx_template_and_accepts_only_signed_pdf(): void
     {
         $withAttachment = ItemRequestType::create(['name' => 'Infra-ui', 'requires_attachment' => true]);
-        $this->actingAs($this->userWithRole('requester'));
+        $this->actingAs($this->userWithRole('requester', ['division_id' => Division::create(['name' => 'TOKO-ui-lampiran'])->id]));
 
         Livewire::test(CreateItemRequest::class)
             ->fillForm(['item_request_type_id' => $withAttachment->id])
