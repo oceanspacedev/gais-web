@@ -185,6 +185,79 @@ class BusinessEntityLetterheadTest extends TestCase
             ->assertHasTableActionErrors(['npwp', 'address']);
     }
 
+    public function test_an_entity_without_format_or_color_can_still_be_saved(): void
+    {
+        $this->actingAsManager();
+
+        // Seperti 15 badan usaha lama yang belum punya prefix nomor surat.
+        $entity = BusinessEntity::create(['name' => '__klt_tanpa_format__']);
+
+        Livewire::test(ManageBusinessEntities::class)
+            ->callTableAction('edit', $entity, data: ['address' => 'Jl. __Tanpa Format__'])
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame('Jl. __Tanpa Format__', $entity->fresh()->address);
+    }
+
+    public function test_outlet_hides_its_own_kop_fields_and_follows_the_owner(): void
+    {
+        $this->actingAsManager();
+
+        $company = BusinessEntity::create(['name' => '__klt_pt_form__', 'legal_name' => 'PT __KLT FORM PEMILIK__']);
+        $outlet = BusinessEntity::create(['name' => '__klt_outlet_form__']);
+
+        Livewire::test(ManageBusinessEntities::class)
+            ->mountTableAction('edit', $outlet)
+            ->assertFormFieldIsVisible('address')
+            ->fillForm(['legal_form' => 'brand', 'legal_entity_id' => $company->id])
+            ->assertFormFieldIsHidden('address')
+            ->callMountedTableAction()
+            ->assertHasNoTableActionErrors();
+
+        $this->assertSame($company->id, $outlet->fresh()->legal_entity_id);
+
+        $preview = Letterhead::fromFormState(['name' => '__klt_outlet_form__', 'legal_entity_id' => $company->id]);
+        $this->assertSame('PT __KLT FORM PEMILIK__', $preview->name);
+        $this->assertSame('__klt_outlet_form__', $preview->outlet);
+    }
+
+    public function test_text_position_follows_the_chosen_layout(): void
+    {
+        Storage::disk('public')->put('kopsurat/logo/__klt_layout__.png', base64_decode(self::PNG));
+
+        $entity = BusinessEntity::create(['name' => '__klt_layout__', 'logo' => 'kopsurat/logo/__klt_layout__.png']);
+        $this->assertStringContainsString('kop-align-right', $this->renderKop($entity));
+
+        foreach (['center', 'left'] as $layout) {
+            $entity->update(['letterhead_layout' => $layout]);
+            $this->assertStringContainsString("kop-align-{$layout}", $this->renderKop($entity));
+        }
+
+        // Tanpa logo teks selalu di tengah, apa pun pilihannya.
+        $entity->update(['logo' => null]);
+        $this->assertStringContainsString('kop-align-center', $this->renderKop($entity));
+        $this->assertSame('left', Letterhead::fromFormState(['name' => 'x', 'letterhead_layout' => 'left'])->layout->value);
+    }
+
+    public function test_preview_follows_unsaved_form_input(): void
+    {
+        $letterhead = Letterhead::fromFormState([
+            'name' => '__klt_internal__',
+            'legal_name' => 'PT __KLT DIKETIK__',
+            'address' => 'Jl. __Diketik__',
+            'phone' => '021-1',
+            'email' => 'a@example.test',
+            'logo' => [],
+            'letterhead' => [],
+        ]);
+
+        $this->assertSame('PT __KLT DIKETIK__', $letterhead->name);
+        $this->assertSame('Jl. __Diketik__', $letterhead->address);
+        $this->assertSame('Telp. 021-1 | a@example.test', $letterhead->contact);
+        $this->assertNull($letterhead->logo);
+        $this->assertSame('__klt_internal__', Letterhead::fromFormState(['name' => '__klt_internal__'])->name);
+    }
+
     public function test_a_company_with_outlets_cannot_get_an_owner_or_be_deleted(): void
     {
         $this->actingAsManager();
@@ -194,6 +267,9 @@ class BusinessEntityLetterheadTest extends TestCase
 
         Livewire::test(ManageBusinessEntities::class)
             ->mountTableAction('edit', $company)
+            ->assertFormFieldIsHidden('legal_entity_id')
+            ->fillForm(['legal_form' => 'brand'])
+            ->assertFormFieldIsVisible('legal_entity_id')
             ->assertFormFieldIsDisabled('legal_entity_id');
 
         Livewire::test(ManageBusinessEntities::class)

@@ -12,9 +12,13 @@
     table.kop-table { width: 100%; table-layout: fixed; border: none; border-collapse: collapse; margin: 0; font-size: 14px; }
     table.kop-table td { border: none; padding: 0; vertical-align: middle; }
     table.kop-table td.kop-logo { width: 40%; text-align: left; }
-    table.kop-table td.kop-logo img { max-width: 6.5cm; max-height: 2.4cm; }
-    table.kop-table td.kop-text { text-align: right; line-height: 1.25; word-wrap: break-word; color: #000; }
-    table.kop-table td.kop-text.kop-solo { text-align: center; }
+    table.kop-table td.kop-logo img { max-width: 100%; max-height: 2.4cm; }
+    table.kop-table td.kop-text { line-height: 1.25; word-wrap: break-word; color: #000; }
+    table.kop-table td.kop-align-right { text-align: right; }
+    table.kop-table td.kop-align-center { text-align: center; }
+    table.kop-table td.kop-align-left { text-align: left; padding-left: 12px; }
+    {{-- Teks kiri menempel ke logo, jadi kolom logo dibuat lebih sempit. --}}
+    table.kop-table td.kop-logo.kop-logo-left { width: 33%; }
     .kop-name { font-size: 24px; font-weight: bold; line-height: 1.2; margin-bottom: 2px; }
     .kop-contact { font-size: 12px; }
     .kop-line { margin-top: 10px; border-top: 3px solid #000; border-bottom: 1px solid #000; height: 2px; }
@@ -28,9 +32,9 @@
         <table class="kop-table">
             <tr>
                 @if ($letterhead->logo)
-                    <td class="kop-logo"><img src="{{ $letterhead->logo }}" alt="Logo"></td>
+                    <td class="kop-logo kop-logo-{{ $letterhead->textAlign() }}"><img src="{{ $letterhead->logo }}" alt="Logo"></td>
                 @endif
-                <td class="kop-text{{ $letterhead->logo ? '' : ' kop-solo' }}">
+                <td class="kop-text kop-align-{{ $letterhead->textAlign() }}">
                     @if ($letterhead->name !== '')
                         <div class="kop-name">{{ $letterhead->name }}</div>
                     @endif
