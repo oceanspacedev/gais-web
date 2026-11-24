@@ -10,13 +10,16 @@ use Illuminate\Support\Facades\Gate;
  * diberi role): izin di PERMISSIONS selalu dianggap dimiliki. Policy tetap
  * memeriksa izin Shield seperti biasa; yang berubah hanya jawabannya.
  *
- * Saat ini: membuat laporan gangguan ke GA dan melihat laporannya sendiri.
- * Laporan orang lain tetap butuh ViewAll:ProblemReport (ProblemReport::visibility()).
+ * Saat ini: membuat laporan gangguan ke GA dan melihat laporannya sendiri,
+ * serta membuka daftar Pengajuan Barang. Laporan/pengajuan orang lain tetap
+ * dibatasi visibility() masing-masing model.
  *
  * Karyawan yang sudah ditempatkan di divisi/toko (users.division_id) juga
  * mendapat izin pemohon (role requester): membuat pengajuan barang dan melihat
- * pengajuan divisinya, sebagai pengganti akun bersama toko. Tanpa divisi,
- * pengajuan barang tetap butuh role atau izin Shield.
+ * pengajuan divisinya, sebagai pengganti akun bersama toko. Karyawan yang belum
+ * punya divisi memilihnya sekali di halaman Pengajuan Barang
+ * (ListItemRequests::chooseDivisionAction); setelah itu hanya admin yang bisa
+ * mengubahnya.
  */
 final class BaselineAccess
 {
@@ -27,6 +30,7 @@ final class BaselineAccess
         'ViewAny:ProblemReport',
         'View:ProblemReport',
         'Create:ProblemReport',
+        'ViewAny:ItemRequest',
     ];
 
     /**
