@@ -50,7 +50,7 @@ class ListItemRequests extends ListRecords
             $this->chooseDivisionAction(),
             $this->exportRecapAction(),
             $this->exportMasterQrAction(),
-            CreateAction::make()->label('Buat Pengajuan'),
+            CreateAction::make()->label('Buat Pengajuan')->visible(fn (): bool => ! $this->needsDivision()),
         ];
     }
 
@@ -126,7 +126,7 @@ class ListItemRequests extends ListRecords
     {
         $user = auth()->user();
 
-        return $user instanceof User && $user->division_id === null;
+        return $user instanceof User && $user->needsToChooseDivision();
     }
 
     /**

@@ -82,7 +82,7 @@ class BaselineAccessTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $this->get(ItemRequestResource::getUrl('index'))->assertOk();
-        $this->get(ItemRequestResource::getUrl('create'))->assertForbidden();
+        $this->get(ItemRequestResource::getUrl('create'))->assertRedirect(ItemRequestResource::getUrl('index'));
 
         Livewire::test(ListItemRequests::class)
             ->assertSet('defaultAction', 'chooseDivision')
