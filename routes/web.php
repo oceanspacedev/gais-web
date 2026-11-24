@@ -51,6 +51,7 @@ Route::get('email-login/link/{token}', EmailLogin::class)
 Route::get('asset-transfer/{id}/download', [PdfController::class, 'downloadAssetTransfer'])->middleware(['auth'])->name('asset-transfer.download');
 Route::get('task-completion/{id}/download', [PdfController::class, 'downloadTaskCompletion'])->middleware(['auth'])->name('task-completion.download');
 Route::get('task-completion/{id}/preview', [PdfController::class, 'previewTaskCompletion'])->middleware(['auth'])->name('task-completion.preview');
+Route::get('business-entities/{businessEntity}/letterhead-preview', [PdfController::class, 'previewLetterhead'])->middleware(['auth'])->name('business-entity.letterhead-preview');
 Route::post('admin/camera-upload', [CameraUploadController::class, 'upload'])->middleware(['auth'])->name('admin.camera-upload');
 Route::get('stored-file/download', [StoredFileController::class, 'download'])
     ->middleware(['auth', 'signed'])
