@@ -116,6 +116,32 @@ class ItemRequestResourceTest extends TestCase
         $this->assertSame(1, $request->refresh()->client_status->value);
     }
 
+    public function test_division_member_can_confirm_a_finished_request_of_a_retired_division_account(): void
+    {
+        $division = Division::create(['name' => 'FINANCE-ui']);
+        $other = Division::create(['name' => 'TOKO-ui-lain']);
+        ItemRequestScope::create(['division_id' => Division::create(['name' => 'HCM-ui'])->id]);
+        $oldAccount = $this->userWithRole('requester', ['division_id' => $division->id]);
+        $member = $this->userWithRole('requester', ['division_id' => $division->id]);
+        $outsider = $this->userWithRole('requester', ['division_id' => $other->id]);
+        $request = $this->request($oldAccount);
+        $request->forceFill(['client_status' => 4])->save();
+        $request->approvals()->where('approval_type', 'EXECUTOR')->firstOrFail()->markApproved($oldAccount);
+
+        $this->actingAs($outsider);
+        $this->assertFalse($request->refresh()->canBeConfirmedBy($outsider));
+
+        $this->actingAs($member);
+        Livewire::test(ViewItemRequest::class, ['record' => $request->getRouteKey()])
+            ->assertOk()
+            ->assertActionVisible('confirm')
+            ->callAction('confirm', ['accepted' => '1', 'user_notes' => 'diterima divisi'])
+            ->assertNotified();
+
+        $this->assertSame(1, $request->refresh()->client_status->value);
+        $this->assertSame(0, app(ItemRequestWorkflow::class)->openCountByType($member, $request->item_request_type_id));
+    }
+
     public function test_process_action_waits_for_the_division_that_approves_quantities(): void
     {
         $top = Area::create(['name' => 'TOP-ui']);
