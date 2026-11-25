@@ -82,6 +82,9 @@ class AdminPanelProvider extends PanelProvider
                 $this->locationShortcut('Master Aset'),
                 $this->locationShortcut('OB / Kebersihan'),
             ])
+            // MekayaPlugin menyalakan registrasi, reset password, dan profil; GAIS mematikan ketiganya
+            // (akun dibuat admin). Harus setelah ->plugin(MekayaPlugin) agar menimpa pengaturannya.
+            ->registration(null)
             ->passwordReset(null, null)
             ->profile(null)
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')

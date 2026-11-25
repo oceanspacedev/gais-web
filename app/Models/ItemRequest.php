@@ -187,6 +187,22 @@ class ItemRequest extends Model
     }
 
     /**
+     * Penerimaan boleh dikonfirmasi pemohon atau anggota divisi/toko yang sama, karena
+     * kuota dihitung per divisi: pengajuan akun lama (mis. akun toko yang loginnya
+     * dimatikan) tetap bisa ditutup oleh akun pribadi rekan satu divisinya.
+     */
+    public function canBeConfirmedBy(?User $user): bool
+    {
+        if ($this->isOwnedBy($user)) {
+            return true;
+        }
+
+        return $user !== null
+            && $this->division_id !== null
+            && (int) $this->division_id === (int) $user->division_id;
+    }
+
+    /**
      * Total memakai jumlah disetujui bila sudah diisi, kalau belum jumlah diminta (sumo: show).
      */
     public function grandTotal(): float
