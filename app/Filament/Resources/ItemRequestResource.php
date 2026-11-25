@@ -411,7 +411,7 @@ class ItemRequestResource extends Resource
                 ->color('success')
                 ->modalHeading('Konfirmasi penerimaan barang')
                 ->modalWidth('md')
-                ->visible(fn (ItemRequest $record) => $record->isOwnedBy($user())
+                ->visible(fn (ItemRequest $record) => $record->canBeConfirmedBy($user())
                     && $record->isApproved(ItemRequestApprovalType::Executor)
                     && ! $record->isApproved(ItemRequestApprovalType::EndUser)
                     && in_array($record->client_status, [ItemRequestClientStatus::Closed, ItemRequestClientStatus::Waiting], true))
