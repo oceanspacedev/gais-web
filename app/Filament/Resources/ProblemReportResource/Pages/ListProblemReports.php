@@ -4,6 +4,7 @@ namespace App\Filament\Resources\ProblemReportResource\Pages;
 
 use App\Enums\ProblemReportStatus;
 use App\Exports\ProblemReportExport;
+use App\Filament\Concerns\ChoosesOwnDivision;
 use App\Filament\Concerns\MemoizesTableQuery;
 use App\Filament\Resources\ProblemReportResource;
 use App\Models\ProblemReport;
@@ -19,13 +20,21 @@ use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
 class ListProblemReports extends ListRecords
 {
-    use MemoizesTableQuery;
+    use ChoosesOwnDivision, MemoizesTableQuery;
 
     protected static string $resource = ProblemReportResource::class;
+
+    public function mount(): void
+    {
+        parent::mount();
+
+        $this->promptForDivision();
+    }
 
     protected function getHeaderActions(): array
     {
         return [
+            $this->chooseDivisionAction(),
             // Sumo: /problemReport/export untuk satu rentang tanggal pelaporan.
             Action::make('exportReports')
                 ->label('Ekspor Laporan')
@@ -47,7 +56,7 @@ class ListProblemReports extends ListRecords
 
                     return Excel::download($export, $export->fileName());
                 }),
-            CreateAction::make()->label('Lapor Gangguan'),
+            CreateAction::make()->label('Lapor Gangguan')->visible(fn (): bool => ! $this->needsDivision()),
         ];
     }
 
@@ -61,5 +70,10 @@ class ListProblemReports extends ListRecords
         }
 
         return $tabs;
+    }
+
+    protected function divisionUnlocks(): string
+    {
+        return 'melaporkan gangguan';
     }
 }

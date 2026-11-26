@@ -12,14 +12,15 @@ use Illuminate\Support\Facades\Gate;
  *
  * Saat ini: membuat laporan gangguan ke GA dan melihat laporannya sendiri,
  * serta membuka daftar Pengajuan Barang. Laporan/pengajuan orang lain tetap
- * dibatasi visibility() masing-masing model.
+ * dibatasi visibility() masing-masing model. Karyawan tanpa divisi memilih
+ * divisinya dulu sebelum melapor (ListProblemReports), supaya laporannya
+ * terlihat oleh rekan sedivisi.
  *
  * Karyawan yang sudah ditempatkan di divisi/toko (users.division_id) juga
  * mendapat izin pemohon (role requester): membuat pengajuan barang dan melihat
  * pengajuan divisinya, sebagai pengganti akun bersama toko. Karyawan yang belum
- * punya divisi memilihnya sekali di halaman Pengajuan Barang
- * (ListItemRequests::chooseDivisionAction); setelah itu hanya admin yang bisa
- * mengubahnya.
+ * punya divisi memilihnya sekali di halaman Pengajuan Barang atau Laporan
+ * Gangguan (ChoosesOwnDivision); setelah itu hanya admin yang bisa mengubahnya.
  */
 final class BaselineAccess
 {
