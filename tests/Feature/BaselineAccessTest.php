@@ -5,8 +5,10 @@ namespace Tests\Feature;
 use App\Filament\Resources\ItemRequestResource;
 use App\Filament\Resources\ItemRequestResource\Pages\ListItemRequests;
 use App\Filament\Resources\ProblemReportResource;
+use App\Filament\Resources\ProblemReportResource\Pages\ListProblemReports;
 use App\Models\Division;
 use App\Models\ItemRequest;
+use App\Models\ItemRequestType;
 use App\Models\ProblemReport;
 use App\Models\Product;
 use App\Models\User;
@@ -41,7 +43,8 @@ class BaselineAccessTest extends TestCase
         Filament::setCurrentPanel(Filament::getPanel('admin'));
 
         $this->get(ProblemReportResource::getUrl('index'))->assertOk();
-        $this->get(ProblemReportResource::getUrl('create'))->assertOk();
+        // Belum punya divisi: memilihnya dulu di daftar sebelum melapor.
+        $this->get(ProblemReportResource::getUrl('create'))->assertRedirect(ProblemReportResource::getUrl('index'));
     }
 
     public function test_employee_placed_in_a_division_can_request_items_without_a_role(): void
@@ -103,6 +106,62 @@ class BaselineAccessTest extends TestCase
             ->assertActionVisible('create');
 
         $this->get(ItemRequestResource::getUrl('create'))->assertOk();
+    }
+
+    public function test_employee_without_division_chooses_it_before_reporting_and_their_old_records_follow(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $division = Division::create(['name' => 'CS-uji-pilih-divisi-lapor']);
+        $other = Division::create(['name' => 'CS-uji-divisi-lain-lapor']);
+        $type = ItemRequestType::create(['name' => 'ATK-uji-pilih-divisi-lapor']);
+        $employee = User::factory()->create();
+        $colleague = User::factory()->create(['division_id' => $division->id]);
+
+        $oldReport = ProblemReport::create(['user_id' => $employee->id, 'reported_at' => now()]);
+        $oldRequest = ItemRequest::create(['user_id' => $employee->id, 'item_request_type_id' => $type->id, 'requested_at' => now()]);
+        $placedReport = ProblemReport::create(['user_id' => $employee->id, 'division_id' => $other->id, 'reported_at' => now()]);
+        $strangerReport = ProblemReport::create(['user_id' => User::factory()->create()->id, 'reported_at' => now()]);
+
+        $this->assertNull($oldReport->division_id);
+        $this->assertFalse($oldReport->isVisibleTo($colleague));
+
+        $this->actingAs($employee);
+        Filament::setCurrentPanel(Filament::getPanel('admin'));
+
+        $this->get(ProblemReportResource::getUrl('create'))->assertRedirect(ProblemReportResource::getUrl('index'));
+
+        Livewire::test(ListProblemReports::class)
+            ->assertSet('defaultAction', 'chooseDivision')
+            ->assertActionVisible('chooseDivision')
+            ->assertActionHidden('create')
+            ->callAction('chooseDivision', ['division_id' => $division->id])
+            ->assertHasNoActionErrors()
+            ->assertRedirect(ProblemReportResource::getUrl('index'));
+
+        $this->assertSame($division->id, $employee->fresh()->division_id);
+
+        // Laporan dan pengajuan lamanya yang tanpa divisi ikut masuk divisi itu,
+        // sehingga terlihat oleh rekan sedivisi; yang sudah berdivisi dan milik
+        // orang lain tidak disentuh.
+        $this->assertSame($division->id, $oldReport->fresh()->division_id);
+        $this->assertSame($division->id, $oldRequest->fresh()->division_id);
+        $this->assertSame($other->id, $placedReport->fresh()->division_id);
+        $this->assertNull($strangerReport->fresh()->division_id);
+        $this->assertTrue($oldReport->fresh()->isVisibleTo($colleague));
+        $this->assertTrue($oldRequest->fresh()->isVisibleTo($colleague));
+
+        // Sekali saja: pilihan berikutnya ditolak dan divisi tidak berubah.
+        $this->assertFalse($employee->fresh()->chooseOwnDivision($other));
+        $this->assertSame($division->id, $employee->fresh()->division_id);
+
+        $this->actingAs($employee->fresh());
+        Livewire::test(ListProblemReports::class)
+            ->assertSet('defaultAction', null)
+            ->assertActionHidden('chooseDivision')
+            ->assertActionVisible('create');
+
+        $this->get(ProblemReportResource::getUrl('create'))->assertOk();
     }
 
     public function test_employee_only_sees_their_own_reports(): void
