@@ -23,6 +23,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use InvalidArgumentException;
 use Laravel\Sanctum\HasApiTokens;
@@ -225,10 +226,11 @@ class User extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
-     * Karyawan biasa (pemohon) yang belum punya divisi: wajib memilih divisinya
-     * dulu sebelum membuat pengajuan barang, supaya pengajuan masuk ke area dan
-     * kuota divisi yang benar. Pemroses (GA, executor, manager, accounting,
-     * audit, super admin) tidak diminta, walau tanpa divisi.
+     * Karyawan biasa (pemohon/pelapor) yang belum punya divisi: wajib memilih
+     * divisinya dulu sebelum membuat pengajuan barang atau laporan gangguan,
+     * supaya record masuk ke area dan kuota divisi yang benar dan terlihat oleh
+     * rekan sedivisi. Pemroses (GA, executor, manager, accounting, audit, super
+     * admin) tidak diminta, walau tanpa divisi.
      */
     public function needsToChooseDivision(): bool
     {
@@ -243,6 +245,39 @@ class User extends Authenticatable implements FilamentUser, HasName
         }
 
         return true;
+    }
+
+    /**
+     * Karyawan mengisi divisinya sendiri, sekali saja (setelah itu hanya admin
+     * lewat menu Pengguna). Pengajuan dan laporannya yang belum tercatat
+     * divisinya ikut diisi supaya terlihat oleh rekan sedivisi; yang sudah
+     * punya divisi tidak diubah. False bila divisinya ternyata sudah terisi.
+     */
+    public function chooseOwnDivision(Division $division): bool
+    {
+        return DB::transaction(function () use ($division): bool {
+            // Dikunci: hanya mengisi bila masih kosong (cegah ganti lewat request ulang).
+            $updated = DB::table('users')
+                ->where('id', $this->getKey())
+                ->whereNull('division_id')
+                ->update(['division_id' => $division->id, 'updated_at' => now()]);
+
+            if ($updated === 0) {
+                return false;
+            }
+
+            foreach (['item_requests', 'problem_reports'] as $table) {
+                DB::table($table)
+                    ->where('user_id', $this->getKey())
+                    ->whereNull('division_id')
+                    ->update(['division_id' => $division->id]);
+            }
+
+            $this->setAttribute('division_id', $division->id);
+            $this->syncOriginalAttribute('division_id');
+
+            return true;
+        });
     }
 
     /**
